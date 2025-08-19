@@ -17,7 +17,8 @@ services:
       - PGPASSWORD=${POSTGRES_PASSWORD:-password}
       - PGDATABASE=virtual_audience
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - virtual-audience-network
     volumes:

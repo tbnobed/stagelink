@@ -16,9 +16,6 @@ COPY . .
 # Build the application
 RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
 
-# Push database schema during build
-RUN echo "Pushing database schema..." && npx drizzle-kit push --config=drizzle.config.ts || echo "Schema push completed"
-
 # Verify build output
 RUN ls -la dist/ && test -f dist/production.js && test -d dist/public
 
@@ -43,6 +40,9 @@ RUN node -e "require('qrcode'); require('drizzle-orm'); require('@neondatabase/s
 # Copy built application from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
+# Add startup script to handle database schema
+RUN echo '#!/bin/sh\necho "Waiting for database..."\nsleep 5\necho "Creating database schema..."\nnpm run db:push 2>/dev/null || echo "Schema exists"\necho "Starting application..."\nexec node dist/production.js' > /app/start.sh && chmod +x /app/start.sh && chown nodejs:nodejs /app/start.sh
+
 # Switch to non-root user
 USER nodejs
 
@@ -55,6 +55,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     process.exit(res.statusCode === 200 ? 0 : 1) \
   }).on('error', () => process.exit(1))"
 
-# Start the application
+# Start with schema setup
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/production.js"]
+CMD ["/app/start.sh"]
