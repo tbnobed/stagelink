@@ -122,11 +122,14 @@ export default function Generator() {
       return;
     }
 
+    // Wait for next tick to ensure canvas is in DOM
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
     const canvas = qrCanvasRef.current;
     if (!canvas) {
       toast({
         title: "Error",
-        description: "Canvas element not found.",
+        description: "Canvas element not found. Please try again.",
         variant: "destructive",
       });
       return;
@@ -333,14 +336,14 @@ export default function Generator() {
               </div>
 
               {/* QR Code Display */}
-              {showQR && (
-                <div className="text-center" data-testid="qr-code-container">
-                  <div className="bg-white p-4 rounded-lg inline-block">
-                    <canvas ref={qrCanvasRef}></canvas>
-                  </div>
-                  <p className="va-text-secondary text-sm mt-2">Scan to open guest session</p>
+              <div className="text-center" data-testid="qr-code-container">
+                <div className="bg-white p-4 rounded-lg inline-block" style={{ display: showQR ? 'inline-block' : 'none' }}>
+                  <canvas ref={qrCanvasRef}></canvas>
                 </div>
-              )}
+                {showQR && (
+                  <p className="va-text-secondary text-sm mt-2">Scan to open guest session</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
