@@ -57,15 +57,15 @@ export default function Links() {
     }
   };
 
-  const previewStream = async (returnFeed: string, linkId: string) => {
+  const previewStream = async (streamName: string, linkId: string) => {
     if (!previewVideoRef.current) return;
 
     try {
       setPreviewingLink(linkId);
-      await startPlayback(previewVideoRef.current, returnFeed);
+      await startPlayback(previewVideoRef.current, streamName);
       toast({
         title: "Preview Started",
-        description: `Now previewing ${returnFeed}`,
+        description: `Now previewing stream: ${streamName}`,
       });
     } catch (error) {
       toast({
@@ -190,7 +190,7 @@ export default function Links() {
                         Copy
                       </Button>
                       <Button 
-                        onClick={() => previewStream(link.returnFeed, link.id)}
+                        onClick={() => previewStream(link.streamName, link.id)}
                         variant="outline"
                         size="sm"
                         className="va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
@@ -280,7 +280,7 @@ export default function Links() {
                     <div className="flex justify-between">
                       <span className="va-text-secondary">Stream:</span>
                       <span className="va-text-primary font-mono text-xs">
-                        {links.find(l => l.id === previewingLink)?.returnFeed}
+                        {links.find(l => l.id === previewingLink)?.streamName}
                       </span>
                     </div>
                   </div>

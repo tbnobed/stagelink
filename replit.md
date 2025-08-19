@@ -9,6 +9,8 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Updated link generator to point to current Replit server instead of external CDN
 - Removed stats section from homepage per user request
 - Generated links now use dynamic host: window.location.host/session?stream=guest1&return=studio1&chat=true
+- Created new Links page with WHEP preview functionality for managing generated links
+- Preview shows the guest stream (WHIP stream) not the return feed, so you can see what the guest will broadcast
 
 # User Preferences
 
