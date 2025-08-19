@@ -7,7 +7,7 @@ This guide will help you deploy the Virtual Audience Platform on your Ubuntu ser
 - Ubuntu 20.04+ server
 - Docker and Docker Compose installed
 - At least 2GB RAM and 10GB disk space
-- Open ports: 80 (HTTP), 443 (HTTPS), 5432 (PostgreSQL - optional)
+- Open ports: 80 (HTTP), 5432 (PostgreSQL - optional)
 
 ## Quick Deployment
 
@@ -113,20 +113,16 @@ docker-compose ps
 virtual-audience-platform/
 ├── docker-compose.yml      # Multi-service orchestration
 ├── Dockerfile             # Application container definition
-├── nginx.conf             # Nginx reverse proxy configuration
 ├── init.sql              # Database initialization
 ├── deploy.sh             # Automated deployment script
 ├── .dockerignore         # Docker build exclusions
-├── logs/                 # Application logs
-└── ssl/                  # SSL certificates
-    ├── cert.pem
-    └── key.pem
+└── logs/                 # Application logs
 ```
 
 ## Services Overview
 
 ### 1. Application Container (app)
-- **Port:** 5000
+- **Port:** 80 (mapped from internal 5000)
 - **Image:** Custom Node.js application
 - **Health Check:** `/health` endpoint
 - **Volumes:** `./logs:/app/logs`
@@ -137,12 +133,6 @@ virtual-audience-platform/
 - **Volumes:** `postgres_data:/var/lib/postgresql/data`
 - **Health Check:** `pg_isready`
 
-### 3. Nginx Reverse Proxy (nginx)
-- **Ports:** 80 (HTTP), 443 (HTTPS)
-- **Image:** nginx:alpine
-- **Features:** SSL termination, gzip compression, rate limiting
-- **Volumes:** `./nginx.conf`, `./ssl/`
-
 ## Management Commands
 
 ```bash
@@ -152,7 +142,6 @@ docker-compose logs -f
 # View specific service logs
 docker-compose logs -f app
 docker-compose logs -f db
-docker-compose logs -f nginx
 
 # Restart services
 docker-compose restart
@@ -187,7 +176,6 @@ docker-compose exec -T db psql -U postgres virtual_audience < backup.sql
    ```bash
    sudo ufw allow 22      # SSH
    sudo ufw allow 80      # HTTP
-   sudo ufw allow 443     # HTTPS
    sudo ufw enable
    ```
 
@@ -200,12 +188,7 @@ docker-compose exec -T db psql -U postgres virtual_audience < backup.sql
 
 ### For High Traffic:
 
-1. **Nginx Configuration:**
-   - Increase `worker_connections`
-   - Adjust rate limiting rules
-   - Enable caching for static assets
-
-2. **Database Optimization:**
+1. **Database Optimization:**
    - Increase PostgreSQL shared_buffers
    - Tune connection limits
    - Set up connection pooling
@@ -252,9 +235,6 @@ curl -f http://localhost/health
 
 # Database health
 docker-compose exec db pg_isready -U postgres
-
-# Nginx configuration test
-docker-compose exec nginx nginx -t
 ```
 
 ## Monitoring

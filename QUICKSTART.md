@@ -49,7 +49,6 @@ chmod +x deploy.sh && ./deploy.sh
 - **Docker Compose**: Multi-container orchestration
 - **Virtual Audience Platform**: Your streaming application
 - **PostgreSQL Database**: For data persistence
-- **Nginx Reverse Proxy**: For SSL and load balancing
 
 ---
 

@@ -75,7 +75,7 @@ echo "⏳ Waiting for services to be ready..."
 sleep 10
 
 # Check service health
-if docker-compose exec app curl -f http://localhost:5000/health &> /dev/null; then
+if curl -f http://localhost/health &> /dev/null; then
     echo "✅ Application is healthy!"
 else
     echo "⚠️  Application health check failed. Checking logs..."
