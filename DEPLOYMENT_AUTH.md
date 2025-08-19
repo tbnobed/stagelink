@@ -11,7 +11,7 @@ Virtual Audience Platform now includes a complete authentication system with URL
 - **Admin Panel**: Admins can create/delete users and manage platform
 - **URL Shortening**: 6-character short links that hide technical parameters from end users
 - **Link Security**: Automatic cleanup of expired links with proper error handling
-- **Session Tokens**: Single-use tokens prevent history replay attacks and link sharing abuse
+- **Session Tokens**: Reusable security tokens prevent unauthorized access to streaming sessions until link expiration or deletion
 
 ## 🚀 Quick Deployment (Production Ready)
 
@@ -73,6 +73,99 @@ The system creates a default admin account on first startup:
 1. Log in at `http://your-domain/auth`
 2. Click your username → "Profile"
 3. Change password in the profile section
+
+## 🔒 Session Token Security System
+
+The platform now includes a comprehensive session token system for enhanced security:
+
+### How Session Tokens Work
+
+1. **Token Generation**: Every streaming link (guest and viewer) gets a unique session token
+2. **Access Control**: All streaming pages require valid tokens to prevent unauthorized access
+3. **Token Validation**: Server validates tokens before allowing access to streaming sessions
+4. **Automatic Cleanup**: Tokens are automatically invalidated when links expire or are deleted
+5. **Reusable Until Expiration**: Tokens can be used multiple times until the link expires or is deleted
+
+### Token Security Features
+
+- **Full URL Protection**: Both short links (/s/abc123) and full URLs include session tokens
+- **Short Link Resolution**: Short links automatically redirect with proper session tokens
+- **Access Denied Pages**: Clear error messages for invalid, expired, or deleted tokens
+- **Database Storage**: Session tokens persist across server restarts when using DatabaseStorage
+- **Foreign Key Relationships**: Proper database constraints ensure data integrity
+
+### Deployment Benefits
+
+- **Prevents History Replay**: Old bookmarked URLs won't work if the link was deleted
+- **Secure Sharing**: Only users with valid tokens can access streaming sessions
+- **Audit Trail**: All token creation and validation is logged for security monitoring
+- **Production Ready**: Full PostgreSQL integration with proper indexing for performance
+
+### Token Lifecycle
+
+1. **Creation**: Token generated when link is created
+2. **Validation**: Token checked on every access to streaming pages
+3. **Reuse**: Same token works until link expires or is deleted
+4. **Invalidation**: Token becomes invalid when:
+   - Link is manually deleted by user/admin
+   - Link expires based on configured duration
+   - Associated link no longer exists in database
+
+## 📊 URL Shortening System
+
+### Short Link Features
+
+- **Clean URLs**: 6-character codes (e.g., /s/abc123) hide technical parameters
+- **User-Friendly**: No complex URLs with streams, tokens, or return feeds visible
+- **QR Code Ready**: Short links work perfectly for QR code generation
+- **Token Security**: Short links resolve to full URLs with proper session tokens
+- **Expiration Aware**: Short links respect the same expiration as their parent links
+
+### Short Link Types
+
+1. **Guest Session Links**: `/s/abc123` → redirects to guest session with token
+2. **Viewer Links**: `/sv/def456` → redirects to studio viewer with token  
+3. **Automatic Cleanup**: Expired short links are automatically removed
+
+## 🛠 Troubleshooting
+
+### Common Issues
+
+1. **"Access Denied" Messages**: Usually means link was deleted or expired
+2. **Token Validation Errors**: Check if link still exists in the Links page
+3. **Short Link Not Found**: Link may have expired or been manually deleted
+4. **Database Connection Issues**: Verify PostgreSQL is running and accessible
+
+### Debugging Session Tokens
+
+```bash
+# Check token validation directly
+curl -X POST http://localhost:5000/api/validate-token \
+  -H "Content-Type: application/json" \
+  -d '{"token":"your-token-here"}'
+
+# Expected response for valid token:
+# {"valid":true,"linkId":"123","linkType":"guest"}
+
+# Expected response for invalid token:
+# {"valid":false,"error":"Invalid or expired token"}
+```
+
+### Database Health Checks
+
+```bash
+# Connect to database container
+docker exec -it virtual-audience-db-v2 psql -U postgres -d virtual_audience
+
+# Check session tokens table
+SELECT count(*) FROM session_tokens;
+
+# Check links and their tokens
+SELECT l.id, l.stream_name, l.expires_at, st.id as token 
+FROM links l 
+LEFT JOIN session_tokens st ON l.id = st.link_id 
+WHERE st.link_type = 'guest';
+```
 
 ## 🔒 Session Token Security
 

@@ -97,6 +97,11 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Changed session tokens from single-use to reusable until link expiration or deletion per user requirements
 - **SECURITY FIX**: Session tokens are now properly invalidated when links are deleted, preventing access to deleted streaming sessions
 - Updated both MemStorage and DatabaseStorage to invalidate session tokens on link deletion
+- **DOCKER UPDATE**: Updated Docker deployment files to support latest session token security system
+- Fixed session_tokens table schema in init.sql to match current implementation (removed single-use fields, added link_type validation)
+- Updated DEPLOYMENT_AUTH.md with comprehensive session token documentation and troubleshooting guides
+- Short viewer links (/sv/:code) now properly include session tokens in redirected URLs for secure access
+- Docker deployment now preserves existing authentication data during updates while supporting new security features
 
 # User Preferences
 

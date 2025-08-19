@@ -85,25 +85,21 @@ CREATE TABLE IF NOT EXISTS "short_viewer_links" (
         "created_at" timestamp DEFAULT now() NOT NULL
 );
 
--- Session tokens table for single-use link security
+-- Session tokens table for reusable link security
 CREATE TABLE IF NOT EXISTS "session_tokens" (
         "id" varchar PRIMARY KEY NOT NULL,
-        "link_id" varchar,
-        "viewer_link_id" varchar,
-        "token_type" varchar NOT NULL,
-        "is_consumed" boolean DEFAULT false NOT NULL,
-        "expires_at" timestamp NOT NULL,
+        "link_id" varchar NOT NULL,
+        "link_type" varchar NOT NULL,
+        "expires_at" timestamp,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "created_by" integer NOT NULL,
-        CONSTRAINT "session_tokens_link_id_links_id_fk" FOREIGN KEY ("link_id") REFERENCES "links"("id") ON DELETE cascade ON UPDATE no action,
-        CONSTRAINT "session_tokens_viewer_link_id_viewer_links_id_fk" FOREIGN KEY ("viewer_link_id") REFERENCES "viewer_links"("id") ON DELETE cascade ON UPDATE no action,
         CONSTRAINT "session_tokens_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
 );
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "sessions" ("expire");
 CREATE INDEX IF NOT EXISTS "session_tokens_link_id_idx" ON "session_tokens" ("link_id");
-CREATE INDEX IF NOT EXISTS "session_tokens_viewer_link_id_idx" ON "session_tokens" ("viewer_link_id");
+CREATE INDEX IF NOT EXISTS "session_tokens_link_type_idx" ON "session_tokens" ("link_type");
 CREATE INDEX IF NOT EXISTS "session_tokens_expires_at_idx" ON "session_tokens" ("expires_at");
 
 -- Create default admin user (password: password - MUST be changed in production)
