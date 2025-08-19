@@ -15,7 +15,7 @@ export default function Navigation() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <img 
-              src="https://cdn2.obedtv.live:8088/players/obedtv.png" 
+              src="https://cdn2.obedtv.live:8088/obedtv.png" 
               alt="OBTV Logo" 
               className="h-8 w-auto mr-3 rounded"
               onError={(e) => {

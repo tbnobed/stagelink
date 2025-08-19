@@ -1,6 +1,12 @@
 import { Link } from "wouter";
 
 export default function Home() {
+  const stats = [
+    { label: "Uptime", value: "99.9%" },
+    { label: "Max Resolution", value: "1080p" },
+    { label: "Frame Rate", value: "30fps" },
+    { label: "Latency", value: "< 100ms" }
+  ];
 
   return (
     <div className="min-h-screen py-12 px-4">
@@ -85,6 +91,16 @@ export default function Home() {
               Open Link Generator
             </Link>
           </div>
+        </div>
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          {stats.map((stat, index) => (
+            <div key={index} className="va-bg-dark-surface-2 rounded-lg p-4">
+              <div className="text-2xl font-bold va-text-green">{stat.value}</div>
+              <div className="text-sm va-text-secondary">{stat.label}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

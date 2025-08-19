@@ -75,7 +75,7 @@ export default function Generator() {
     }
 
     const canvas = qrCanvasRef.current;
-    if (!canvas || !(window as any).QRCode) {
+    if (!canvas || !window.QRCode) {
       toast({
         title: "Error",
         description: "QR code library not loaded.",
@@ -84,7 +84,7 @@ export default function Generator() {
       return;
     }
 
-    (window as any).QRCode.toCanvas(canvas, generatedLink, {
+    window.QRCode.toCanvas(canvas, generatedLink, {
       width: 200,
       margin: 2,
       color: {
