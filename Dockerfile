@@ -42,8 +42,18 @@ COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 
-# Add startup script to handle database schema
-RUN echo '#!/bin/sh\necho "Waiting for database..."\nsleep 10\necho "Creating database schema..."\nnpx drizzle-kit push 2>/dev/null || echo "Schema exists"\necho "Starting application..."\nexec node dist/production.js' > /app/start.sh && chmod +x /app/start.sh && chown nodejs:nodejs /app/start.sh
+# Create startup script before switching to nodejs user
+RUN cat > /app/start.sh << 'EOF'
+#!/bin/sh
+echo "Waiting for database..."
+sleep 10
+echo "Creating database schema..."
+npx drizzle-kit push 2>/dev/null || echo "Schema exists"
+echo "Starting application..."
+exec node dist/production.js
+EOF
+
+RUN chmod +x /app/start.sh && chown nodejs:nodejs /app/start.sh
 
 # Switch to non-root user
 USER nodejs
