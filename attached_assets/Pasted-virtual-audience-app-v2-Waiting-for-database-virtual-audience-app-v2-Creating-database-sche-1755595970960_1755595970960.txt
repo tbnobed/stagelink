@@ -1,0 +1,87 @@
+virtual-audience-app-v2  | Waiting for database...
+virtual-audience-app-v2  | Creating database schema...
+virtual-audience-app-v2  | No config path provided, using default 'drizzle.config.ts'
+virtual-audience-app-v2  | Reading config file '/app/drizzle.config.ts'
+virtual-audience-app-v2  | Using 'pg' driver for database querying
+virtual-audience-db-v2   | The files belonging to this database system will be owned by user "postgres".
+virtual-audience-app-v2  | [⣷] Pulling schema from database...
+[✓] Pulling schema from database...
+virtual-audience-app-v2  | [✓] Changes applied
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | npm notice New major version of npm available! 10.8.2 -> 11.5.2
+virtual-audience-app-v2  | npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+virtual-audience-db-v2   | This user must also own the server process.
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | The database cluster will be initialized with locale "en_US.utf8".
+virtual-audience-db-v2   | The default database encoding has accordingly been set to "UTF8".
+virtual-audience-db-v2   | The default text search configuration will be set to "english".
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | Data page checksums are disabled.
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+virtual-audience-app-v2  | npm notice To update run: npm install -g npm@11.5.2
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | Starting application...
+virtual-audience-app-v2  | 9:32:09 AM [express] serving on port 5000
+virtual-audience-db-v2   | creating subdirectories ... ok
+virtual-audience-db-v2   | selecting dynamic shared memory implementation ... posix
+virtual-audience-db-v2   | selecting default max_connections ... 100
+virtual-audience-db-v2   | selecting default shared_buffers ... 128MB
+virtual-audience-db-v2   | selecting default time zone ... UTC
+virtual-audience-db-v2   | creating configuration files ... ok
+virtual-audience-db-v2   | running bootstrap script ... ok
+virtual-audience-db-v2   | sh: locale: not found
+virtual-audience-db-v2   | 2025-08-19 09:31:47.185 UTC [36] WARNING:  no usable system locales were found
+virtual-audience-db-v2   | performing post-bootstrap initialization ... ok
+virtual-audience-db-v2   | syncing data to disk ... ok
+virtual-audience-db-v2   |
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | Success. You can now start the database server using:
+virtual-audience-db-v2   |
+virtual-audience-db-v2   |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | initdb: warning: enabling "trust" authentication for local connections
+virtual-audience-db-v2   | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+virtual-audience-db-v2   | waiting for server to start....2025-08-19 09:31:47.789 UTC [42] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2   | 2025-08-19 09:31:47.790 UTC [42] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2   | 2025-08-19 09:31:47.796 UTC [45] LOG:  database system was shut down at 2025-08-19 09:31:47 UTC
+virtual-audience-db-v2   | 2025-08-19 09:31:47.805 UTC [42] LOG:  database system is ready to accept connections
+virtual-audience-db-v2   |  done
+virtual-audience-db-v2   | server started
+virtual-audience-db-v2   | CREATE DATABASE
+virtual-audience-db-v2   |
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql
+virtual-audience-db-v2   |  ?column?
+virtual-audience-db-v2   | ----------
+virtual-audience-db-v2   | (0 rows)
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | You are now connected to database "virtual_audience" as user "postgres".
+virtual-audience-db-v2   | GRANT
+virtual-audience-db-v2   | GRANT
+virtual-audience-db-v2   | GRANT
+virtual-audience-db-v2   | GRANT
+virtual-audience-db-v2   |
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | waiting for server to shut down....2025-08-19 09:31:48.004 UTC [42] LOG:  received fast shutdown request
+virtual-audience-db-v2   | 2025-08-19 09:31:48.006 UTC [42] LOG:  aborting any active transactions
+virtual-audience-db-v2   | 2025-08-19 09:31:48.011 UTC [42] LOG:  background worker "logical replication launcher" (PID 48) exited with exit code 1
+virtual-audience-db-v2   | 2025-08-19 09:31:48.012 UTC [43] LOG:  shutting down
+virtual-audience-db-v2   | 2025-08-19 09:31:48.013 UTC [43] LOG:  checkpoint starting: shutdown immediate
+virtual-audience-db-v2   | 2025-08-19 09:31:48.060 UTC [43] LOG:  checkpoint complete: wrote 921 buffers (5.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.026 s, sync=0.018 s, total=0.049 s; sync files=301, longest=0.001 s, average=0.001 s; distance=4239 kB, estimate=4239 kB
+virtual-audience-db-v2   | 2025-08-19 09:31:48.072 UTC [42] LOG:  database system is shut down
+virtual-audience-db-v2   |  done
+virtual-audience-db-v2   | server stopped
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | PostgreSQL init process complete; ready for start up.
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | 2025-08-19 09:31:48.140 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2   | 2025-08-19 09:31:48.140 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+virtual-audience-db-v2   | 2025-08-19 09:31:48.140 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+virtual-audience-db-v2   | 2025-08-19 09:31:48.143 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2   | 2025-08-19 09:31:48.147 UTC [61] LOG:  database system was shut down at 2025-08-19 09:31:48 UTC
+virtual-audience-db-v2   | 2025-08-19 09:31:48.157 UTC [1] LOG:  database system is ready to accept connections
+virtual-audience-app-v2  | 9:32:18 AM [express] POST /api/links 500 in 57ms :: {"error":"Failed to create link"}
+virtual-audience-app-v2  | 9:32:21 AM [express] POST /api/links 500 in 9ms :: {"error":"Failed to create link"}
+virtual-audience-app-v2  | 9:32:22 AM [express] POST /api/links 500 in 11ms :: {"error":"Failed to create link"}
+virtual-audience-app-v2  | 9:32:23 AM [express] POST /api/links 500 in 8ms :: {"error":"Failed to create link"}

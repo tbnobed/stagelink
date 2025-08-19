@@ -16,18 +16,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Links API routes
   app.get('/api/links', async (req, res) => {
     try {
+      console.log('Fetching all links...');
       const links = await storage.getAllLinks();
+      console.log('Links fetched successfully:', links.length, 'links');
       res.json(links);
     } catch (error) {
+      console.error('Failed to fetch links:', error);
       res.status(500).json({ error: 'Failed to fetch links' });
     }
   });
 
   app.post('/api/links', async (req, res) => {
     try {
+      console.log('Creating link with data:', req.body);
       const link = await storage.createLink(req.body);
+      console.log('Link created successfully:', link);
       res.json(link);
     } catch (error) {
+      console.error('Failed to create link:', error);
       res.status(500).json({ error: 'Failed to create link' });
     }
   });

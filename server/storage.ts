@@ -1,7 +1,7 @@
 import { users, generatedLinks, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, lt } from "drizzle-orm";
+import { eq, lt, and, isNotNull } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -128,14 +128,19 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(generatedLinks)
       .where(eq(generatedLinks.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async deleteExpiredLinks(): Promise<number> {
     const now = new Date();
     const result = await db
       .delete(generatedLinks)
-      .where(lt(generatedLinks.expiresAt, now));
+      .where(
+        and(
+          isNotNull(generatedLinks.expiresAt),
+          lt(generatedLinks.expiresAt, now)
+        )
+      );
     return result.rowCount || 0;
   }
 }
