@@ -8,6 +8,9 @@ This guide will help you deploy the Virtual Audience Platform v2.0 on your Ubunt
 - ✅ Improved Docker health checks and build process
 - ✅ Enhanced production server with proper error handling
 - ✅ Links now persist and sync across all users and browsers
+- ✅ Fixed QR code generation with proper npm package integration
+- ✅ Added production Docker compose configuration
+- ✅ Enhanced deployment scripts with QR code support verification
 
 ## Prerequisites
 

@@ -8,7 +8,7 @@ if [ "$1" ]; then
     BASE_URL="$1"
 fi
 
-echo "🧪 Testing Virtual Audience Platform API at $BASE_URL"
+echo "🧪 Testing Virtual Audience Platform v2.0 API (with QR Code support) at $BASE_URL"
 echo ""
 
 # Test health endpoint
@@ -75,3 +75,11 @@ echo "   GET    $BASE_URL/api/links       - List all links"
 echo "   POST   $BASE_URL/api/links       - Create new link"
 echo "   DELETE $BASE_URL/api/links/:id   - Delete specific link"
 echo "   DELETE $BASE_URL/api/links       - Delete expired links"
+echo ""
+echo "🆕 v2.0 Features Available:"
+echo "   ✓ QR Code generation for all links"
+echo "   ✓ Cross-browser link sharing"
+echo "   ✓ Real-time link synchronization"
+echo "   ✓ Link expiration management"
+echo "   ✓ WHIP/WHEP streaming support"
+echo "   ✓ Live stream preview functionality"

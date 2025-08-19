@@ -1,4 +1,4 @@
-# Multi-stage build for Virtual Audience Platform
+# Multi-stage build for Virtual Audience Platform v2.0
 FROM node:18-alpine AS builder
 
 # Set working directory
@@ -30,9 +30,12 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Install only production dependencies
+# Install only production dependencies (including qrcode for QR generation)
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
+
+# Verify QR code package is installed
+RUN node -e "console.log('QR Code package available:', !!require('qrcode'))"
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
