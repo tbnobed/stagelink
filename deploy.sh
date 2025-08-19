@@ -7,13 +7,37 @@ echo "🚀 Starting Virtual Audience Platform deployment..."
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker is not installed. Please install Docker first."
-    exit 1
+    echo "❌ Docker is not installed."
+    echo ""
+    echo "Would you like to install Docker automatically? (y/n)"
+    read -r response
+    if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+        echo "🔧 Running Docker installation script..."
+        chmod +x install-docker.sh
+        ./install-docker.sh
+        echo ""
+        echo "⚠️  Please log out and log back in, then run ./deploy.sh again"
+        echo "Or run: newgrp docker && ./deploy.sh"
+        exit 0
+    else
+        echo "Please install Docker manually and run this script again."
+        echo "Installation script available: ./install-docker.sh"
+        exit 1
+    fi
 fi
 
 # Check if Docker Compose is installed
 if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose is not installed. Please install Docker Compose first."
+    echo "❌ Docker Compose is not installed. Please run the Docker installation script:"
+    echo "./install-docker.sh"
+    exit 1
+fi
+
+# Check if user is in docker group
+if ! groups $USER | grep &>/dev/null '\bdocker\b'; then
+    echo "⚠️  User $USER is not in the docker group."
+    echo "Run: sudo usermod -aG docker $USER && newgrp docker"
+    echo "Then run this script again."
     exit 1
 fi
 

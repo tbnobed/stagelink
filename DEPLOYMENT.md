@@ -11,21 +11,34 @@ This guide will help you deploy the Virtual Audience Platform on your Ubuntu ser
 
 ## Quick Deployment
 
-1. **Clone/Upload the project to your Ubuntu server**
-
-2. **Make deployment script executable:**
+### For New Servers (Docker Not Installed):
+1. **Install Docker:**
    ```bash
-   chmod +x deploy.sh
+   chmod +x install-docker.sh && ./install-docker.sh
    ```
 
-3. **Run the deployment script:**
+2. **Refresh user permissions:**
+   ```bash
+   # Log out and back in, OR run:
+   newgrp docker
+   ```
+
+3. **Deploy the application:**
    ```bash
    ./deploy.sh
+   ```
+
+### For Servers with Docker:
+1. **Run deployment:**
+   ```bash
+   chmod +x deploy.sh && ./deploy.sh
    ```
 
 4. **Access your application:**
    - HTTP: `http://your-server-ip`
    - HTTPS: `https://your-server-ip`
+
+> **See QUICKSTART.md for simplified instructions**
 
 ## Manual Deployment Steps
 
