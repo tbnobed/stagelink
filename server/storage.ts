@@ -382,15 +382,8 @@ export class MemStorage implements IStorage {
       return { valid: false };
     }
     
-    // Check if token has been used
-    if (sessionToken.used) {
-      console.log('Token has already been used');
-      return { valid: false };
-    }
-    
-    // Mark token as used (single-use)
-    sessionToken.used = true;
-    console.log('Token validated and consumed successfully');
+    // Token is valid and can be used multiple times until expiration or deletion
+    console.log('Token validated successfully');
     
     return { 
       valid: true, 
@@ -404,7 +397,6 @@ export class MemStorage implements IStorage {
       id: randomUUID(),
       linkId,
       linkType,
-      used: false,
       createdAt: new Date(),
       expiresAt,
       createdBy: userId || null,
@@ -771,17 +763,7 @@ export class DatabaseStorage implements IStorage {
       return { valid: false };
     }
 
-    // Check if token has already been used
-    if (sessionToken.used) {
-      return { valid: false };
-    }
-
-    // Mark token as used (consume it for single-use)
-    await db
-      .update(sessionTokens)
-      .set({ used: true })
-      .where(eq(sessionTokens.id, token));
-
+    // Token is valid and can be used multiple times until expiration or deletion
     return {
       valid: true,
       linkId: sessionToken.linkId || undefined,
@@ -797,7 +779,6 @@ export class DatabaseStorage implements IStorage {
         id: tokenId,
         linkId,
         linkType,
-        used: false,
         createdAt: new Date(),
         expiresAt,
         createdBy: userId || null,

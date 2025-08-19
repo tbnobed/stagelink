@@ -68,12 +68,11 @@ export const insertShortLinkSchema = createInsertSchema(shortLinks).omit({
 export type InsertShortLink = z.infer<typeof insertShortLinkSchema>;
 export type ShortLink = typeof shortLinks.$inferSelect;
 
-// Session tokens table for one-time use tokens to prevent replay attacks
+// Session tokens table for reusable tokens that expire or get deleted with links
 export const sessionTokens = pgTable("session_tokens", {
   id: text("id").primaryKey(), // UUID token
   linkId: text("link_id"), // Can be null for direct access tokens
   linkType: text("link_type"), // 'guest', 'viewer', or 'short'
-  used: boolean("used").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at").notNull(),
   createdBy: integer("created_by").references(() => users.id),
