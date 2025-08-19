@@ -192,10 +192,10 @@ export default function Generator() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="va-bg-dark-surface-2 va-border-dark">
-                    <SelectItem value="studio1">Studio 1 (Main)</SelectItem>
-                    <SelectItem value="studio2">Studio 2 (Backup)</SelectItem>
-                    <SelectItem value="studio3">Studio 3 (Guest)</SelectItem>
-                    <SelectItem value="studio4">Studio 4 (Archive)</SelectItem>
+                    <SelectItem value="livestream1">Studio 1 (Main)</SelectItem>
+                    <SelectItem value="livestream2">Studio 2 (Backup)</SelectItem>
+                    <SelectItem value="livestream3">Studio 3 (Guest)</SelectItem>
+                    <SelectItem value="livestream5">Studio 4 (Archive)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
