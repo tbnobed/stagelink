@@ -61,9 +61,14 @@ export default function Session() {
           return;
         }
       } else {
-        // For development - allow access without token (MemStorage mode)
-        console.warn('No session token provided - allowing access in development mode');
-        setTokenValid(true);
+        // No token provided - deny access
+        toast({
+          title: "Access Denied",
+          description: "This session requires a valid token. Please use the link provided to you.",
+          variant: "destructive",
+        });
+        setLocation('/');
+        return;
       }
 
       setIsValidatingToken(false);
