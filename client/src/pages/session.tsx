@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { initializeStreaming, startPublishing, stopPublishing, startPlayback } from "@/lib/streaming";
 
@@ -10,12 +9,8 @@ export default function Session() {
   const [audioCodec, setAudioCodec] = useState("-");
   const [videoCodec, setVideoCodec] = useState("-");
   const [showChat, setShowChat] = useState(false);
-  const [chatMessages, setChatMessages] = useState<Array<{id: number, user: string, message: string, timestamp: Date}>>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [username, setUsername] = useState("Guest");
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -27,15 +22,6 @@ export default function Session() {
 
     if (chatEnabled) {
       setShowChat(true);
-      // Add welcome message
-      setChatMessages([
-        {
-          id: 1,
-          user: "System",
-          message: "Welcome to the live chat! Share your thoughts and questions here.",
-          timestamp: new Date()
-        }
-      ]);
     }
 
     // Initialize streaming
@@ -87,34 +73,6 @@ export default function Session() {
 
   const toggleChat = () => {
     setShowChat(!showChat);
-  };
-
-  const sendMessage = () => {
-    if (!newMessage.trim()) return;
-    
-    const message = {
-      id: Date.now(),
-      user: username,
-      message: newMessage.trim(),
-      timestamp: new Date()
-    };
-    
-    setChatMessages(prev => [...prev, message]);
-    setNewMessage("");
-    
-    // Auto-scroll to bottom
-    setTimeout(() => {
-      if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-      }
-    }, 100);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
   };
 
   return (
@@ -239,59 +197,10 @@ export default function Session() {
                     Live Chat
                   </h4>
                 </div>
-                
-                {/* Chat Messages */}
-                <div 
-                  ref={chatContainerRef}
-                  className="flex-1 overflow-y-auto p-3 space-y-3 h-72"
-                  style={{ maxHeight: '280px' }}
-                >
-                  {chatMessages.map((msg) => (
-                    <div key={msg.id} className="flex flex-col">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className={`text-sm font-medium ${
-                          msg.user === 'System' ? 'va-text-green' : 'text-blue-400'
-                        }`}>
-                          {msg.user}
-                        </span>
-                        <span className="text-xs va-text-secondary">
-                          {msg.timestamp.toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="va-text-primary text-sm bg-va-dark-bg rounded px-3 py-2">
-                        {msg.message}
-                      </div>
-                    </div>
-                  ))}
-                  {chatMessages.length === 0 && (
-                    <div className="text-center va-text-secondary py-8">
-                      <i className="fas fa-comments text-2xl mb-2"></i>
-                      <p>No messages yet. Start the conversation!</p>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Chat Input */}
-                <div className="p-3 border-t va-border-dark">
-                  <div className="flex space-x-2">
-                    <Input
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={handleKeyPress}
-                      placeholder="Type a message..."
-                      className="flex-1 va-bg-dark-bg va-border-dark va-text-primary placeholder:text-gray-500 focus:ring-va-primary focus:border-transparent"
-                      data-testid="input-chat-message"
-                    />
-                    <Button
-                      onClick={sendMessage}
-                      disabled={!newMessage.trim()}
-                      className="va-bg-primary hover:va-bg-primary-dark text-va-dark-bg px-4"
-                      data-testid="button-send-message"
-                    >
-                      <i className="fas fa-paper-plane"></i>
-                    </Button>
-                  </div>
-                </div>
+                <iframe 
+                  src="https://dev.blabb.me/room/pe9gg8" 
+                  className="w-full h-full border-none"
+                />
               </div>
             )}
 
