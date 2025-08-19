@@ -1,0 +1,238 @@
+📊 Service Status:
+NAME                   IMAGE                COMMAND                  SERVICE   CREATED          STATUS                                  PORTS
+virtual-audience-app   stagelink-app        "dumb-init -- node d…"   app       11 seconds ago   Restarting (1) Less than a second ago
+virtual-audience-db    postgres:15-alpine   "docker-entrypoint.s…"   db        11 seconds ago   Up 10 seconds (healthy)                 0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+
+🌐 Access your application at:
+   HTTP:  http://localhost
+   HTTP:  http://192.168.3.235
+
+📝 Useful commands:
+   View logs:    docker-compose logs -f
+   Stop:         docker-compose down
+   Restart:      docker-compose restart
+   Update:       ./deploy.sh
+
+⚠️  Production checklist:
+   1. Update default passwords in .env file
+   2. Configure your domain name in nginx.conf
+   3. Set up proper firewall rules
+   4. Consider adding SSL/HTTPS for production use
+obtv-admin@stagelink:~/stagelink$ docker-compose logs -f
+virtual-audience-app  | node:internal/errors:496
+virtual-audience-app  |     ErrorCaptureStackTrace(err);
+virtual-audience-app  |     ^
+virtual-audience-app  |
+virtual-audience-db   | The files belonging to this database system will be owned by user "postgres".
+virtual-audience-db   | This user must also own the server process.
+virtual-audience-db   |
+virtual-audience-app  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+virtual-audience-app  |     at new NodeError (node:internal/errors:405:5)
+virtual-audience-app  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+virtual-audience-app  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+virtual-audience-app  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+virtual-audience-app  |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+virtual-audience-app  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+virtual-audience-app  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+virtual-audience-app  |     at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+virtual-audience-db   | The database cluster will be initialized with locale "en_US.utf8".
+virtual-audience-db   | The default database encoding has accordingly been set to "UTF8".
+virtual-audience-db   | The default text search configuration will be set to "english".
+virtual-audience-db   |
+virtual-audience-db   | Data page checksums are disabled.
+virtual-audience-db   |
+virtual-audience-db   | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+virtual-audience-db   | creating subdirectories ... ok
+virtual-audience-app  |     at link (node:internal/modules/esm/module_job:75:36) {
+virtual-audience-app  |   code: 'ERR_MODULE_NOT_FOUND'
+virtual-audience-app  | }
+virtual-audience-app  |
+virtual-audience-app  | Node.js v18.20.8
+virtual-audience-db   | selecting dynamic shared memory implementation ... posix
+virtual-audience-db   | selecting default max_connections ... 100
+virtual-audience-db   | selecting default shared_buffers ... 128MB
+virtual-audience-db   | selecting default time zone ... UTC
+virtual-audience-app  | node:internal/errors:496
+virtual-audience-app  |     ErrorCaptureStackTrace(err);
+virtual-audience-app  |     ^
+virtual-audience-app  |
+virtual-audience-app  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+virtual-audience-db   | creating configuration files ... ok
+virtual-audience-db   | running bootstrap script ... ok
+virtual-audience-app  |     at new NodeError (node:internal/errors:405:5)
+virtual-audience-app  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+virtual-audience-app  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+virtual-audience-app  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+virtual-audience-app  |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+virtual-audience-db   | sh: locale: not found
+virtual-audience-db   | 2025-08-19 08:05:49.619 UTC [35] WARNING:  no usable system locales were found
+virtual-audience-db   | performing post-bootstrap initialization ... ok
+virtual-audience-db   | syncing data to disk ... ok
+virtual-audience-db   |
+virtual-audience-db   |
+virtual-audience-db   | Success. You can now start the database server using:
+virtual-audience-db   |
+virtual-audience-app  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+virtual-audience-app  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+virtual-audience-app  |     at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+virtual-audience-app  |     at link (node:internal/modules/esm/module_job:75:36) {
+virtual-audience-app  |   code: 'ERR_MODULE_NOT_FOUND'
+virtual-audience-app  | }
+virtual-audience-db   |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+virtual-audience-db   |
+virtual-audience-db   | initdb: warning: enabling "trust" authentication for local connections
+virtual-audience-db   | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+virtual-audience-db   | waiting for server to start....2025-08-19 08:05:50.266 UTC [41] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db   | 2025-08-19 08:05:50.267 UTC [41] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db   | 2025-08-19 08:05:50.272 UTC [44] LOG:  database system was shut down at 2025-08-19 08:05:50 UTC
+virtual-audience-db   | 2025-08-19 08:05:50.281 UTC [41] LOG:  database system is ready to accept connections
+virtual-audience-db   |  done
+virtual-audience-db   | server started
+virtual-audience-db   | CREATE DATABASE
+virtual-audience-db   |
+virtual-audience-db   |
+virtual-audience-db   | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql
+virtual-audience-db   |  ?column?
+virtual-audience-db   | ----------
+virtual-audience-db   | (0 rows)
+virtual-audience-db   |
+virtual-audience-db   | You are now connected to database "virtual_audience" as user "postgres".
+virtual-audience-db   | CREATE TABLE
+virtual-audience-db   | CREATE TABLE
+virtual-audience-db   | ALTER TABLE
+virtual-audience-app  |
+virtual-audience-app  | Node.js v18.20.8
+virtual-audience-db   | CREATE INDEX
+virtual-audience-app  | node:internal/errors:496
+virtual-audience-app  |     ErrorCaptureStackTrace(err);
+virtual-audience-app  |     ^
+virtual-audience-db   | CREATE TABLE
+virtual-audience-db   | CREATE INDEX
+virtual-audience-db   | CREATE INDEX
+virtual-audience-db   | INSERT 0 1
+virtual-audience-db   | GRANT
+virtual-audience-db   |
+virtual-audience-app  |
+virtual-audience-app  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+virtual-audience-app  |     at new NodeError (node:internal/errors:405:5)
+virtual-audience-app  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+virtual-audience-app  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+virtual-audience-db   |
+virtual-audience-db   | waiting for server to shut down...2025-08-19 08:05:50.508 UTC [41] LOG:  received fast shutdown request
+virtual-audience-db   | .2025-08-19 08:05:50.510 UTC [41] LOG:  aborting any active transactions
+virtual-audience-app  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+virtual-audience-app  |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+virtual-audience-app  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+virtual-audience-app  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+virtual-audience-app  |     at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+virtual-audience-db   | 2025-08-19 08:05:50.515 UTC [41] LOG:  background worker "logical replication launcher" (PID 47) exited with exit code 1
+virtual-audience-db   | 2025-08-19 08:05:50.515 UTC [42] LOG:  shutting down
+virtual-audience-db   | 2025-08-19 08:05:50.516 UTC [42] LOG:  checkpoint starting: shutdown immediate
+virtual-audience-db   | 2025-08-19 08:05:50.560 UTC [42] LOG:  checkpoint complete: wrote 936 buffers (5.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.018 s, sync=0.024 s, total=0.046 s; sync files=319, longest=0.001 s, average=0.001 s; distance=4310 kB, estimate=4310 kB
+virtual-audience-db   | 2025-08-19 08:05:50.573 UTC [41] LOG:  database system is shut down
+virtual-audience-db   |  done
+virtual-audience-db   | server stopped
+virtual-audience-app  |     at link (node:internal/modules/esm/module_job:75:36) {
+virtual-audience-app  |   code: 'ERR_MODULE_NOT_FOUND'
+virtual-audience-app  | }
+virtual-audience-app  |
+virtual-audience-app  | Node.js v18.20.8
+virtual-audience-db   |
+virtual-audience-app  | node:internal/errors:496
+virtual-audience-db   | PostgreSQL init process complete; ready for start up.
+virtual-audience-db   |
+virtual-audience-db   | 2025-08-19 08:05:50.641 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db   | 2025-08-19 08:05:50.641 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+virtual-audience-db   | 2025-08-19 08:05:50.641 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+virtual-audience-db   | 2025-08-19 08:05:50.644 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db   | 2025-08-19 08:05:50.649 UTC [60] LOG:  database system was shut down at 2025-08-19 08:05:50 UTC
+virtual-audience-db   | 2025-08-19 08:05:50.656 UTC [1] LOG:  database system is ready to accept connections
+virtual-audience-app  |     ErrorCaptureStackTrace(err);
+virtual-audience-app  |     ^
+virtual-audience-app  |
+virtual-audience-app  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+virtual-audience-app  |     at new NodeError (node:internal/errors:405:5)
+virtual-audience-app  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+virtual-audience-app  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+virtual-audience-app  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+virtual-audience-app  |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+virtual-audience-app  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+virtual-audience-app  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+virtual-audience-app  |     at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+virtual-audience-app  |     at link (node:internal/modules/esm/module_job:75:36) {
+virtual-audience-app  |   code: 'ERR_MODULE_NOT_FOUND'
+virtual-audience-app  | }
+virtual-audience-app  |
+virtual-audience-app  | Node.js v18.20.8
+virtual-audience-app  | node:internal/errors:496
+virtual-audience-app  |     ErrorCaptureStackTrace(err);
+virtual-audience-app  |     ^
+virtual-audience-app  |
+virtual-audience-app  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+virtual-audience-app  |     at new NodeError (node:internal/errors:405:5)
+virtual-audience-app  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+virtual-audience-app  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+virtual-audience-app  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+virtual-audience-app  |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+virtual-audience-app  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+virtual-audience-app  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+virtual-audience-app  |     at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+virtual-audience-app  |     at link (node:internal/modules/esm/module_job:75:36) {
+virtual-audience-app  |   code: 'ERR_MODULE_NOT_FOUND'
+virtual-audience-app  | }
+virtual-audience-app  |
+virtual-audience-app  | Node.js v18.20.8
+virtual-audience-app  | node:internal/errors:496
+virtual-audience-app  |     ErrorCaptureStackTrace(err);
+virtual-audience-app  |     ^
+virtual-audience-app  |
+virtual-audience-app  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+virtual-audience-app  |     at new NodeError (node:internal/errors:405:5)
+virtual-audience-app  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+virtual-audience-app  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+virtual-audience-app  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+virtual-audience-app  |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+virtual-audience-app  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+virtual-audience-app  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+virtual-audience-app  |     at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+virtual-audience-app  |     at link (node:internal/modules/esm/module_job:75:36) {
+virtual-audience-app  |   code: 'ERR_MODULE_NOT_FOUND'
+virtual-audience-app  | }
+virtual-audience-app  |
+virtual-audience-app  | Node.js v18.20.8
+virtual-audience-app  | node:internal/errors:496
+virtual-audience-app  |     ErrorCaptureStackTrace(err);
+virtual-audience-app  |     ^
+virtual-audience-app  |
+virtual-audience-app  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+virtual-audience-app  |     at new NodeError (node:internal/errors:405:5)
+virtual-audience-app  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+virtual-audience-app  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+virtual-audience-app  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+virtual-audience-app  |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+virtual-audience-app  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+virtual-audience-app  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+virtual-audience-app  |     at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+virtual-audience-app  |     at link (node:internal/modules/esm/module_job:75:36) {
+virtual-audience-app  |   code: 'ERR_MODULE_NOT_FOUND'
+virtual-audience-app  | }
+virtual-audience-app  |
+virtual-audience-app  | Node.js v18.20.8
+virtual-audience-app  | node:internal/errors:496
+virtual-audience-app  |     ErrorCaptureStackTrace(err);
+virtual-audience-app  |     ^
+virtual-audience-app  |
+virtual-audience-app  | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /app/dist/index.js
+virtual-audience-app  |     at new NodeError (node:internal/errors:405:5)
+virtual-audience-app  |     at packageResolve (node:internal/modules/esm/resolve:916:9)
+virtual-audience-app  |     at moduleResolve (node:internal/modules/esm/resolve:973:20)
+virtual-audience-app  |     at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+virtual-audience-app  |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+virtual-audience-app  |     at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+virtual-audience-app  |     at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+virtual-audience-app  |     at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+virtual-audience-app  |     at link (node:internal/modules/esm/module_job:75:36) {
+virtual-audience-app  |   code: 'ERR_MODULE_NOT_FOUND'
+virtual-audience-app  | }
+virtual-audience-app  |
+virtual-audience-app  | Node.js v18.20.8
