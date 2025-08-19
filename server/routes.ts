@@ -18,6 +18,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Session Token Validation API
+  app.post('/api/validate-token', async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ valid: false, error: 'Token is required' });
+      }
+
+      const result = await storage.validateAndConsumeSessionToken(token);
+      if (!result.valid) {
+        return res.status(401).json({ valid: false, error: 'Invalid or expired token' });
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Token validation error:', error);
+      res.status(500).json({ valid: false, error: 'Token validation failed' });
+    }
+  });
+
   // User management routes (Admin only)
   app.get('/api/users', requireAdmin, async (req, res) => {
     try {
@@ -117,8 +137,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Creating link with data:', req.body);
       const userId = (req.user as any)?.id;
-      const link = await storage.createLink(req.body, userId);
-      console.log('Link created successfully:', link);
+      
+      // Create session token for this link
+      const linkExpiry = req.body.expiresAt ? new Date(req.body.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours default
+      const sessionToken = await storage.createSessionToken(req.body.id, 'guest', linkExpiry, userId);
+      
+      // Add session token to the link data and URL
+      const linkData = {
+        ...req.body,
+        sessionToken: sessionToken.id,
+        url: `${req.body.url}&token=${sessionToken.id}` // Add token to URL
+      };
+      
+      const link = await storage.createLink(linkData, userId);
+      console.log('Link created successfully with session token:', link);
       res.json(link);
     } catch (error) {
       console.error('Failed to create link:', error);
@@ -199,14 +231,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = (req.user as any)?.id;
       const { id, returnFeed, chatEnabled, url, expiresAt } = req.body;
       
-      const viewerLink = await storage.createViewerLink({
+      // Create session token for this viewer link
+      const linkExpiry = expiresAt ? new Date(expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours default
+      const sessionToken = await storage.createSessionToken(id, 'viewer', linkExpiry, userId);
+      
+      // Add session token to the viewer link data and URL
+      const viewerLinkData = {
         id,
         returnFeed,
         chatEnabled: chatEnabled ?? false,
-        url,
+        url: `${url}&token=${sessionToken.id}`, // Add token to URL
         expiresAt: expiresAt ? new Date(expiresAt) : null,
-      }, userId);
-
+        sessionToken: sessionToken.id,
+      };
+      
+      const viewerLink = await storage.createViewerLink(viewerLinkData, userId);
+      console.log('Viewer link created successfully with session token:', viewerLink);
       res.json(viewerLink);
     } catch (error) {
       console.error('Failed to create viewer link:', error);

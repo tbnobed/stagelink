@@ -19,29 +19,77 @@ export default function StudioViewer() {
   const [chatEnabled, setChatEnabled] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [returnFeed, setReturnFeed] = useState("");
+  const [isValidatingToken, setIsValidatingToken] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get parameters from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const returnParam = urlParams.get('return');
-    const chatParam = urlParams.get('chat');
+    const validateTokenAndInitialize = async () => {
+      // Get parameters from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const returnParam = urlParams.get('return');
+      const chatParam = urlParams.get('chat');
+      const token = urlParams.get('token');
 
-    if (!returnParam) {
-      toast({
-        title: "Error",
-        description: "No return feed specified",
-        variant: "destructive",
-      });
-      setLocation('/');
-      return;
-    }
+      if (!returnParam) {
+        toast({
+          title: "Error",
+          description: "No return feed specified",
+          variant: "destructive",
+        });
+        setLocation('/');
+        return;
+      }
 
-    setReturnFeed(returnParam);
-    setChatEnabled(chatParam === 'true');
-    setShowChat(chatParam === 'true');
+      // Validate session token if provided
+      if (token) {
+        try {
+          const response = await fetch('/api/validate-token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token }),
+          });
+
+          const result = await response.json();
+          
+          if (!result.valid) {
+            toast({
+              title: "Access Denied",
+              description: "This viewer link has expired or been used already. Please request a new link.",
+              variant: "destructive",
+            });
+            setLocation('/');
+            return;
+          }
+          
+          setTokenValid(true);
+        } catch (error) {
+          console.error('Token validation failed:', error);
+          toast({
+            title: "Access Denied",
+            description: "Unable to validate session token. Please try again.",
+            variant: "destructive",
+          });
+          setLocation('/');
+          return;
+        }
+      } else {
+        // For development - allow access without token (MemStorage mode)
+        console.warn('No session token provided - allowing access in development mode');
+        setTokenValid(true);
+      }
+
+      setIsValidatingToken(false);
+      setReturnFeed(returnParam);
+      setChatEnabled(chatParam === 'true');
+      setShowChat(chatParam === 'true');
+    };
+
+    validateTokenAndInitialize();
   }, [setLocation, toast]);
 
   // Cleanup on unmount
@@ -166,6 +214,32 @@ export default function StudioViewer() {
       description: "Stopped viewing return feed",
     });
   };
+
+  // Show loading state while validating token
+  if (isValidatingToken) {
+    return (
+      <div className="min-h-screen va-bg-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-va-primary mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold va-text-primary mb-2">Validating Access</h2>
+          <p className="va-text-secondary">Please wait while we verify your viewer token...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied state if token is invalid
+  if (!tokenValid) {
+    return (
+      <div className="min-h-screen va-bg-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">🚫</div>
+          <h2 className="text-xl font-semibold va-text-primary mb-2">Access Denied</h2>
+          <p className="va-text-secondary">This viewer link is no longer valid.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-8 px-4">

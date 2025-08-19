@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull } from "drizzle-orm";
@@ -40,6 +40,11 @@ export interface IStorage {
   createShortViewerLink(shortViewerLink: InsertShortViewerLink, userId?: number): Promise<ShortViewerLink>;
   deleteShortViewerLink(code: string): Promise<boolean>;
   deleteExpiredShortViewerLinks(): Promise<number>;
+  
+  // Session Tokens
+  validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }>;
+  createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken>;
+  cleanupExpiredTokens(): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -127,6 +132,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       expiresAt: insertLink.expiresAt ? new Date(insertLink.expiresAt) : null,
       createdBy: userId || null,
+      sessionToken: null, // Always null in MemStorage
     };
     this.links.set(link.id, link);
     return link;
@@ -209,6 +215,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       expiresAt: insertShortLink.expiresAt ? new Date(insertShortLink.expiresAt) : null,
       createdBy: userId || null,
+      sessionToken: null, // Always null in MemStorage
     };
     this.shortLinks.set(shortLink.id, shortLink);
     return shortLink;
@@ -248,6 +255,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       expiresAt: insertViewerLink.expiresAt ? new Date(insertViewerLink.expiresAt) : null,
       createdBy: userId || null,
+      sessionToken: null, // Always null in MemStorage
     };
     this.viewerLinks.set(viewerLink.id, viewerLink);
     return viewerLink;
@@ -313,6 +321,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       expiresAt: insertShortViewerLink.expiresAt ? new Date(insertShortViewerLink.expiresAt) : null,
       createdBy: userId || null,
+      sessionToken: null, // Always null in MemStorage
     };
     this.shortViewerLinks.set(shortViewerLink.id, shortViewerLink);
     return shortViewerLink;
@@ -334,6 +343,30 @@ export class MemStorage implements IStorage {
     }
     
     return deletedCount;
+  }
+
+  // Session Token Methods (Not implemented for MemStorage - tokens are used for production)
+  async validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }> {
+    console.warn('Session tokens not supported in MemStorage - using in memory storage');
+    return { valid: true }; // Allow all access in development mode
+  }
+
+  async createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken> {
+    console.warn('Session tokens not supported in MemStorage');
+    return {
+      id: randomUUID(),
+      linkId,
+      linkType,
+      used: false,
+      createdAt: new Date(),
+      expiresAt,
+      createdBy: userId || null,
+    };
+  }
+
+  async cleanupExpiredTokens(): Promise<number> {
+    console.warn('Token cleanup not needed in MemStorage');
+    return 0;
   }
 }
 
@@ -664,6 +697,67 @@ export class DatabaseStorage implements IStorage {
           lt(shortViewerLinks.expiresAt, now)
         )
       );
+    return result.rowCount || 0;
+  }
+
+  // Session Token Methods
+  async validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }> {
+    const [sessionToken] = await db
+      .select()
+      .from(sessionTokens)
+      .where(eq(sessionTokens.id, token));
+
+    if (!sessionToken) {
+      return { valid: false };
+    }
+
+    // Check if token has expired
+    if (sessionToken.expiresAt <= new Date()) {
+      // Clean up expired token
+      await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
+      return { valid: false };
+    }
+
+    // Check if token has already been used
+    if (sessionToken.used) {
+      return { valid: false };
+    }
+
+    // Mark token as used (consume it for single-use)
+    await db
+      .update(sessionTokens)
+      .set({ used: true })
+      .where(eq(sessionTokens.id, token));
+
+    return {
+      valid: true,
+      linkId: sessionToken.linkId || undefined,
+      linkType: sessionToken.linkType || undefined,
+    };
+  }
+
+  async createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken> {
+    const tokenId = randomUUID();
+    const [token] = await db
+      .insert(sessionTokens)
+      .values({
+        id: tokenId,
+        linkId,
+        linkType,
+        used: false,
+        createdAt: new Date(),
+        expiresAt,
+        createdBy: userId || null,
+      })
+      .returning();
+    return token;
+  }
+
+  async cleanupExpiredTokens(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .delete(sessionTokens)
+      .where(lt(sessionTokens.expiresAt, now));
     return result.rowCount || 0;
   }
 }

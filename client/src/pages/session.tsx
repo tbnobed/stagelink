@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { initializeStreaming, startPublishing, stopPublishing, startPlayback } from "@/lib/streaming";
 
 export default function Session() {
@@ -9,33 +10,83 @@ export default function Session() {
   const [audioCodec, setAudioCodec] = useState("-");
   const [videoCodec, setVideoCodec] = useState("-");
   const [showChat, setShowChat] = useState(false);
+  const [isValidatingToken, setIsValidatingToken] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
-    // Parse URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const stream = urlParams.get('stream');
-    const returnStream = urlParams.get('return');
-    const chatEnabled = urlParams.get('chat') === 'true';
+    const validateTokenAndInitialize = async () => {
+      // Parse URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const stream = urlParams.get('stream');
+      const returnStream = urlParams.get('return');
+      const chatEnabled = urlParams.get('chat') === 'true';
 
-    if (chatEnabled) {
-      setShowChat(true);
-    }
+      // Validate session token if provided
+      if (token) {
+        try {
+          const response = await fetch('/api/validate-token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token }),
+          });
 
-    // Initialize streaming
-    initializeStreaming({
-      stream: stream || 'obed2',
-      returnStream: returnStream || stream || 'obed2',
-      app: 'live'
-    });
+          const result = await response.json();
+          
+          if (!result.valid) {
+            toast({
+              title: "Access Denied",
+              description: "This link has expired or been used already. Please request a new link.",
+              variant: "destructive",
+            });
+            setLocation('/');
+            return;
+          }
+          
+          setTokenValid(true);
+        } catch (error) {
+          console.error('Token validation failed:', error);
+          toast({
+            title: "Access Denied",
+            description: "Unable to validate session token. Please try again.",
+            variant: "destructive",
+          });
+          setLocation('/');
+          return;
+        }
+      } else {
+        // For development - allow access without token (MemStorage mode)
+        console.warn('No session token provided - allowing access in development mode');
+        setTokenValid(true);
+      }
 
-    // Start playback immediately
-    if (playerVideoRef.current) {
-      startPlayback(playerVideoRef.current, returnStream || stream || 'obed2');
-    }
-  }, []);
+      setIsValidatingToken(false);
+
+      if (chatEnabled) {
+        setShowChat(true);
+      }
+
+      // Initialize streaming
+      initializeStreaming({
+        stream: stream || 'obed2',
+        returnStream: returnStream || stream || 'obed2',
+        app: 'live'
+      });
+
+      // Start playback immediately
+      if (playerVideoRef.current) {
+        startPlayback(playerVideoRef.current, returnStream || stream || 'obed2');
+      }
+    };
+
+    validateTokenAndInitialize();
+  }, [toast, setLocation]);
 
   const togglePublishing = async () => {
     if (!isPublishing) {
@@ -74,6 +125,32 @@ export default function Session() {
   const toggleChat = () => {
     setShowChat(!showChat);
   };
+
+  // Show loading state while validating token
+  if (isValidatingToken) {
+    return (
+      <div className="min-h-screen va-bg-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-va-primary mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold va-text-primary mb-2">Validating Session</h2>
+          <p className="va-text-secondary">Please wait while we verify your access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied state if token is invalid
+  if (!tokenValid) {
+    return (
+      <div className="min-h-screen va-bg-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">🚫</div>
+          <h2 className="text-xl font-semibold va-text-primary mb-2">Access Denied</h2>
+          <p className="va-text-secondary">This session link is no longer valid.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen py-8 px-4">

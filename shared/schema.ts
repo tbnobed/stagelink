@@ -36,6 +36,7 @@ export const generatedLinks = pgTable("generated_links", {
   returnFeed: text("return_feed").notNull(),
   chatEnabled: boolean("chat_enabled").notNull().default(false),
   url: text("url").notNull(),
+  sessionToken: text("session_token").unique(), // One-time use token
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),
@@ -54,6 +55,7 @@ export const shortLinks = pgTable("short_links", {
   streamName: text("stream_name").notNull(),
   returnFeed: text("return_feed").notNull(),
   chatEnabled: boolean("chat_enabled").notNull().default(false),
+  sessionToken: text("session_token").unique(), // One-time use token
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),
@@ -66,12 +68,31 @@ export const insertShortLinkSchema = createInsertSchema(shortLinks).omit({
 export type InsertShortLink = z.infer<typeof insertShortLinkSchema>;
 export type ShortLink = typeof shortLinks.$inferSelect;
 
+// Session tokens table for one-time use tokens to prevent replay attacks
+export const sessionTokens = pgTable("session_tokens", {
+  id: text("id").primaryKey(), // UUID token
+  linkId: text("link_id"), // Can be null for direct access tokens
+  linkType: text("link_type"), // 'guest', 'viewer', or 'short'
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+export const insertSessionTokenSchema = createInsertSchema(sessionTokens).omit({
+  createdAt: true,
+  createdBy: true,
+});
+export type InsertSessionToken = z.infer<typeof insertSessionTokenSchema>;
+export type SessionToken = typeof sessionTokens.$inferSelect;
+
 // Viewer links table for return feed viewing
 export const viewerLinks = pgTable("viewer_links", {
   id: text("id").primaryKey(),
   returnFeed: text("return_feed").notNull(),
   chatEnabled: boolean("chat_enabled").notNull().default(false),
   url: text("url").notNull(),
+  sessionToken: text("session_token").unique(), // One-time use token
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),
@@ -89,6 +110,7 @@ export const shortViewerLinks = pgTable("short_viewer_links", {
   id: text("id").primaryKey(), // Short code like "v1b2c3"
   returnFeed: text("return_feed").notNull(),
   chatEnabled: boolean("chat_enabled").notNull().default(false),
+  sessionToken: text("session_token").unique(), // One-time use token
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),
