@@ -1,0 +1,32 @@
+ ✔ Container virtual-audience-app-v2           Started                                                            11.2s
+obtv-admin@stagelink:~/stagelink$ docker-compose logs -f
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | 2025-08-19 17:59:22.821 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2  | 2025-08-19 17:59:22.821 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+virtual-audience-db-v2  | 2025-08-19 17:59:22.821 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+virtual-audience-db-v2  | 2025-08-19 17:59:22.823 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2  | 2025-08-19 17:59:22.828 UTC [29] LOG:  database system was shut down at 2025-08-19 17:57:57 UTC
+virtual-audience-db-v2  | 2025-08-19 17:59:22.838 UTC [1] LOG:  database system is ready to accept connections
+virtual-audience-app-v2  | Waiting for database...
+virtual-audience-app-v2  | Creating database schema with authentication support...
+virtual-audience-app-v2  | DROP SCHEMA
+virtual-audience-app-v2  | CREATE SCHEMA
+virtual-audience-app-v2  | No config path provided, using default 'drizzle.config.ts'
+virtual-audience-app-v2  | Reading config file '/app/drizzle.config.ts'
+virtual-audience-app-v2  | Using 'pg' driver for database querying
+virtual-audience-app-v2  | [⣷] Pulling schema from database...
+[✓] Pulling schema from database...
+virtual-audience-app-v2  | [✓] Changes applied
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | npm notice New major version of npm available! 10.8.2 -> 11.5.2
+virtual-audience-app-v2  | npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+virtual-audience-app-v2  | npm notice To update run: npm install -g npm@11.5.2
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | Starting Virtual Audience Platform with authentication...
+virtual-audience-app-v2  | Using PostgreSQL driver for database connection
+virtual-audience-app-v2  | 5:59:45 PM [express] serving on port 5000
+virtual-audience-app-v2  | 5:59:58 PM [express] GET /api/user 401 in 6ms
+virtual-audience-app-v2  | 6:00:03 PM [express] POST /api/login 401 in 60ms
+virtual-audience-app-v2  | 6:00:11 PM [express] POST /api/login 401 in 6ms
