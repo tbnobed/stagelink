@@ -30,18 +30,20 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Install only production dependencies (including qrcode for QR generation)
+# Install only production dependencies (including qrcode for QR generation and drizzle-kit)
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production && npm install drizzle-kit && npm cache clean --force
 
 # Verify packages are installed
 RUN node -e "require('qrcode'); require('drizzle-orm'); require('@neondatabase/serverless'); console.log('All packages verified')"
 
-# Copy built application from builder stage
+# Copy built application and config from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 
 # Add startup script to handle database schema
-RUN echo '#!/bin/sh\necho "Waiting for database..."\nsleep 5\necho "Creating database schema..."\nnpm run db:push 2>/dev/null || echo "Schema exists"\necho "Starting application..."\nexec node dist/production.js' > /app/start.sh && chmod +x /app/start.sh && chown nodejs:nodejs /app/start.sh
+RUN echo '#!/bin/sh\necho "Waiting for database..."\nsleep 10\necho "Creating database schema..."\nnpx drizzle-kit push 2>/dev/null || echo "Schema exists"\necho "Starting application..."\nexec node dist/production.js' > /app/start.sh && chmod +x /app/start.sh && chown nodejs:nodejs /app/start.sh
 
 # Switch to non-root user
 USER nodejs
