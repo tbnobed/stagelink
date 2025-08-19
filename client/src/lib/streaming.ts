@@ -93,55 +93,13 @@ export async function startPlayback(videoElement: HTMLVideoElement, streamName: 
     return;
   }
 
-  console.log('Starting playback for return feed:', streamName);
-
   try {
     const player = new window.SrsRtcWhipWhepAsync();
-    
-    // Set up event handlers
-    player.ontrack = (event: any) => {
-      console.log('Received track for stream:', streamName, event);
-      if (event.streams && event.streams[0]) {
-        videoElement.srcObject = event.streams[0];
-      }
-    };
+    videoElement.srcObject = player.stream;
 
     const url = `https://cdn2.obedtv.live:1990/rtc/v1/whep/?app=${config.app}&stream=${streamName}`;
-    console.log('WHEP playback URL:', url);
-    
     await player.play(url);
-    console.log('WHEP playback started successfully for stream:', streamName);
-    
-    // Fallback: if ontrack doesn't fire, try setting srcObject directly
-    setTimeout(() => {
-      if (!videoElement.srcObject && player.stream) {
-        console.log('Setting srcObject directly for stream:', streamName);
-        videoElement.srcObject = player.stream;
-      }
-    }, 2000);
-    
   } catch (err) {
-    console.error("WHEP play failed for stream:", streamName, "Error:", err);
-    console.error("This likely means the stream '" + streamName + "' is not currently available on the SRS server");
-    
-    // Show user-friendly error in video element
-    const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 360;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#1a1a1a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#ff6b6b';
-      ctx.font = '16px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Return feed not available', canvas.width / 2, canvas.height / 2 - 10);
-      ctx.fillStyle = '#888';
-      ctx.font = '12px Arial';
-      ctx.fillText(`Stream: ${streamName}`, canvas.width / 2, canvas.height / 2 + 15);
-    }
-    
-    const stream = canvas.captureStream(1);
-    videoElement.srcObject = stream;
+    console.error("WHEP play failed", err);
   }
 }
