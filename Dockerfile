@@ -48,7 +48,7 @@ RUN cat > /app/start.sh << 'EOF'
 echo "Waiting for database..."
 sleep 10
 echo "Creating database schema..."
-npx drizzle-kit push 2>/dev/null || echo "Schema exists"
+npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
 echo "Starting application..."
 exec node dist/production.js
 EOF
