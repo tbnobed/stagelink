@@ -1,6 +1,13 @@
 # Virtual Audience Platform - Docker Deployment Guide
 
-This guide will help you deploy the Virtual Audience Platform on your Ubuntu server using Docker.
+This guide will help you deploy the Virtual Audience Platform v2.0 on your Ubuntu server using Docker.
+
+## Latest Updates (August 2025)
+- ✅ Fixed link sharing across browsers with server-side storage
+- ✅ Added REST API for link management (/api/links)
+- ✅ Improved Docker health checks and build process
+- ✅ Enhanced production server with proper error handling
+- ✅ Links now persist and sync across all users and browsers
 
 ## Prerequisites
 

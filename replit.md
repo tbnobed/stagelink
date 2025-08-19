@@ -36,6 +36,10 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Added REST API endpoints for links: GET /api/links, POST /api/links, DELETE /api/links/:id
 - Updated frontend to use React Query for server state management instead of localStorage
 - Links are now visible to all users accessing the application on any browser
+- Updated Docker deployment with improved build process and health checks
+- Added comprehensive API testing script and deployment verification
+- Enhanced deployment documentation with v2.0 features and troubleshooting
+- Created .env.example for easier configuration management
 
 # User Preferences
 

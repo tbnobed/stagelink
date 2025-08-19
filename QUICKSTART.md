@@ -1,4 +1,10 @@
-# Virtual Audience Platform - Quick Start Guide
+# Virtual Audience Platform v2.0 - Quick Start
+
+## What's New in v2.0
+- 🔗 **Link Sharing**: Links now work across all browsers and devices
+- 🌐 **REST API**: Full API for link management and integration
+- 📊 **Real-time Sync**: Links update instantly across all users
+- 🔧 **Better Docker**: Improved build process and health checks Guide
 
 ## For New Ubuntu Servers (Docker Not Installed)
 

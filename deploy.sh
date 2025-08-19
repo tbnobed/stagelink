@@ -3,7 +3,7 @@
 # Virtual Audience Platform Deployment Script
 set -e
 
-echo "🚀 Starting Virtual Audience Platform deployment..."
+echo "🚀 Starting Virtual Audience Platform v2.0 deployment with Link Sharing API..."
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
