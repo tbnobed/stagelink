@@ -53,6 +53,7 @@ export class MemStorage implements IStorage {
   private shortLinks: Map<string, ShortLink>;
   private viewerLinks: Map<string, ViewerLink>;
   private shortViewerLinks: Map<string, ShortViewerLink>;
+  private sessionTokens: Map<string, SessionToken>;
   private userIdCounter: number = 1;
 
   constructor() {
@@ -61,6 +62,7 @@ export class MemStorage implements IStorage {
     this.shortLinks = new Map();
     this.viewerLinks = new Map();
     this.shortViewerLinks = new Map();
+    this.sessionTokens = new Map();
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -143,9 +145,16 @@ export class MemStorage implements IStorage {
     const deletedLink = this.links.get(id);
     const linkDeleted = this.links.delete(id);
     
-    // Also delete any short links associated with this regular link
+    // SECURITY FIX: Invalidate session tokens associated with this link
     if (linkDeleted && deletedLink) {
-      // Remove short links that match this link's parameters
+      // Invalidate session tokens for this link
+      for (const [tokenId, token] of Array.from(this.sessionTokens.entries())) {
+        if (token.linkId === id && token.linkType === 'stream') {
+          this.sessionTokens.delete(tokenId);
+        }
+      }
+      
+      // Also delete any short links associated with this regular link
       for (const [shortId, shortLink] of Array.from(this.shortLinks.entries())) {
         if (shortLink.streamName === deletedLink.streamName && 
             shortLink.returnFeed === deletedLink.returnFeed &&
@@ -262,7 +271,18 @@ export class MemStorage implements IStorage {
   }
 
   async deleteViewerLink(id: string): Promise<boolean> {
-    return this.viewerLinks.delete(id);
+    const linkDeleted = this.viewerLinks.delete(id);
+    
+    // SECURITY FIX: Invalidate session tokens associated with this viewer link
+    if (linkDeleted) {
+      for (const [tokenId, token] of Array.from(this.sessionTokens.entries())) {
+        if (token.linkId === id && token.linkType === 'viewer') {
+          this.sessionTokens.delete(tokenId);
+        }
+      }
+    }
+    
+    return linkDeleted;
   }
 
   async deleteExpiredViewerLinks(): Promise<number> {
