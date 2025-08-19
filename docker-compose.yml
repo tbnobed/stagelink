@@ -10,11 +10,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=5000
-      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:password@db:5432/virtual_audience}
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/virtual_audience
       - PGHOST=db
       - PGPORT=5432
       - PGUSER=postgres
-      - PGPASSWORD=${POSTGRES_PASSWORD:-password}
+      - PGPASSWORD=postgres
       - PGDATABASE=virtual_audience
     depends_on:
       db:
@@ -37,7 +37,7 @@ services:
     environment:
       - POSTGRES_DB=virtual_audience
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_PASSWORD=postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro

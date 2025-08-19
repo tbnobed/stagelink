@@ -48,6 +48,7 @@ RUN cat > /app/start.sh << 'EOF'
 echo "Waiting for database..."
 sleep 10
 echo "Creating database schema..."
+export DATABASE_URL="postgresql://postgres:postgres@db:5432/virtual_audience"
 npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
 echo "Starting application..."
 exec node dist/production.js
