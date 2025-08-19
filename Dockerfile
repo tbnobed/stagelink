@@ -57,16 +57,25 @@ RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
 echo "Waiting for database..."
 sleep 10
-echo "Creating database schema with authentication and URL shortening support..."
+echo "Setting up Virtual Audience Platform with authentication and URL shortening..."
 export DATABASE_URL="postgresql://postgres:postgres@db:5432/virtual_audience"
 export SESSION_SECRET="${SESSION_SECRET:-virtual-audience-production-secret-change-in-production}"
 
-# For clean deployments, drop and recreate schema
-psql "$DATABASE_URL" -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;" 2>/dev/null || echo "Schema recreation skipped"
+# Check if this is a fresh deployment or an update
+EXISTING_USERS=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM users;" 2>/dev/null | tr -d ' ' || echo "0")
 
-# Push schema with force flag (includes new short_links table)
-echo "yes" | npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
-echo "Starting Virtual Audience Platform with authentication and URL shortening..."
+if [ "$EXISTING_USERS" = "0" ] || [ -z "$EXISTING_USERS" ]; then
+  echo "Fresh deployment detected - setting up clean database..."
+  # Only drop schema for completely fresh deployments
+  psql "$DATABASE_URL" -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;" 2>/dev/null || echo "Schema recreation skipped"
+  echo "yes" | npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
+else
+  echo "Existing data detected ($EXISTING_USERS users) - preserving data and updating schema..."
+  # For existing deployments, only update schema without destroying data
+  npx drizzle-kit push 2>&1 || echo "Schema update completed"
+fi
+
+echo "Starting Virtual Audience Platform..."
 exec node -e "
 process.env.USE_PG_DRIVER = 'true';
 process.env.SESSION_SECRET = process.env.SESSION_SECRET;

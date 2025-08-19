@@ -59,6 +59,16 @@ The system creates a default admin account on first startup:
 
 **⚠️ SECURITY WARNING**: Change this password immediately after first login!
 
+## ⚠️ Important: Data Preservation During Rebuilds
+
+**CRITICAL**: The Docker deployment script has been updated to preserve existing users during rebuilds. However, if you experience data loss:
+
+1. **For Lost Admin User**: Use the `restore-admin-user.sql` script
+2. **For Lost User Data**: The updated Docker script now detects existing users and preserves data
+3. **Fresh vs Update Deployments**: 
+   - Fresh deployments (0 users) = Clean database setup
+   - Update deployments (existing users) = Preserve data, update schema only
+
 1. Log in at `http://your-domain/auth`
 2. Click your username → "Profile"
 3. Change password in the profile section
