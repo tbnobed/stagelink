@@ -367,13 +367,40 @@ export class MemStorage implements IStorage {
 
   // Session Token Methods (Not implemented for MemStorage - tokens are used for production)
   async validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }> {
-    console.warn('Session tokens not supported in MemStorage - using in memory storage');
-    return { valid: true }; // Allow all access in development mode
+    console.log('Validating session token:', token);
+    
+    const sessionToken = this.sessionTokens.get(token);
+    if (!sessionToken) {
+      console.log('Token not found in storage');
+      return { valid: false };
+    }
+    
+    // Check if token has expired
+    if (sessionToken.expiresAt && new Date() > sessionToken.expiresAt) {
+      console.log('Token has expired');
+      this.sessionTokens.delete(token);
+      return { valid: false };
+    }
+    
+    // Check if token has been used
+    if (sessionToken.used) {
+      console.log('Token has already been used');
+      return { valid: false };
+    }
+    
+    // Mark token as used (single-use)
+    sessionToken.used = true;
+    console.log('Token validated and consumed successfully');
+    
+    return { 
+      valid: true, 
+      linkId: sessionToken.linkId || undefined, 
+      linkType: sessionToken.linkType || undefined 
+    };
   }
 
   async createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken> {
-    console.warn('Session tokens not supported in MemStorage');
-    return {
+    const token: SessionToken = {
       id: randomUUID(),
       linkId,
       linkType,
@@ -382,6 +409,12 @@ export class MemStorage implements IStorage {
       expiresAt,
       createdBy: userId || null,
     };
+    
+    // Store the token in the Map
+    this.sessionTokens.set(token.id, token);
+    console.log('Session token created and stored:', token.id);
+    
+    return token;
   }
 
   async cleanupExpiredTokens(): Promise<number> {
