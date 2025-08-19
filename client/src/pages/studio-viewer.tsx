@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { startPlayback, initializeStreaming } from "@/lib/streaming";
 
 // Global variables for SRS SDK
 declare global {
@@ -92,6 +93,11 @@ export default function StudioViewer() {
       setReturnFeed(returnParam);
       setChatEnabled(chatParam === 'true');
       setShowChat(chatParam === 'true');
+      
+      // Initialize streaming configuration
+      initializeStreaming({
+        app: 'live'
+      });
     };
 
     validateTokenAndInitialize();
@@ -132,50 +138,14 @@ export default function StudioViewer() {
         playerRef.current = null;
       }
       
-      // Create new SRS WHEP player
-      playerRef.current = new window.SrsRtcWhipWhepAsync();
-      
-      // Set up the video element
-      videoRef.current.srcObject = playerRef.current.stream;
-      
-      // Build the WHEP URL for the return feed - using same port as streaming.ts
-      const whepUrl = `https://cdn2.obedtv.live:1990/rtc/v1/whep/?app=live&stream=${returnFeed}`;
-      console.log('Connecting to WHEP URL:', whepUrl);
-      
-      // Start WHEP playback
-      await playerRef.current.play(whepUrl);
+      // Use the improved startPlayback function with retry logic
+      await startPlayback(videoRef.current, returnFeed);
       
       toast({
         title: "Success",
         description: `Connected to return feed: ${returnFeed}`,
       });
-      
-      // Set up stats collection
-      if (window.SrsRtcFormatStats) {
-        const updateStats = () => {
-          if (playerRef.current && playerRef.current.pc) {
-            playerRef.current.pc.getStats(null).then((stats: any) => {
-              const formattedStats = window.SrsRtcFormatStats(stats);
-              if (formattedStats && formattedStats.video) {
-                setVideoStats({
-                  resolution: formattedStats.video.resolution || 'N/A',
-                  codec: formattedStats.video.codec || 'N/A',
-                  bitrate: formattedStats.video.bitrate || 'N/A',
-                  fps: formattedStats.video.fps || 'N/A'
-                });
-              }
-            }).catch((err: any) => {
-              console.warn('Stats collection error:', err);
-            });
-          }
-        };
-        
-        // Update stats every 2 seconds
-        const statsInterval = setInterval(updateStats, 2000);
-        
-        // Store interval reference for cleanup
-        (playerRef.current as any).statsInterval = statsInterval;
-      }
+
       
     } catch (error) {
       console.error('WHEP playback error:', error);

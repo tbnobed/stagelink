@@ -12,6 +12,7 @@ export default function Session() {
   const [showChat, setShowChat] = useState(false);
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
+  const [returnFeedStatus, setReturnFeedStatus] = useState<'connecting' | 'connected' | 'failed' | 'retrying'>('connecting');
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
@@ -86,7 +87,35 @@ export default function Session() {
 
       // Start playback immediately
       if (playerVideoRef.current) {
-        startPlayback(playerVideoRef.current, returnStream || stream || 'obed2');
+        setReturnFeedStatus('connecting');
+        try {
+          await startPlayback(playerVideoRef.current, returnStream || stream || 'obed2');
+          setReturnFeedStatus('connected');
+        } catch (error) {
+          console.error('Return feed connection failed:', error);
+          setReturnFeedStatus('failed');
+          toast({
+            title: "Return Feed Connection Issue",
+            description: "Having trouble connecting to the return feed. Retrying in background...",
+            variant: "destructive",
+          });
+          
+          // Retry after a delay
+          setTimeout(async () => {
+            setReturnFeedStatus('retrying');
+            try {
+              await startPlayback(playerVideoRef.current!, returnStream || stream || 'obed2');
+              setReturnFeedStatus('connected');
+              toast({
+                title: "Return Feed Connected",
+                description: "Successfully connected to the return feed",
+              });
+            } catch (retryError) {
+              console.error('Return feed retry failed:', retryError);
+              setReturnFeedStatus('failed');
+            }
+          }, 5000);
+        }
       }
     };
 
@@ -252,8 +281,20 @@ export default function Session() {
           <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold va-text-primary">Studio Return Feed</h3>
-              <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm" data-testid="status-player">
-                Connected
+              <span 
+                className={`px-3 py-1 rounded-full text-sm ${
+                  returnFeedStatus === 'connected' 
+                    ? 'bg-green-500/20 text-green-400'
+                    : returnFeedStatus === 'connecting' || returnFeedStatus === 'retrying'
+                    ? 'bg-yellow-500/20 text-yellow-400'
+                    : 'bg-red-500/20 text-red-400'
+                }`}
+                data-testid="status-player"
+              >
+                {returnFeedStatus === 'connected' && 'Connected'}
+                {returnFeedStatus === 'connecting' && 'Connecting...'}
+                {returnFeedStatus === 'retrying' && 'Retrying...'}
+                {returnFeedStatus === 'failed' && 'Connection Failed'}
               </span>
             </div>
 

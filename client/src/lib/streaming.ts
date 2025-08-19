@@ -87,19 +87,57 @@ export function stopPublishing() {
   }
 }
 
-export async function startPlayback(videoElement: HTMLVideoElement, streamName: string) {
+export async function startPlayback(videoElement: HTMLVideoElement, streamName: string, maxRetries: number = 5) {
   if (!window.SrsRtcWhipWhepAsync) {
     console.warn('SRS SDK not loaded, cannot start playback');
     return;
   }
 
-  try {
-    const player = new window.SrsRtcWhipWhepAsync();
-    videoElement.srcObject = player.stream;
+  let retryCount = 0;
+  const retryDelay = 2000; // 2 seconds between retries
 
-    const url = `https://cdn2.obedtv.live:1990/rtc/v1/whep/?app=${config.app}&stream=${streamName}`;
-    await player.play(url);
-  } catch (err) {
-    console.error("WHEP play failed", err);
-  }
+  const attemptPlayback = async (): Promise<any> => {
+    try {
+      console.log(`Attempting WHEP playback for stream: ${streamName} (attempt ${retryCount + 1}/${maxRetries + 1})`);
+      
+      const player = new window.SrsRtcWhipWhepAsync();
+      
+      // Set up connection event listeners
+      player.pc.addEventListener('connectionstatechange', () => {
+        console.log(`WHEP connection state: ${player.pc.connectionState}`);
+        if (player.pc.connectionState === 'connected') {
+          console.log(`WHEP playback connected successfully for stream: ${streamName}`);
+        } else if (player.pc.connectionState === 'failed') {
+          console.log(`WHEP connection failed for stream: ${streamName}`);
+        }
+      });
+
+      player.pc.addEventListener('iceconnectionstatechange', () => {
+        console.log(`WHEP ICE connection state: ${player.pc.iceConnectionState}`);
+      });
+
+      const url = `https://cdn2.obedtv.live:1990/rtc/v1/whep/?app=${config.app}&stream=${streamName}`;
+      console.log(`WHEP URL: ${url}`);
+      
+      await player.play(url);
+      videoElement.srcObject = player.stream;
+      
+      console.log(`WHEP playback initiated successfully for stream: ${streamName}`);
+      return player;
+    } catch (err) {
+      console.error(`WHEP play attempt ${retryCount + 1} failed:`, err);
+      
+      if (retryCount < maxRetries) {
+        retryCount++;
+        console.log(`Retrying WHEP playback in ${retryDelay}ms... (${retryCount}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return attemptPlayback();
+      } else {
+        console.error(`WHEP playback failed after ${maxRetries + 1} attempts for stream: ${streamName}`);
+        throw err;
+      }
+    }
+  };
+
+  return attemptPlayback();
 }
