@@ -169,7 +169,7 @@ export default function AuthPage() {
             <img 
               src="/stagelinq-logo.png" 
               alt="StageLinq Logo" 
-              className="h-16 w-auto"
+              className="h-80 w-auto"
               data-testid="stagelinq-logo"
             />
           </div>
