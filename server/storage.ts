@@ -57,7 +57,7 @@ export class MemStorage implements IStorage {
       ...insertLink,
       chatEnabled: insertLink.chatEnabled ?? false,
       createdAt: new Date(),
-      expiresAt: insertLink.expiresAt || null,
+      expiresAt: insertLink.expiresAt ? new Date(insertLink.expiresAt) : null,
     };
     this.links.set(link.id, link);
     return link;
@@ -118,7 +118,7 @@ export class DatabaseStorage implements IStorage {
         ...insertLink,
         chatEnabled: insertLink.chatEnabled ?? false,
         createdAt: new Date(),
-        expiresAt: insertLink.expiresAt || null,
+        expiresAt: insertLink.expiresAt ? new Date(insertLink.expiresAt) : null,
       })
       .returning();
     return link;
