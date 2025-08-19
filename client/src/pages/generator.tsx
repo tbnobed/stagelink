@@ -11,6 +11,8 @@ export default function Generator() {
   const [streamName, setStreamName] = useState("");
   const [returnFeed, setReturnFeed] = useState("studio1");
   const [enableChat, setEnableChat] = useState(true);
+  const [expirationOption, setExpirationOption] = useState("never");
+  const [customHours, setCustomHours] = useState("24");
   const [generatedLink, setGeneratedLink] = useState("");
   const [showQR, setShowQR] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,6 +31,14 @@ export default function Generator() {
     const baseURL = `${window.location.protocol}//${window.location.host}/session`;
     const url = `${baseURL}?stream=${encodeURIComponent(streamName.trim())}&return=${encodeURIComponent(returnFeed)}&chat=${enableChat}`;
     
+    // Calculate expiration date
+    let expiresAt: Date | undefined = undefined;
+    if (expirationOption !== "never") {
+      const now = new Date();
+      const hours = expirationOption === "custom" ? parseInt(customHours) : parseInt(expirationOption);
+      expiresAt = new Date(now.getTime() + (hours * 60 * 60 * 1000));
+    }
+    
     // Save to localStorage
     const newLink = {
       id: Date.now().toString(),
@@ -36,7 +46,8 @@ export default function Generator() {
       returnFeed: returnFeed,
       chatEnabled: enableChat,
       url: url,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      expiresAt: expiresAt ? expiresAt.toISOString() : undefined
     };
 
     const existingLinks = JSON.parse(localStorage.getItem('virtualAudienceLinks') || '[]');
@@ -186,6 +197,54 @@ export default function Generator() {
                   className="data-[state=checked]:bg-va-primary"
                   data-testid="switch-enable-chat"
                 />
+              </div>
+
+              {/* Link Expiration */}
+              <div>
+                <Label className="va-text-secondary">Link Expiration</Label>
+                <div className="mt-2 space-y-3">
+                  <Select value={expirationOption} onValueChange={setExpirationOption}>
+                    <SelectTrigger className="va-bg-dark-surface-2 va-border-dark va-text-primary focus:ring-va-primary focus:border-transparent" data-testid="select-expiration">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="va-bg-dark-surface-2 va-border-dark">
+                      <SelectItem value="never">Never expires</SelectItem>
+                      <SelectItem value="1">1 hour</SelectItem>
+                      <SelectItem value="6">6 hours</SelectItem>
+                      <SelectItem value="24">24 hours</SelectItem>
+                      <SelectItem value="72">3 days</SelectItem>
+                      <SelectItem value="168">1 week</SelectItem>
+                      <SelectItem value="custom">Custom duration</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {expirationOption === "custom" && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        max="8760"
+                        value={customHours}
+                        onChange={(e) => setCustomHours(e.target.value)}
+                        className="va-bg-dark-surface-2 va-border-dark va-text-primary focus:ring-va-primary focus:border-transparent"
+                        placeholder="Hours"
+                        data-testid="input-custom-hours"
+                      />
+                      <span className="va-text-secondary text-sm">hours</span>
+                    </div>
+                  )}
+                  
+                  <p className="text-xs va-text-secondary">
+                    {expirationOption === "never" 
+                      ? "Link will remain active indefinitely" 
+                      : `Link will expire ${
+                          expirationOption === "custom" 
+                            ? `in ${customHours} hours` 
+                            : `in ${expirationOption} hour${expirationOption !== "1" ? "s" : ""}`
+                        }`
+                    }
+                  </p>
+                </div>
               </div>
 
               {/* Generate Button */}

@@ -11,6 +11,7 @@ interface GeneratedLink {
   chatEnabled: boolean;
   url: string;
   createdAt: Date;
+  expiresAt?: Date;
 }
 
 export default function Links() {
@@ -19,6 +20,32 @@ export default function Links() {
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
 
+  const isLinkExpired = (link: GeneratedLink): boolean => {
+    if (!link.expiresAt) return false;
+    return new Date() > link.expiresAt;
+  };
+
+  const getTimeUntilExpiry = (link: GeneratedLink): string => {
+    if (!link.expiresAt) return "Never expires";
+    
+    const now = new Date();
+    const diff = link.expiresAt.getTime() - now.getTime();
+    
+    if (diff <= 0) return "Expired";
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `${days} day${days !== 1 ? 's' : ''} remaining`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m remaining`;
+    } else {
+      return `${minutes}m remaining`;
+    }
+  };
+
   useEffect(() => {
     // Load saved links from localStorage
     const savedLinks = localStorage.getItem('virtualAudienceLinks');
@@ -26,9 +53,26 @@ export default function Links() {
       try {
         const parsedLinks = JSON.parse(savedLinks).map((link: any) => ({
           ...link,
-          createdAt: new Date(link.createdAt)
+          createdAt: new Date(link.createdAt),
+          expiresAt: link.expiresAt ? new Date(link.expiresAt) : undefined
         }));
-        setLinks(parsedLinks);
+        
+        // Filter out expired links
+        const now = new Date();
+        const validLinks = parsedLinks.filter((link: GeneratedLink) => 
+          !link.expiresAt || link.expiresAt > now
+        );
+        
+        // Update localStorage if any links were removed
+        if (validLinks.length !== parsedLinks.length) {
+          localStorage.setItem('virtualAudienceLinks', JSON.stringify(validLinks));
+          toast({
+            title: "Expired Links Removed",
+            description: `${parsedLinks.length - validLinks.length} expired links were automatically removed`,
+          });
+        }
+        
+        setLinks(validLinks);
       } catch (error) {
         console.error('Error loading saved links:', error);
       }
@@ -126,6 +170,32 @@ export default function Links() {
     });
   };
 
+  const removeExpiredLinks = () => {
+    const now = new Date();
+    const validLinks = links.filter(link => !link.expiresAt || link.expiresAt > now);
+    const expiredCount = links.length - validLinks.length;
+    
+    if (expiredCount === 0) {
+      toast({
+        title: "No Expired Links",
+        description: "All links are still valid",
+      });
+      return;
+    }
+    
+    setLinks(validLinks);
+    localStorage.setItem('virtualAudienceLinks', JSON.stringify(validLinks));
+    
+    if (previewingLink && !validLinks.find(l => l.id === previewingLink)) {
+      stopPreview();
+    }
+    
+    toast({
+      title: "Expired Links Removed",
+      description: `${expiredCount} expired link${expiredCount !== 1 ? 's' : ''} removed`,
+    });
+  };
+
   return (
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-7xl mx-auto">
@@ -135,15 +205,26 @@ export default function Links() {
             <p className="va-text-secondary">View and preview all your generated streaming links</p>
           </div>
           {links.length > 0 && (
-            <Button 
-              onClick={clearAllLinks}
-              variant="outline"
-              className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-              data-testid="button-clear-all"
-            >
-              <i className="fas fa-trash mr-2"></i>
-              Clear All
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={removeExpiredLinks}
+                variant="outline"
+                className="border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white"
+                data-testid="button-remove-expired"
+              >
+                <i className="fas fa-clock mr-2"></i>
+                Remove Expired
+              </Button>
+              <Button 
+                onClick={clearAllLinks}
+                variant="outline"
+                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                data-testid="button-clear-all"
+              >
+                <i className="fas fa-trash mr-2"></i>
+                Clear All
+              </Button>
+            </div>
           )}
         </div>
 
@@ -182,10 +263,26 @@ export default function Links() {
                               Chat
                             </Badge>
                           )}
+                          {link.expiresAt && (
+                            <Badge 
+                              variant="outline" 
+                              className={`${
+                                isLinkExpired(link) 
+                                  ? 'bg-red-500/20 text-red-400 border-red-500/50' 
+                                  : 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+                              }`}
+                            >
+                              <i className="fas fa-clock mr-1"></i>
+                              {getTimeUntilExpiry(link)}
+                            </Badge>
+                          )}
                         </div>
-                        <p className="va-text-secondary text-sm mb-3">
-                          Created: {link.createdAt.toLocaleString()}
-                        </p>
+                        <div className="text-sm va-text-secondary mb-3 space-y-1">
+                          <div>Created: {link.createdAt.toLocaleString()}</div>
+                          {link.expiresAt && (
+                            <div>Expires: {link.expiresAt.toLocaleString()}</div>
+                          )}
+                        </div>
                         <div className="va-bg-dark-surface-2 rounded p-3 mb-4">
                           <code className="text-xs va-text-green font-mono break-all" data-testid={`text-url-${link.id}`}>
                             {link.url}

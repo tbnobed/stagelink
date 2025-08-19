@@ -16,6 +16,10 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Added "Copy Ingest Link" button that generates RTMP ingest URLs: rtmp://cdn2.obedtv.live/live/{StreamName}
 - Replaced Guest Session card with Links card on the home page per user request
 - Removed Session link from main navigation menu
+- Added link expiration functionality with configurable durations (1 hour to 1 week, custom, or never)
+- Automatic cleanup of expired links on page load with user notification
+- Added "Remove Expired Links" button for manual cleanup
+- Links display expiration status with countdown timers and color-coded badges
 
 # User Preferences
 
