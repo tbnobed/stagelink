@@ -471,9 +471,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log the access for monitoring
       console.log(`Short link accessed: ${req.params.code} -> stream: ${shortLink.streamName}, return: ${shortLink.returnFeed}`);
 
-      // Redirect to session page with original parameters
+      // Find the original link to get its session token
+      const allLinks = await storage.getAllLinks();
+      const originalLink = allLinks.find(link => 
+        link.streamName === shortLink.streamName && 
+        link.returnFeed === shortLink.returnFeed &&
+        link.chatEnabled === shortLink.chatEnabled
+      );
+
+      // If we can't find the original link, it may have been deleted
+      if (!originalLink) {
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Link No Longer Available - Virtual Audience Platform</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #e2e8f0; }
+              .container { max-width: 600px; margin: 0 auto; }
+              h1 { color: #ef4444; margin-bottom: 20px; }
+              p { margin-bottom: 15px; line-height: 1.6; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Link No Longer Available</h1>
+              <p>The streaming session linked to this short link has been removed or expired.</p>
+              <p>Please contact the person who shared this link for a new one.</p>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+
+      // Redirect to session page with original parameters including session token
       const chatParam = shortLink.chatEnabled ? '&chat=true' : '';
-      const redirectUrl = `/session?stream=${encodeURIComponent(shortLink.streamName)}&return=${encodeURIComponent(shortLink.returnFeed)}${chatParam}`;
+      const tokenParam = originalLink.sessionToken ? `&token=${originalLink.sessionToken}` : '';
+      const redirectUrl = `/session?stream=${encodeURIComponent(shortLink.streamName)}&return=${encodeURIComponent(shortLink.returnFeed)}${chatParam}${tokenParam}`;
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Failed to resolve short link:', error);
