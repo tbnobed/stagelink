@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import QRCode from "qrcode";
 
 export default function Generator() {
   const [streamName, setStreamName] = useState("");
@@ -111,7 +112,7 @@ export default function Generator() {
     }
   };
 
-  const generateQRCode = () => {
+  const generateQRCode = async () => {
     if (!generatedLink) {
       toast({
         title: "Error",
@@ -122,34 +123,37 @@ export default function Generator() {
     }
 
     const canvas = qrCanvasRef.current;
-    if (!canvas || !(window as any).QRCode) {
+    if (!canvas) {
       toast({
         title: "Error",
-        description: "QR code library not loaded.",
+        description: "Canvas element not found.",
         variant: "destructive",
       });
       return;
     }
 
-    (window as any).QRCode.toCanvas(canvas, generatedLink, {
-      width: 200,
-      margin: 2,
-      color: {
-        dark: '#000000',
-        light: '#FFFFFF'
-      }
-    }, function (error: any) {
-      if (error) {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Error generating QR code",
-          variant: "destructive",
-        });
-      } else {
-        setShowQR(true);
-      }
-    });
+    try {
+      await QRCode.toCanvas(canvas, generatedLink, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      setShowQR(true);
+      toast({
+        title: "Success",
+        description: "QR code generated successfully!",
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Error",
+        description: "Error generating QR code",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
