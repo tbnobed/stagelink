@@ -1,0 +1,66 @@
+✅ Self-signed certificates generated. For production, replace with valid certificates.
+📝 Creating .env file from template...
+✅ .env file created with random passwords.
+🔨 Building and starting services...
+WARN[0000] /home/obtv-admin/stagelink/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+WARN[0000] /home/obtv-admin/stagelink/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+[+] Building 14.5s (15/19)
+ => [internal] load local bake definitions                                                                         0.0s
+ => => reading from stdin 521B                                                                                     0.0s
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 1.34kB                                                                             0.0s
+ => [internal] load metadata for docker.io/library/node:18-alpine                                                  0.7s
+ => [internal] load .dockerignore                                                                                  0.0s
+ => => transferring context: 257B                                                                                  0.0s
+ => [internal] load build context                                                                                  0.0s
+ => => transferring context: 601.13kB                                                                              0.0s
+ => [builder 1/6] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35c  4.2s
+ => => resolve docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8c  0.0s
+ => => sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e 7.67kB / 7.67kB                     0.0s
+ => => sha256:929b04d7c782f04f615cf785488fed452b6569f87c73ff666ad553a7554f0006 1.72kB / 1.72kB                     0.0s
+ => => sha256:ee77c6cd7c1886ecc802ad6cedef3a8ec1ea27d1fb96162bf03dd3710839b8da 6.18kB / 6.18kB                     0.0s
+ => => sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870 3.64MB / 3.64MB                     0.3s
+ => => sha256:dd71dde834b5c203d162902e6b8994cb2309ae049a0eabc4efea161b2b5a3d0e 40.01MB / 40.01MB                   0.8s
+ => => sha256:1e5a4c89cee5c0826c540ab06d4b6b491c96eda01837f430bd47f0d26702d6e3 1.26MB / 1.26MB                     0.3s
+ => => extracting sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870                          0.2s
+ => => sha256:25ff2da83641908f65c3a74d80409d6b1b62ccfaab220b9ea70b80df5a2e0549 446B / 446B                         0.4s
+ => => extracting sha256:dd71dde834b5c203d162902e6b8994cb2309ae049a0eabc4efea161b2b5a3d0e                          3.0s
+ => => extracting sha256:1e5a4c89cee5c0826c540ab06d4b6b491c96eda01837f430bd47f0d26702d6e3                          0.1s
+ => => extracting sha256:25ff2da83641908f65c3a74d80409d6b1b62ccfaab220b9ea70b80df5a2e0549                          0.0s
+ => [production 2/9] RUN apk add --no-cache dumb-init                                                              0.8s
+ => [builder 2/6] WORKDIR /app                                                                                     0.1s
+ => [builder 3/6] COPY package*.json ./                                                                            0.0s
+ => [builder 4/6] RUN npm ci --only=production                                                                     8.8s
+ => [production 3/9] WORKDIR /app                                                                                  0.0s
+ => [production 4/9] RUN addgroup -g 1001 -S nodejs                                                                0.4s
+ => [production 5/9] RUN adduser -S nodejs -u 1001                                                                 0.3s
+ => [builder 5/6] COPY . .                                                                                         0.0s
+ => ERROR [builder 6/6] RUN npm run build                                                                          0.5s
+------
+ > [builder 6/6] RUN npm run build:
+0.411
+0.411 > rest-express@1.0.0 build
+0.411 > vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+0.411
+0.416 sh: vite: not found
+------
+Dockerfile:17
+
+--------------------
+
+  15 |
+
+  16 |     # Build the application
+
+  17 | >>> RUN npm run build
+
+  18 |
+
+  19 |     # Production stage
+
+--------------------
+
+failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 127
+
+obtv-admin@stagelink:~/stagelink$
+obtv-admin@stagelink:~/stagelink$

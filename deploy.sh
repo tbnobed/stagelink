@@ -43,17 +43,7 @@ fi
 
 # Create necessary directories
 echo "📁 Creating directories..."
-mkdir -p logs ssl
-
-# Check if SSL certificates exist
-if [ ! -f "ssl/cert.pem" ] || [ ! -f "ssl/key.pem" ]; then
-    echo "🔐 SSL certificates not found. Generating self-signed certificates..."
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout ssl/key.pem \
-        -out ssl/cert.pem \
-        -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
-    echo "✅ Self-signed certificates generated. For production, replace with valid certificates."
-fi
+mkdir -p logs
 
 # Check for environment file
 if [ ! -f ".env" ]; then
@@ -102,7 +92,7 @@ docker-compose ps
 echo ""
 echo "🌐 Access your application at:"
 echo "   HTTP:  http://localhost"
-echo "   HTTPS: https://localhost"
+echo "   HTTP:  http://$(hostname -I | awk '{print $1}')"
 echo ""
 echo "📝 Useful commands:"
 echo "   View logs:    docker-compose logs -f"
@@ -110,8 +100,8 @@ echo "   Stop:         docker-compose down"
 echo "   Restart:      docker-compose restart"
 echo "   Update:       ./deploy.sh"
 echo ""
-echo "⚠️  Remember to:"
-echo "   1. Replace self-signed SSL certificates with valid ones for production"
-echo "   2. Update default passwords in .env file"
-echo "   3. Configure your domain name in nginx.conf"
-echo "   4. Set up proper firewall rules"
+echo "⚠️  Production checklist:"
+echo "   1. Update default passwords in .env file"
+echo "   2. Configure your domain name in nginx.conf"
+echo "   3. Set up proper firewall rules"
+echo "   4. Consider adding SSL/HTTPS for production use"

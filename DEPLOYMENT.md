@@ -36,7 +36,6 @@ This guide will help you deploy the Virtual Audience Platform on your Ubuntu ser
 
 4. **Access your application:**
    - HTTP: `http://your-server-ip`
-   - HTTPS: `https://your-server-ip`
 
 > **See QUICKSTART.md for simplified instructions**
 

@@ -29,7 +29,6 @@ newgrp docker
 
 That's it! Your application will be available at:
 - **HTTP**: `http://your-server-ip`
-- **HTTPS**: `https://your-server-ip` (with self-signed certificate)
 
 ---
 
@@ -94,9 +93,9 @@ Check the detailed `DEPLOYMENT.md` guide for comprehensive troubleshooting and c
 
 ## Security Notes
 
-- The deployment creates self-signed SSL certificates
-- Default passwords are randomly generated
-- For production use, replace with valid SSL certificates
+- Default passwords are randomly generated and secure
 - Update passwords in the `.env` file for enhanced security
+- For production use, consider adding SSL/HTTPS support
+- Set up proper firewall rules to secure your server
 
 Your Virtual Audience Platform is now ready for live streaming!
