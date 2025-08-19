@@ -1,5 +1,7 @@
-import { type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink } from "@shared/schema";
+import { users, generatedLinks, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, lt } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -80,4 +82,62 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getAllLinks(): Promise<GeneratedLink[]> {
+    const now = new Date();
+    
+    // First, clean up expired links
+    await this.deleteExpiredLinks();
+    
+    // Return all non-expired links
+    return await db.select().from(generatedLinks);
+  }
+
+  async createLink(insertLink: InsertGeneratedLink): Promise<GeneratedLink> {
+    const [link] = await db
+      .insert(generatedLinks)
+      .values({
+        ...insertLink,
+        chatEnabled: insertLink.chatEnabled ?? false,
+        createdAt: new Date(),
+        expiresAt: insertLink.expiresAt || null,
+      })
+      .returning();
+    return link;
+  }
+
+  async deleteLink(id: string): Promise<boolean> {
+    const result = await db
+      .delete(generatedLinks)
+      .where(eq(generatedLinks.id, id));
+    return result.rowCount > 0;
+  }
+
+  async deleteExpiredLinks(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .delete(generatedLinks)
+      .where(lt(generatedLinks.expiresAt, now));
+    return result.rowCount || 0;
+  }
+}
+
+export const storage = new DatabaseStorage();

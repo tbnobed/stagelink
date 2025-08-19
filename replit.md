@@ -43,6 +43,9 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Fixed QR code generation issues by replacing window.QRCode with proper npm package
 - Added production Docker compose configuration with resource limits
 - Enhanced deployment scripts to verify QR code package installation
+- Fixed link persistence issue by implementing PostgreSQL database storage instead of in-memory storage
+- Links now persist across application restarts and server reboots
+- Migrated from MemStorage to DatabaseStorage with proper database schema
 
 # User Preferences
 
