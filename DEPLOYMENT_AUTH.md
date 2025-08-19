@@ -102,14 +102,22 @@ The system creates a default admin account on first startup:
 - [ ] Configure backups for PostgreSQL data
 
 ### After Deployment
+- [ ] Run `./test-docker-auth.sh` to verify authentication system
 - [ ] Access application and verify login works
-- [ ] Log in with default admin account
-- [ ] Change admin password immediately
-- [ ] Create regular user accounts as needed
-- [ ] Test streaming functionality
-- [ ] Verify session persistence across restarts
+- [ ] Log in with default admin account (admin/password)
+- [ ] Change admin password immediately via Profile page
+- [ ] Create regular user accounts via Admin panel
+- [ ] Test streaming functionality with authenticated users
+- [ ] Verify session persistence across container restarts
 
 ## 🔧 Troubleshooting
+
+### Quick Authentication Test
+
+Run the automated test script:
+```bash
+./test-docker-auth.sh
+```
 
 ### Authentication Issues
 
@@ -118,8 +126,11 @@ The system creates a default admin account on first startup:
 # Check if admin user was created
 docker-compose exec db psql -U postgres -d virtual_audience -c "SELECT username, role FROM users;"
 
-# Check application logs
-docker-compose logs app | grep -i "admin\|auth\|password"
+# Check application logs for admin creation
+docker-compose logs app | grep -i "admin\|created\|setup"
+
+# Restart containers if admin wasn't created
+docker-compose down && docker-compose up -d
 ```
 
 **Session not persisting:**

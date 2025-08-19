@@ -68,7 +68,13 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-
+  // Create default admin user on startup
+  try {
+    const { createDefaultAdmin } = await import("./setup-admin");
+    await createDefaultAdmin();
+  } catch (error) {
+    console.error("Failed to setup default admin:", error);
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

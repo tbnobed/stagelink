@@ -14,10 +14,14 @@ RUN npm ci --include=dev
 COPY . .
 
 # Build the application
-RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --allow-overwrite
 
-# Build Docker-specific database configuration
+# Build Docker-specific database configuration  
 RUN npx esbuild server/db-docker.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/db-docker.js --external:../shared/schema.js
+
+# Build authentication modules separately to ensure they're available
+RUN npx esbuild server/setup-admin.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/setup-admin.js
+RUN npx esbuild server/auth.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/auth.js
 
 # Verify build output
 RUN ls -la dist/ && test -f dist/production.js && test -d dist/public && test -f dist/db-docker.js
@@ -44,6 +48,7 @@ RUN node -e "require('qrcode'); require('drizzle-orm'); require('pg'); console.l
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
+COPY --from=builder --chown=nodejs:nodejs /app/server ./server
 
 # Create startup script before switching to nodejs user
 RUN cat > /app/start.sh << 'EOF'
