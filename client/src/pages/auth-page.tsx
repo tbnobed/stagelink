@@ -165,6 +165,14 @@ export default function AuthPage() {
       {/* Right side - Hero */}
       <div className="flex-1 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-8">
         <div className="max-w-md text-center">
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/stagelinq-logo.png" 
+              alt="StageLinq Logo" 
+              className="h-16 w-auto"
+              data-testid="stagelinq-logo"
+            />
+          </div>
           <h1 className="text-3xl font-bold text-primary mb-4">
             Virtual Audience Platform
           </h1>
