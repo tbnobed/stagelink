@@ -77,6 +77,8 @@ export default function Session() {
         setShowChat(true);
       }
 
+      console.log('Session parameters:', { stream, returnStream, chatEnabled });
+
       // Initialize streaming
       initializeStreaming({
         stream: stream || 'obed2',
@@ -84,10 +86,14 @@ export default function Session() {
         app: 'live'
       });
 
-      // Start playback immediately
-      if (playerVideoRef.current) {
-        startPlayback(playerVideoRef.current, returnStream || stream || 'obed2');
-      }
+      // Start playback with a small delay to ensure video element is ready
+      setTimeout(() => {
+        if (playerVideoRef.current) {
+          const playbackStream = returnStream || stream || 'obed2';
+          console.log('Starting return feed playback for:', playbackStream);
+          startPlayback(playerVideoRef.current, playbackStream);
+        }
+      }, 1000);
     };
 
     validateTokenAndInitialize();
