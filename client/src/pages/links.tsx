@@ -201,7 +201,7 @@ export default function Links() {
                         {previewingLink === link.id ? 'Previewing...' : 'Preview'}
                       </Button>
                       <Button 
-                        onClick={() => window.open(link.url, '_blank')}
+                        onClick={() => window.open(`/viewer?stream=${encodeURIComponent(link.streamName)}`, '_blank')}
                         variant="outline"
                         size="sm"
                         className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"

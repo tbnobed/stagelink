@@ -8,6 +8,7 @@ import Home from "@/pages/home";
 import Generator from "@/pages/generator";
 import Session from "@/pages/session";
 import Links from "@/pages/links";
+import Viewer from "@/pages/viewer";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
         <Route path="/generator" component={Generator} />
         <Route path="/session" component={Session} />
         <Route path="/links" component={Links} />
+        <Route path="/viewer" component={Viewer} />
         <Route component={NotFound} />
       </Switch>
     </div>

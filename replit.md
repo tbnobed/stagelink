@@ -11,6 +11,8 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Generated links now use dynamic host: window.location.host/session?stream=guest1&return=studio1&chat=true
 - Created new Links page with WHEP preview functionality for managing generated links
 - Preview shows the guest stream (WHIP stream) not the return feed, so you can see what the guest will broadcast
+- Added dedicated Viewer page (/viewer) for full-screen WHEP playback of guest streams
+- "Open" button in Links page now opens full-screen viewer instead of guest session page
 
 # User Preferences
 
