@@ -23,6 +23,7 @@ export interface IStorage {
   
   // Short Links
   getShortLink(code: string): Promise<ShortLink | undefined>;
+  getShortLinkByParams(streamName: string, returnFeed: string, chatEnabled: boolean): Promise<ShortLink | undefined>;
   createShortLink(shortLink: InsertShortLink, userId?: number): Promise<ShortLink>;
   deleteShortLink(code: string): Promise<boolean>;
   deleteExpiredShortLinks(): Promise<number>;
@@ -162,6 +163,26 @@ export class MemStorage implements IStorage {
     }
     
     return link;
+  }
+
+  async getShortLinkByParams(streamName: string, returnFeed: string, chatEnabled: boolean): Promise<ShortLink | undefined> {
+    const entries = Array.from(this.shortLinks.entries());
+    for (const [code, link] of entries) {
+      if (link.streamName === streamName && 
+          link.returnFeed === returnFeed && 
+          link.chatEnabled === chatEnabled) {
+        
+        // Check if link has expired
+        if (link.expiresAt && link.expiresAt <= new Date()) {
+          // Clean up expired link
+          this.shortLinks.delete(code);
+          continue;
+        }
+        
+        return link;
+      }
+    }
+    return undefined;
   }
 
   async createShortLink(insertShortLink: InsertShortLink, userId?: number): Promise<ShortLink> {
@@ -321,6 +342,33 @@ export class DatabaseStorage implements IStorage {
     if (link.expiresAt && link.expiresAt <= new Date()) {
       // Clean up expired link immediately
       await this.deleteShortLink(code);
+      return undefined;
+    }
+    
+    return link;
+  }
+
+  async getShortLinkByParams(streamName: string, returnFeed: string, chatEnabled: boolean): Promise<ShortLink | undefined> {
+    const [link] = await db
+      .select()
+      .from(shortLinks)
+      .where(
+        and(
+          eq(shortLinks.streamName, streamName),
+          eq(shortLinks.returnFeed, returnFeed),
+          eq(shortLinks.chatEnabled, chatEnabled)
+        )
+      )
+      .limit(1);
+    
+    if (!link) {
+      return undefined;
+    }
+    
+    // Check if link has expired
+    if (link.expiresAt && link.expiresAt <= new Date()) {
+      // Clean up expired link immediately
+      await this.deleteShortLink(link.id);
       return undefined;
     }
     

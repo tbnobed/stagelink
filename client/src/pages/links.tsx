@@ -14,6 +14,8 @@ interface GeneratedLink {
   url: string;
   createdAt: string | Date;
   expiresAt?: string | Date | null;
+  shortLink?: string | null;
+  shortCode?: string | null;
 }
 
 export default function Links() {
@@ -295,24 +297,47 @@ export default function Links() {
                             <div>Expires: {new Date(link.expiresAt).toLocaleString()}</div>
                           )}
                         </div>
-                        <div className="va-bg-dark-surface-2 rounded p-3 mb-4">
-                          <code className="text-xs va-text-green font-mono break-all" data-testid={`text-url-${link.id}`}>
-                            {link.url}
-                          </code>
+                        <div className="space-y-3 mb-4">
+                          {/* Short Link - Primary Display */}
+                          {link.shortLink && (
+                            <div className="va-bg-dark-surface-2 rounded p-3 border-l-4 border-va-primary">
+                              <div className="flex items-center gap-2 mb-1">
+                                <i className="fas fa-star text-va-primary text-xs"></i>
+                                <span className="text-xs va-text-primary font-medium">Recommended Share Link</span>
+                              </div>
+                              <code className="text-sm va-text-green font-mono break-all" data-testid={`text-short-url-${link.id}`}>
+                                {`${window.location.origin}${link.shortLink}`}
+                              </code>
+                            </div>
+                          )}
+                          {/* Full Link - Secondary Display */}
+                          <div className="va-bg-dark-surface-2 rounded p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <i className="fas fa-link text-gray-400 text-xs"></i>
+                              <span className="text-xs va-text-secondary font-medium">Full Link</span>
+                            </div>
+                            <code className="text-xs va-text-secondary font-mono break-all" data-testid={`text-url-${link.id}`}>
+                              {link.url}
+                            </code>
+                          </div>
                         </div>
                       </div>
                     </div>
                     
                     <div className="flex gap-2 flex-wrap">
                       <Button 
-                        onClick={() => copyToClipboard(link.url)}
+                        onClick={() => copyToClipboard(
+                          link.shortLink 
+                            ? `${window.location.origin}${link.shortLink}` 
+                            : link.url
+                        )}
                         variant="outline"
                         size="sm"
                         className="border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
                         data-testid={`button-copy-${link.id}`}
                       >
                         <i className="fas fa-copy mr-2"></i>
-                        Copy
+                        {link.shortLink ? 'Copy Short Link' : 'Copy'}
                       </Button>
                       <Button 
                         onClick={() => previewStream(link.streamName, link.id)}

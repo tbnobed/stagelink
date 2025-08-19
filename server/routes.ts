@@ -86,8 +86,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Fetching all links...');
       const links = await storage.getAllLinks();
+      
+      // For each link, try to find corresponding short link
+      const linksWithShortLinks = await Promise.all(
+        links.map(async (link) => {
+          // Find short link with matching parameters
+          const shortLink = await storage.getShortLinkByParams(
+            link.streamName, 
+            link.returnFeed, 
+            link.chatEnabled
+          );
+          
+          return {
+            ...link,
+            shortLink: shortLink ? `/s/${shortLink.id}` : null,
+            shortCode: shortLink?.id || null,
+          };
+        })
+      );
+      
       console.log('Links fetched successfully:', links.length, 'links');
-      res.json(links);
+      res.json(linksWithShortLinks);
     } catch (error) {
       console.error('Failed to fetch links:', error);
       res.status(500).json({ error: 'Failed to fetch links' });
