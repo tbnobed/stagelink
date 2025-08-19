@@ -1,8 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { startPlayback } from "@/lib/streaming";
 import { useLocation } from "wouter";
+
+// Global variables for SRS SDK
+declare global {
+  interface Window {
+    SrsRtcWhipWhepAsync: any;
+    SrsRtcFormatStats: any;
+  }
+}
 
 export default function StudioViewer() {
   const [, setLocation] = useLocation();
@@ -12,6 +19,7 @@ export default function StudioViewer() {
   const [chatEnabled, setChatEnabled] = useState(false);
   const [returnFeed, setReturnFeed] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,38 +42,121 @@ export default function StudioViewer() {
     setChatEnabled(chatParam === 'true');
   }, [setLocation, toast]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (playerRef.current) {
+        if ((playerRef.current as any).statsInterval) {
+          clearInterval((playerRef.current as any).statsInterval);
+        }
+        playerRef.current.close();
+        playerRef.current = null;
+      }
+    };
+  }, []);
+
   const startViewing = async () => {
     if (!videoRef.current || !returnFeed) return;
+    
+    if (!window.SrsRtcWhipWhepAsync) {
+      toast({
+        title: "Error",
+        description: "SRS SDK not loaded. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsPlaying(true);
     setHasError(false);
     
     try {
-      const url = `https://cdn2.obedtv.live:8088/rtc/v1/whep/?app=live&stream=${returnFeed}`;
+      // Clean up existing player
+      if (playerRef.current) {
+        playerRef.current.close();
+        playerRef.current = null;
+      }
       
-      await startPlayback(videoRef.current, url);
+      // Create new SRS WHEP player
+      playerRef.current = new window.SrsRtcWhipWhepAsync();
+      
+      // Set up the video element
+      videoRef.current.srcObject = playerRef.current.stream;
+      
+      // Build the WHEP URL for the return feed
+      const whepUrl = `https://cdn2.obedtv.live:8088/rtc/v1/whep/?app=live&stream=${returnFeed}`;
+      console.log('Connecting to WHEP URL:', whepUrl);
+      
+      // Start WHEP playback
+      await playerRef.current.play(whepUrl);
       
       toast({
         title: "Success",
-        description: "Connected to return feed",
+        description: `Connected to return feed: ${returnFeed}`,
       });
+      
+      // Set up stats collection
+      if (window.SrsRtcFormatStats) {
+        const updateStats = () => {
+          if (playerRef.current && playerRef.current.pc) {
+            playerRef.current.pc.getStats(null).then((stats: any) => {
+              const formattedStats = window.SrsRtcFormatStats(stats);
+              if (formattedStats && formattedStats.video) {
+                setVideoStats({
+                  resolution: formattedStats.video.resolution || 'N/A',
+                  codec: formattedStats.video.codec || 'N/A',
+                  bitrate: formattedStats.video.bitrate || 'N/A',
+                  fps: formattedStats.video.fps || 'N/A'
+                });
+              }
+            }).catch((err: any) => {
+              console.warn('Stats collection error:', err);
+            });
+          }
+        };
+        
+        // Update stats every 2 seconds
+        const statsInterval = setInterval(updateStats, 2000);
+        
+        // Store interval reference for cleanup
+        (playerRef.current as any).statsInterval = statsInterval;
+      }
+      
     } catch (error) {
-      console.error('Playback error:', error);
+      console.error('WHEP playback error:', error);
       setHasError(true);
       setIsPlaying(false);
+      
+      // Clean up failed connection
+      if (playerRef.current) {
+        playerRef.current.close();
+        playerRef.current = null;
+      }
+      
       toast({
         title: "Connection Failed",
-        description: "Could not connect to the return feed. Please check if the stream is active.",
+        description: `Could not connect to ${returnFeed}. Please check if the stream is active.`,
         variant: "destructive",
       });
     }
   };
 
   const stopViewing = () => {
+    // Clean up player and intervals
+    if (playerRef.current) {
+      if ((playerRef.current as any).statsInterval) {
+        clearInterval((playerRef.current as any).statsInterval);
+      }
+      playerRef.current.close();
+      playerRef.current = null;
+    }
+    
+    // Clear video element
     if (videoRef.current) {
       videoRef.current.srcObject = null;
       videoRef.current.pause();
     }
+    
     setIsPlaying(false);
     setVideoStats(null);
     toast({
