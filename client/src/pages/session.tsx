@@ -15,10 +15,14 @@ export default function Session() {
   const [returnFeedStatus, setReturnFeedStatus] = useState<'connecting' | 'connected' | 'failed' | 'retrying'>('connecting');
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
+  const initializationRef = useRef(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    if (initializationRef.current) return; // Prevent multiple initializations
+    initializationRef.current = true;
+    
     const validateTokenAndInitialize = async () => {
       // Parse URL parameters
       const urlParams = new URLSearchParams(window.location.search);
@@ -128,7 +132,7 @@ export default function Session() {
     };
 
     validateTokenAndInitialize();
-  }, []); // Remove dependencies to prevent re-running
+  }, [toast, setLocation]); // Proper dependencies
 
   // Add debugging for status changes
   useEffect(() => {
