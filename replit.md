@@ -94,7 +94,9 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Automatic cleanup of expired session tokens with proper foreign key cascade deletion
 - **SECURITY FIX**: Removed development fallback that allowed access without tokens - all streaming pages now require valid session tokens
 - Fixed short link resolution to properly include session tokens in redirected URLs
-- Implemented proper token validation in MemStorage with single-use consumption logic
+- Changed session tokens from single-use to reusable until link expiration or deletion per user requirements
+- **SECURITY FIX**: Session tokens are now properly invalidated when links are deleted, preventing access to deleted streaming sessions
+- Updated both MemStorage and DatabaseStorage to invalidate session tokens on link deletion
 
 # User Preferences
 

@@ -149,8 +149,9 @@ export class MemStorage implements IStorage {
     if (linkDeleted && deletedLink) {
       // Invalidate session tokens for this link
       for (const [tokenId, token] of Array.from(this.sessionTokens.entries())) {
-        if (token.linkId === id && token.linkType === 'stream') {
+        if (token.linkId === id && token.linkType === 'link') {
           this.sessionTokens.delete(tokenId);
+          console.log('Invalidated session token for deleted link:', tokenId);
         }
       }
       
@@ -501,8 +502,19 @@ export class DatabaseStorage implements IStorage {
       .delete(generatedLinks)
       .where(eq(generatedLinks.id, id));
     
-    // If link was deleted, also clean up associated short links
+    // If link was deleted, also clean up associated resources
     if ((result.rowCount ?? 0) > 0 && deletedLink) {
+      // Delete associated session tokens
+      await db
+        .delete(sessionTokens)
+        .where(
+          and(
+            eq(sessionTokens.linkId, id),
+            eq(sessionTokens.linkType, 'link')
+          )
+        );
+      
+      // Delete associated short links
       await db
         .delete(shortLinks)
         .where(
