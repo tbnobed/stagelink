@@ -26,6 +26,9 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Created PostgreSQL database with initialization scripts and health checks
 - Added automated deployment script with SSL certificate generation
 - Implemented health check endpoint for container monitoring
+- Fixed Docker build issues by creating dedicated production server without vite dependencies
+- Resolved module resolution errors in production environment
+- Updated build commands to use npx for proper CLI tool execution
 
 # User Preferences
 
