@@ -149,7 +149,7 @@ export class MemStorage implements IStorage {
     if (linkDeleted && deletedLink) {
       // Invalidate session tokens for this link
       for (const [tokenId, token] of Array.from(this.sessionTokens.entries())) {
-        if (token.linkId === id && token.linkType === 'link') {
+        if (token.linkId === id && token.linkType === 'guest') {
           this.sessionTokens.delete(tokenId);
           console.log('Invalidated session token for deleted link:', tokenId);
         }
@@ -383,6 +383,20 @@ export class MemStorage implements IStorage {
       return { valid: false };
     }
     
+    // Check if the associated link still exists
+    if (sessionToken.linkId) {
+      if (sessionToken.linkType === 'guest' && !this.links.has(sessionToken.linkId)) {
+        console.log('Associated guest link no longer exists, invalidating token');
+        this.sessionTokens.delete(token);
+        return { valid: false };
+      }
+      if (sessionToken.linkType === 'viewer' && !this.viewerLinks.has(sessionToken.linkId)) {
+        console.log('Associated viewer link no longer exists, invalidating token');
+        this.sessionTokens.delete(token);
+        return { valid: false };
+      }
+    }
+    
     // Token is valid and can be used multiple times until expiration or deletion
     console.log('Token validated successfully');
     
@@ -510,7 +524,7 @@ export class DatabaseStorage implements IStorage {
         .where(
           and(
             eq(sessionTokens.linkId, id),
-            eq(sessionTokens.linkType, 'link')
+            eq(sessionTokens.linkType, 'guest')
           )
         );
       
@@ -773,6 +787,26 @@ export class DatabaseStorage implements IStorage {
       // Clean up expired token
       await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
       return { valid: false };
+    }
+
+    // Check if the associated link still exists
+    if (sessionToken.linkId) {
+      if (sessionToken.linkType === 'guest') {
+        const [link] = await db.select().from(generatedLinks).where(eq(generatedLinks.id, sessionToken.linkId));
+        if (!link) {
+          // Link was deleted, invalidate token
+          await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
+          return { valid: false };
+        }
+      }
+      if (sessionToken.linkType === 'viewer') {
+        const [viewerLink] = await db.select().from(viewerLinks).where(eq(viewerLinks.id, sessionToken.linkId));
+        if (!viewerLink) {
+          // Viewer link was deleted, invalidate token
+          await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
+          return { valid: false };
+        }
+      }
     }
 
     // Token is valid and can be used multiple times until expiration or deletion
