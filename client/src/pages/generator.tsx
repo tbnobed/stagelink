@@ -93,10 +93,12 @@ export default function Generator() {
         throw new Error('Failed to save link');
       }
 
+      const regularLinkData = await regularResponse.json();
       const shortLinkData = await shortResponse.json();
       const shortUrl = `${window.location.protocol}//${window.location.host}/s/${shortLinkData.id}`;
 
-      setGeneratedLink(url);
+      // Use the URL with session token from the server response
+      setGeneratedLink(regularLinkData.url);
       setShortLink(shortUrl);
       setShowQR(false);
 
@@ -161,10 +163,12 @@ export default function Generator() {
         throw new Error('Failed to create viewer link');
       }
 
+      const regularViewerData = await regularResponse.json();
       const shortData = await shortResponse.json();
       const shortUrl = `${window.location.protocol}//${window.location.host}/sv/${shortData.id}`;
 
-      setViewerGeneratedLink(url);
+      // Use the URL with session token from the server response
+      setViewerGeneratedLink(regularViewerData.url);
       setViewerShortLink(shortUrl);
       
       // Generate QR code for the short link
