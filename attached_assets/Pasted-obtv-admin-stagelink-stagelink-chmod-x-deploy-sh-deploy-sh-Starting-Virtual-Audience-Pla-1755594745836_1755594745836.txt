@@ -1,0 +1,150 @@
+obtv-admin@stagelink:~/stagelink$ chmod +x deploy.sh && ./deploy.sh
+🚀 Starting Virtual Audience Platform v2.0 deployment with Persistent Database Storage...
+📁 Creating directories...
+🔨 Building and starting services...
+WARN[0000] /home/obtv-admin/stagelink/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+WARN[0000] /home/obtv-admin/stagelink/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+[+] Building 28.0s (23/23) FINISHED
+ => [internal] load local bake definitions                                                                         0.0s
+ => => reading from stdin 521B                                                                                     0.0s
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 1.76kB                                                                             0.0s
+ => [internal] load metadata for docker.io/library/node:18-alpine                                                  0.3s
+ => [internal] load .dockerignore                                                                                  0.0s
+ => => transferring context: 257B                                                                                  0.0s
+ => CACHED [builder 1/7] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d11894558  0.0s
+ => [internal] load build context                                                                                  0.1s
+ => => transferring context: 1.18MB                                                                                0.0s
+ => [production  2/10] RUN apk add --no-cache dumb-init                                                            0.8s
+ => [builder 2/7] WORKDIR /app                                                                                     0.0s
+ => [builder 3/7] COPY package*.json ./                                                                            0.0s
+ => [builder 4/7] RUN npm ci --include=dev                                                                        12.8s
+ => [production  3/10] WORKDIR /app                                                                                0.0s
+ => [production  4/10] RUN addgroup -g 1001 -S nodejs                                                              0.4s
+ => [production  5/10] RUN adduser -S nodejs -u 1001                                                               0.4s
+ => [production  6/10] COPY package*.json ./                                                                       0.1s
+ => [production  7/10] RUN npm ci --only=production && npm cache clean --force                                    10.3s
+ => [production  8/10] RUN node -e "console.log('QR Code package available:', !!require('qrcode'))"                0.3s
+ => [production  9/10] RUN node -e "console.log('Database packages available:', !!require('drizzle-orm'), !!requi  0.6s
+ => [builder 5/7] COPY . .                                                                                         0.1s
+ => [builder 6/7] RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bu  7.6s
+ => [builder 7/7] RUN ls -la dist/ && test -f dist/production.js && test -d dist/public                            0.4s
+ => [production 10/10] COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist                                  0.0s
+ => exporting to image                                                                                             6.0s
+ => => exporting layers                                                                                            6.0s
+ => => writing image sha256:d0009a4dd7e33bd43d3fd602b81291285ace53376648c3a660b1517dba429a62                       0.0s
+ => => naming to docker.io/library/stagelink-app                                                                   0.0s
+ => resolving provenance for metadata file                                                                         0.0s
+[+] Building 1/1
+ ✔ stagelink-app  Built                                                                                            0.0s
+WARN[0000] /home/obtv-admin/stagelink/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+[+] Running 4/4
+ ✔ Network stagelink_virtual-audience-network  Created                                                             0.1s
+ ✔ Volume "stagelink_postgres_data"            Created                                                             0.0s
+ ✔ Container virtual-audience-db-v2            Started                                                             0.4s
+ ✔ Container virtual-audience-app-v2           Started                                                             0.6s
+⏳ Waiting for services to be ready...
+✅ Application is healthy!
+
+🎉 Deployment complete!
+
+📊 Service Status:
+WARN[0000] /home/obtv-admin/stagelink/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+NAME                      IMAGE                COMMAND                  SERVICE   CREATED          STATUS                             PORTS
+virtual-audience-app-v2   stagelink-app        "dumb-init -- node d…"   app       11 seconds ago   Up 10 seconds (health: starting)   0.0.0.0:80->5000/tcp, [::]:80->5000/tcp
+virtual-audience-db-v2    postgres:15-alpine   "docker-entrypoint.s…"   db        11 seconds ago   Up 10 seconds (healthy)            0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+
+🌐 Access your application at:
+   HTTP:  http://localhost
+   HTTP:  http://172.18.0.1
+
+📝 Useful commands:
+   View logs:    docker-compose logs -f
+   Stop:         docker-compose down
+   Restart:      docker-compose restart
+   Update:       ./deploy.sh
+
+⚠️  Production checklist:
+   1. Update default passwords in .env file
+   2. Configure your domain name in nginx.conf
+   3. Set up proper firewall rules
+   4. Consider adding SSL/HTTPS for production use
+obtv-admin@stagelink:~/stagelink$ docker-compose logs -f
+WARN[0000] /home/obtv-admin/stagelink/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+virtual-audience-db-v2  | The files belonging to this database system will be owned by user "postgres".
+virtual-audience-db-v2  | This user must also own the server process.
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | The database cluster will be initialized with locale "en_US.utf8".
+virtual-audience-db-v2  | The default database encoding has accordingly been set to "UTF8".
+virtual-audience-app-v2  | 9:10:45 AM [express] serving on port 5000
+virtual-audience-app-v2  | 9:11:07 AM [express] POST /api/links 500 in 7ms :: {"error":"Failed to create link"}
+virtual-audience-app-v2  | 9:11:18 AM [express] POST /api/links 500 in 5ms :: {"error":"Failed to create link"}
+virtual-audience-db-v2   | The default text search configuration will be set to "english".
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | Data page checksums are disabled.
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+virtual-audience-db-v2   | creating subdirectories ... ok
+virtual-audience-db-v2   | selecting dynamic shared memory implementation ... posix
+virtual-audience-db-v2   | selecting default max_connections ... 100
+virtual-audience-db-v2   | selecting default shared_buffers ... 128MB
+virtual-audience-db-v2   | selecting default time zone ... UTC
+virtual-audience-db-v2   | creating configuration files ... ok
+virtual-audience-db-v2   | running bootstrap script ... ok
+virtual-audience-db-v2   | sh: locale: not found
+virtual-audience-db-v2   | 2025-08-19 09:10:45.790 UTC [35] WARNING:  no usable system locales were found
+virtual-audience-db-v2   | performing post-bootstrap initialization ... ok
+virtual-audience-db-v2   | syncing data to disk ... ok
+virtual-audience-db-v2   |
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | Success. You can now start the database server using:
+virtual-audience-db-v2   |
+virtual-audience-db-v2   |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | initdb: warning: enabling "trust" authentication for local connections
+virtual-audience-db-v2   | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+virtual-audience-db-v2   | waiting for server to start....2025-08-19 09:10:46.435 UTC [41] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2   | 2025-08-19 09:10:46.436 UTC [41] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2   | 2025-08-19 09:10:46.441 UTC [44] LOG:  database system was shut down at 2025-08-19 09:10:46 UTC
+virtual-audience-db-v2   | 2025-08-19 09:10:46.451 UTC [41] LOG:  database system is ready to accept connections
+virtual-audience-db-v2   |  done
+virtual-audience-db-v2   | server started
+virtual-audience-db-v2   | CREATE DATABASE
+virtual-audience-db-v2   |
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql
+virtual-audience-db-v2   |  ?column?
+virtual-audience-db-v2   | ----------
+virtual-audience-db-v2   | (0 rows)
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | You are now connected to database "virtual_audience" as user "postgres".
+virtual-audience-db-v2   | CREATE TABLE
+virtual-audience-db-v2   | CREATE TABLE
+virtual-audience-db-v2   | ALTER TABLE
+virtual-audience-db-v2   | CREATE INDEX
+virtual-audience-db-v2   | CREATE TABLE
+virtual-audience-db-v2   | CREATE INDEX
+virtual-audience-db-v2   | CREATE INDEX
+virtual-audience-db-v2   | INSERT 0 1
+virtual-audience-db-v2   | GRANT
+virtual-audience-db-v2   |
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | waiting for server to shut down....2025-08-19 09:10:46.688 UTC [41] LOG:  received fast shutdown request
+virtual-audience-db-v2   | 2025-08-19 09:10:46.689 UTC [41] LOG:  aborting any active transactions
+virtual-audience-db-v2   | 2025-08-19 09:10:46.695 UTC [41] LOG:  background worker "logical replication launcher" (PID 47) exited with exit code 1
+virtual-audience-db-v2   | 2025-08-19 09:10:46.696 UTC [42] LOG:  shutting down
+virtual-audience-db-v2   | 2025-08-19 09:10:46.697 UTC [42] LOG:  checkpoint starting: shutdown immediate
+virtual-audience-db-v2   | 2025-08-19 09:10:46.742 UTC [42] LOG:  checkpoint complete: wrote 936 buffers (5.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.025 s, sync=0.017 s, total=0.046 s; sync files=319, longest=0.002 s, average=0.001 s; distance=4310 kB, estimate=4310 kB
+virtual-audience-db-v2   | 2025-08-19 09:10:46.753 UTC [41] LOG:  database system is shut down
+virtual-audience-db-v2   |  done
+virtual-audience-db-v2   | server stopped
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | PostgreSQL init process complete; ready for start up.
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | 2025-08-19 09:10:46.827 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2   | 2025-08-19 09:10:46.827 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+virtual-audience-db-v2   | 2025-08-19 09:10:46.827 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+virtual-audience-db-v2   | 2025-08-19 09:10:46.829 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2   | 2025-08-19 09:10:46.834 UTC [60] LOG:  database system was shut down at 2025-08-19 09:10:46 UTC
+virtual-audience-db-v2   | 2025-08-19 09:10:46.844 UTC [1] LOG:  database system is ready to accept connections
+virtual-audience-app-v2  | 9:11:50 AM [express] POST /api/links 500 in 4ms :: {"error":"Failed to create link"}

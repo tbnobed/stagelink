@@ -27,21 +27,20 @@ CREATE TABLE IF NOT EXISTS session (
 ALTER TABLE session ADD CONSTRAINT session_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE;
 CREATE INDEX IF NOT EXISTS IDX_session_expire ON session (expire);
 
--- Create streaming_links table for persistent link storage (optional)
-CREATE TABLE IF NOT EXISTS streaming_links (
-    id SERIAL PRIMARY KEY,
-    stream_name VARCHAR(255) NOT NULL,
-    return_feed VARCHAR(255) NOT NULL,
-    chat_enabled BOOLEAN DEFAULT TRUE,
+-- Create generated_links table matching Drizzle schema
+CREATE TABLE IF NOT EXISTS generated_links (
+    id TEXT PRIMARY KEY,
+    stream_name TEXT NOT NULL,
+    return_feed TEXT NOT NULL,
+    chat_enabled BOOLEAN NOT NULL DEFAULT false,
     url TEXT NOT NULL,
-    expires_at TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by VARCHAR(255) DEFAULT 'anonymous'
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP
 );
 
 -- Create index for efficient expiration cleanup
-CREATE INDEX IF NOT EXISTS IDX_streaming_links_expires_at ON streaming_links (expires_at);
-CREATE INDEX IF NOT EXISTS IDX_streaming_links_created_at ON streaming_links (created_at);
+CREATE INDEX IF NOT EXISTS idx_generated_links_expires_at ON generated_links (expires_at);
+CREATE INDEX IF NOT EXISTS idx_generated_links_created_at ON generated_links (created_at);
 
 -- Insert default admin user (password: 'admin123' - change this!)
 INSERT INTO users (username, password_hash) 
