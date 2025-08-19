@@ -121,6 +121,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete short link endpoint
+  app.delete('/api/short-links/:code', requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deleteShortLink(req.params.code);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'Short link not found' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete short link' });
+    }
+  });
+
   app.delete('/api/links', requireAdmin, async (req, res) => {
     try {
       const deletedCount = await storage.deleteExpiredLinks();
@@ -162,16 +176,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const shortLink = await storage.getShortLink(req.params.code);
       if (!shortLink) {
-        return res.status(404).send('Link not found or expired');
+        // Return a proper HTML error page for better user experience
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Link Not Found - Virtual Audience Platform</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #e2e8f0; }
+              .container { max-width: 600px; margin: 0 auto; }
+              h1 { color: #ef4444; margin-bottom: 20px; }
+              p { margin-bottom: 15px; line-height: 1.6; }
+              .code { background: #1e293b; padding: 10px; border-radius: 5px; font-family: monospace; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Link Not Found</h1>
+              <p>The short link <span class="code">/s/${req.params.code}</span> was not found or has expired.</p>
+              <p>This could happen if:</p>
+              <ul style="text-align: left; display: inline-block;">
+                <li>The link has expired based on its configured duration</li>
+                <li>The link was deleted by an administrator</li>
+                <li>The link code is invalid or mistyped</li>
+              </ul>
+              <p>Please contact the person who shared this link for a new one.</p>
+            </div>
+          </body>
+          </html>
+        `);
       }
+
+      // Check if the link has expired
+      if (shortLink.expiresAt && new Date() > shortLink.expiresAt) {
+        // Clean up the expired link
+        await storage.deleteShortLink(req.params.code);
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Link Expired - Virtual Audience Platform</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #e2e8f0; }
+              .container { max-width: 600px; margin: 0 auto; }
+              h1 { color: #f59e0b; margin-bottom: 20px; }
+              p { margin-bottom: 15px; line-height: 1.6; }
+              .code { background: #1e293b; padding: 10px; border-radius: 5px; font-family: monospace; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Link Expired</h1>
+              <p>The short link <span class="code">/s/${req.params.code}</span> has expired and is no longer valid.</p>
+              <p>Please contact the person who shared this link for a new one.</p>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+
+      // Log the access for monitoring
+      console.log(`Short link accessed: ${req.params.code} -> stream: ${shortLink.streamName}, return: ${shortLink.returnFeed}`);
 
       // Redirect to session page with original parameters
       const chatParam = shortLink.chatEnabled ? '&chat=true' : '';
-      const redirectUrl = `/session?stream=${shortLink.streamName}&return=${shortLink.returnFeed}${chatParam}`;
+      const redirectUrl = `/session?stream=${encodeURIComponent(shortLink.streamName)}&return=${encodeURIComponent(shortLink.returnFeed)}${chatParam}`;
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Failed to resolve short link:', error);
-      res.status(500).send('Internal server error');
+      res.status(500).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Server Error - Virtual Audience Platform</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #e2e8f0; }
+            .container { max-width: 600px; margin: 0 auto; }
+            h1 { color: #ef4444; margin-bottom: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1>Server Error</h1>
+            <p>An internal server error occurred while processing the link. Please try again later.</p>
+          </div>
+        </body>
+        </html>
+      `);
     }
   });
 

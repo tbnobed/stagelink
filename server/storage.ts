@@ -134,10 +134,17 @@ export class MemStorage implements IStorage {
 
   async getShortLink(code: string): Promise<ShortLink | undefined> {
     const link = this.shortLinks.get(code);
-    if (link && link.expiresAt && link.expiresAt <= new Date()) {
+    if (!link) {
+      return undefined;
+    }
+    
+    // Check if link has expired
+    if (link.expiresAt && link.expiresAt <= new Date()) {
+      // Clean up expired link
       this.shortLinks.delete(code);
       return undefined;
     }
+    
     return link;
   }
 
@@ -271,11 +278,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getShortLink(code: string): Promise<ShortLink | undefined> {
-    // First clean up expired links
-    await this.deleteExpiredShortLinks();
-    
     const [link] = await db.select().from(shortLinks).where(eq(shortLinks.id, code));
-    return link || undefined;
+    
+    if (!link) {
+      return undefined;
+    }
+    
+    // Check if link has expired
+    if (link.expiresAt && link.expiresAt <= new Date()) {
+      // Clean up expired link immediately
+      await this.deleteShortLink(code);
+      return undefined;
+    }
+    
+    return link;
   }
 
   async createShortLink(insertShortLink: InsertShortLink, userId?: number): Promise<ShortLink> {
