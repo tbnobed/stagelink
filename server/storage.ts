@@ -1,4 +1,4 @@
-import { users, generatedLinks, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink } from "@shared/schema";
+import { users, generatedLinks, shortLinks, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull } from "drizzle-orm";
@@ -20,16 +20,24 @@ export interface IStorage {
   createLink(link: InsertGeneratedLink, userId?: number): Promise<GeneratedLink>;
   deleteLink(id: string): Promise<boolean>;
   deleteExpiredLinks(): Promise<number>;
+  
+  // Short Links
+  getShortLink(code: string): Promise<ShortLink | undefined>;
+  createShortLink(shortLink: InsertShortLink, userId?: number): Promise<ShortLink>;
+  deleteShortLink(code: string): Promise<boolean>;
+  deleteExpiredShortLinks(): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private links: Map<string, GeneratedLink>;
+  private shortLinks: Map<string, ShortLink>;
   private userIdCounter: number = 1;
 
   constructor() {
     this.users = new Map();
     this.links = new Map();
+    this.shortLinks = new Map();
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -117,6 +125,45 @@ export class MemStorage implements IStorage {
     for (const [id, link] of Array.from(this.links.entries())) {
       if (link.expiresAt && link.expiresAt <= now) {
         this.links.delete(id);
+        deletedCount++;
+      }
+    }
+    
+    return deletedCount;
+  }
+
+  async getShortLink(code: string): Promise<ShortLink | undefined> {
+    const link = this.shortLinks.get(code);
+    if (link && link.expiresAt && link.expiresAt <= new Date()) {
+      this.shortLinks.delete(code);
+      return undefined;
+    }
+    return link;
+  }
+
+  async createShortLink(insertShortLink: InsertShortLink, userId?: number): Promise<ShortLink> {
+    const shortLink: ShortLink = {
+      ...insertShortLink,
+      chatEnabled: insertShortLink.chatEnabled ?? false,
+      createdAt: new Date(),
+      expiresAt: insertShortLink.expiresAt ? new Date(insertShortLink.expiresAt) : null,
+      createdBy: userId || null,
+    };
+    this.shortLinks.set(shortLink.id, shortLink);
+    return shortLink;
+  }
+
+  async deleteShortLink(code: string): Promise<boolean> {
+    return this.shortLinks.delete(code);
+  }
+
+  async deleteExpiredShortLinks(): Promise<number> {
+    const now = new Date();
+    let deletedCount = 0;
+    
+    for (const [code, link] of Array.from(this.shortLinks.entries())) {
+      if (link.expiresAt && link.expiresAt <= now) {
+        this.shortLinks.delete(code);
         deletedCount++;
       }
     }
@@ -218,6 +265,48 @@ export class DatabaseStorage implements IStorage {
         and(
           isNotNull(generatedLinks.expiresAt),
           lt(generatedLinks.expiresAt, now)
+        )
+      );
+    return result.rowCount || 0;
+  }
+
+  async getShortLink(code: string): Promise<ShortLink | undefined> {
+    // First clean up expired links
+    await this.deleteExpiredShortLinks();
+    
+    const [link] = await db.select().from(shortLinks).where(eq(shortLinks.id, code));
+    return link || undefined;
+  }
+
+  async createShortLink(insertShortLink: InsertShortLink, userId?: number): Promise<ShortLink> {
+    const [shortLink] = await db
+      .insert(shortLinks)
+      .values({
+        ...insertShortLink,
+        chatEnabled: insertShortLink.chatEnabled ?? false,
+        createdAt: new Date(),
+        expiresAt: insertShortLink.expiresAt ? new Date(insertShortLink.expiresAt) : null,
+        createdBy: userId || null,
+      })
+      .returning();
+    return shortLink;
+  }
+
+  async deleteShortLink(code: string): Promise<boolean> {
+    const result = await db
+      .delete(shortLinks)
+      .where(eq(shortLinks.id, code));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteExpiredShortLinks(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .delete(shortLinks)
+      .where(
+        and(
+          isNotNull(shortLinks.expiresAt),
+          lt(shortLinks.expiresAt, now)
         )
       );
     return result.rowCount || 0;

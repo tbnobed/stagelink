@@ -15,6 +15,7 @@ export default function Generator() {
   const [expirationOption, setExpirationOption] = useState("never");
   const [customHours, setCustomHours] = useState("24");
   const [generatedLink, setGeneratedLink] = useState("");
+  const [shortLink, setShortLink] = useState("");
   const [showQR, setShowQR] = useState(false);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
@@ -40,28 +41,54 @@ export default function Generator() {
       expiresAt = new Date(now.getTime() + (hours * 60 * 60 * 1000));
     }
     
-    // Save to server
-    const newLink = {
-      id: Date.now().toString(),
-      streamName: streamName.trim(),
-      returnFeed: returnFeed,
-      chatEnabled: enableChat,
-      url: url,
-      expiresAt: expiresAt || null
-    };
-
     try {
-      const response = await fetch('/api/links', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newLink),
-      });
+      // Create both regular link and short link
+      const [regularResponse, shortResponse] = await Promise.all([
+        // Save regular link
+        fetch('/api/links', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: Date.now().toString(),
+            streamName: streamName.trim(),
+            returnFeed: returnFeed,
+            chatEnabled: enableChat,
+            url: url,
+            expiresAt: expiresAt || null
+          }),
+        }),
+        // Create short link
+        fetch('/api/short-links', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            streamName: streamName.trim(),
+            returnFeed: returnFeed,
+            chatEnabled: enableChat,
+            expiresAt: expiresAt || null
+          }),
+        })
+      ]);
 
-      if (!response.ok) {
+      if (!regularResponse.ok || !shortResponse.ok) {
         throw new Error('Failed to save link');
       }
+
+      const shortLinkData = await shortResponse.json();
+      const shortUrl = `${window.location.protocol}//${window.location.host}/s/${shortLinkData.id}`;
+
+      setGeneratedLink(url);
+      setShortLink(shortUrl);
+      setShowQR(false);
+
+      toast({
+        title: "Links Generated",
+        description: "Both regular and short links created",
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -70,18 +97,11 @@ export default function Generator() {
       });
       return;
     }
-
-    setGeneratedLink(url);
-    setShowQR(false);
-
-    toast({
-      title: "Link Generated",
-      description: "Link saved to your links page",
-    });
   };
 
-  const copyToClipboard = async () => {
-    if (!generatedLink) {
+  const copyToClipboard = async (linkToCopy?: string) => {
+    const linkToUse = linkToCopy || shortLink || generatedLink;
+    if (!linkToUse) {
       toast({
         title: "Error",
         description: "Please generate a link first.",
@@ -91,7 +111,7 @@ export default function Generator() {
     }
 
     try {
-      await navigator.clipboard.writeText(generatedLink);
+      await navigator.clipboard.writeText(linkToUse);
       toast({
         title: "Success",
         description: "Link copied to clipboard!",
@@ -99,7 +119,7 @@ export default function Generator() {
     } catch (err) {
       // Fallback for older browsers
       const textarea = document.createElement('textarea');
-      textarea.value = generatedLink;
+      textarea.value = linkToUse;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand('copy');
@@ -113,7 +133,8 @@ export default function Generator() {
   };
 
   const generateQRCode = async () => {
-    if (!generatedLink) {
+    const linkForQR = shortLink || generatedLink;
+    if (!linkForQR) {
       toast({
         title: "Error",
         description: "Please generate a link first.",
@@ -136,7 +157,7 @@ export default function Generator() {
     }
 
     try {
-      await QRCode.toCanvas(canvas, generatedLink, {
+      await QRCode.toCanvas(canvas, linkForQR, {
         width: 200,
         margin: 2,
         color: {
@@ -297,14 +318,41 @@ export default function Generator() {
             </div>
             
             <div className="space-y-6">
-              {/* Link Output */}
+              {/* Short Link Output */}
+              {shortLink && (
+                <div>
+                  <Label htmlFor="shortLink" className="va-text-secondary">
+                    Short Link (Recommended)
+                  </Label>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      id="shortLink"
+                      readOnly
+                      value={shortLink}
+                      className="va-bg-dark-bg va-border-dark va-text-green font-mono text-sm focus:ring-va-primary/50"
+                      data-testid="input-short-link"
+                    />
+                    <Button 
+                      onClick={() => copyToClipboard(shortLink)}
+                      variant="outline"
+                      size="sm"
+                      className="border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
+                      data-testid="button-copy-short-link"
+                    >
+                      <i className="fas fa-copy"></i>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Full Link Output */}
               <div>
                 <Label htmlFor="generatedLink" className="va-text-secondary">
-                  Guest Session URL
+                  {shortLink ? 'Full Link (Debug)' : 'Guest Session URL'}
                 </Label>
                 <Textarea
                   id="generatedLink"
-                  rows={4}
+                  rows={shortLink ? 3 : 4}
                   readOnly
                   value={generatedLink}
                   placeholder="Generated link will appear here..."
@@ -316,13 +364,13 @@ export default function Generator() {
               {/* Action Buttons */}
               <div className="flex space-x-3">
                 <Button 
-                  onClick={copyToClipboard}
+                  onClick={() => copyToClipboard()}
                   variant="outline"
                   className="flex-1 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
                   data-testid="button-copy-link"
                 >
                   <i className="fas fa-copy mr-2"></i>
-                  Copy Link
+                  Copy {shortLink ? 'Short' : ''} Link
                 </Button>
                 <Button 
                   onClick={generateQRCode}

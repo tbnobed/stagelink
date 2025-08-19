@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireAdmin } from "./auth";
-import { insertUserSchema } from "@shared/schema";
+import { insertUserSchema, insertShortLinkSchema } from "@shared/schema";
+import { generateUniqueShortCode } from "./utils/shortCode";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -126,6 +127,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ deletedCount });
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete expired links' });
+    }
+  });
+
+  // Short link creation
+  app.post('/api/short-links', requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const { streamName, returnFeed, chatEnabled, expiresAt } = req.body;
+      
+      // Generate unique short code
+      const shortCode = await generateUniqueShortCode(async (code) => {
+        const existing = await storage.getShortLink(code);
+        return !!existing;
+      });
+
+      const shortLink = await storage.createShortLink({
+        id: shortCode,
+        streamName,
+        returnFeed,
+        chatEnabled: chatEnabled ?? false,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      }, userId);
+
+      res.json(shortLink);
+    } catch (error) {
+      console.error('Failed to create short link:', error);
+      res.status(500).json({ error: 'Failed to create short link' });
+    }
+  });
+
+  // Short link resolution
+  app.get('/s/:code', async (req, res) => {
+    try {
+      const shortLink = await storage.getShortLink(req.params.code);
+      if (!shortLink) {
+        return res.status(404).send('Link not found or expired');
+      }
+
+      // Redirect to session page with original parameters
+      const chatParam = shortLink.chatEnabled ? '&chat=true' : '';
+      const redirectUrl = `/session?stream=${shortLink.streamName}&return=${shortLink.returnFeed}${chatParam}`;
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Failed to resolve short link:', error);
+      res.status(500).send('Internal server error');
     }
   });
 

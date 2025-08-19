@@ -47,3 +47,21 @@ export const insertGeneratedLinkSchema = createInsertSchema(generatedLinks).omit
 });
 export type InsertGeneratedLink = z.infer<typeof insertGeneratedLinkSchema>;
 export type GeneratedLink = typeof generatedLinks.$inferSelect;
+
+// Short links table for URL shortening
+export const shortLinks = pgTable("short_links", {
+  id: text("id").primaryKey(), // Short code like "a1b2c3"
+  streamName: text("stream_name").notNull(),
+  returnFeed: text("return_feed").notNull(),
+  chatEnabled: boolean("chat_enabled").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+export const insertShortLinkSchema = createInsertSchema(shortLinks).omit({
+  createdAt: true,
+  createdBy: true,
+});
+export type InsertShortLink = z.infer<typeof insertShortLinkSchema>;
+export type ShortLink = typeof shortLinks.$inferSelect;
