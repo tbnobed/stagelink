@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Link Generator | Virtual Audience</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #121212;
+      color: #f0f0f0;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background-color: #1e1e1e;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      max-width: 600px;
+      width: 100%;
+    }
+
+    h2 {
+      color: #00d084;
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 30px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #cccccc;
+      font-size: 14px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 14px;
+      background-color: #2a2a2a;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+    }
+
+    input[type="checkbox"] {
+      width: auto;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 15px;
+      color: #ccc;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: #00d084;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #00b073;
+    }
+
+    textarea {
+      background-color: #1a1a1a;
+      color: #00ffae;
+      font-family: monospace;
+      resize: none;
+    }
+
+    .copy-btn {
+      background-color: transparent;
+      border: 1px solid #00d084;
+      color: #00d084;
+      margin-top: 10px;
+    }
+
+    .copy-btn:hover {
+      background-color: #00d084;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Guest Link Generator</h2>
+
+    <label for="streamName">Guest Stream Name</label>
+    <input type="text" id="streamName" placeholder="e.g. guest1">
+
+    <label for="returnFeed">Studio Return Feed</label>
+    <select id="returnFeed">
+      <option value="livestream5">studio1</option>
+      <option value="studio2">studio2</option>
+      <option value="studio3">studio3</option>
+      <option value="studio4">studio4</option>
+    </select>
+
+    <label class="checkbox-label">
+      <input type="checkbox" id="enableChat" checked>
+      Enable Chat
+    </label>
+
+    <button onclick="generateLink()">Generate Link</button>
+
+    <label for="generatedLink">Generated Link</label>
+    <textarea id="generatedLink" rows="3" readonly placeholder="Generated link will appear here..."></textarea>
+
+    <button class="copy-btn" onclick="copyToClipboard()">Copy to Clipboard</button>
+  </div>
+
+  <script>
+    function generateLink() {
+      const stream = document.getElementById('streamName').value.trim();
+      const returnFeed = document.getElementById('returnFeed').value;
+      const chat = document.getElementById('enableChat').checked;
+
+      if (!stream) {
+        alert("Please enter a stream name.");
+        return;
+      }
+
+      const baseURL = "https://cdn2.obedtv.live:8088/players/sessions.html";
+      const url = `${baseURL}?stream=${encodeURIComponent(stream)}&return=${encodeURIComponent(returnFeed)}&chat=${chat}`;
+      document.getElementById('generatedLink').value = url;
+    }
+
+    function copyToClipboard() {
+      const textarea = document.getElementById('generatedLink');
+      textarea.select();
+      textarea.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+      alert("Link copied to clipboard!");
+    }
+  </script>
+
+</body>
+</html>
