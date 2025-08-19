@@ -9,6 +9,8 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Updated link generator to point to current Replit server instead of external CDN
 - Removed stats section from homepage per user request
 - Generated links now use dynamic host: window.location.host/session?stream=guest1&return=studio1&chat=true
+- Replaced failing external chat iframe with built-in chat system due to 502 Bad Gateway errors
+- Implemented real-time local chat with message history, timestamps, and proper styling
 
 # User Preferences
 
