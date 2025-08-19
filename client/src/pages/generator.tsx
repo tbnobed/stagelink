@@ -26,7 +26,7 @@ export default function Generator() {
       return;
     }
 
-    const baseURL = "https://cdn2.obedtv.live:8088/session.html";
+    const baseURL = "https://cdn2.obedtv.live:8088/players/session.html";
     const url = `${baseURL}?stream=${encodeURIComponent(streamName.trim())}&return=${encodeURIComponent(returnFeed)}&chat=${enableChat}`;
     setGeneratedLink(url);
     setShowQR(false);

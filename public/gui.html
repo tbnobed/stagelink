@@ -171,7 +171,7 @@
         return;
       }
 
-      const baseURL = "https://cdn2.obedtv.live:8088/session.html";
+      const baseURL = "https://cdn2.obedtv.live:8088/players/session.html";
       const url = `${baseURL}?stream=${encodeURIComponent(stream)}&return=${encodeURIComponent(returnFeed)}&chat=${chat}`;
       document.getElementById('generatedLink').value = url;
     }
