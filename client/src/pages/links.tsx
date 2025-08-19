@@ -8,7 +8,7 @@ import { queryClient } from "@/lib/queryClient";
 
 interface GeneratedLink {
   id: string;
-  streamName: string;
+  streamName?: string; // Only for guest session links
   returnFeed: string;
   chatEnabled: boolean;
   url: string;
@@ -16,6 +16,7 @@ interface GeneratedLink {
   expiresAt?: string | Date | null;
   shortLink?: string | null;
   shortCode?: string | null;
+  type: 'guest' | 'viewer'; // Add type to distinguish link types
 }
 
 export default function Links() {
@@ -23,15 +24,34 @@ export default function Links() {
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
 
-  // Fetch links from API
+  // Fetch both guest session links and viewer links
   const { data: links = [], isLoading, error } = useQuery({
-    queryKey: ['/api/links'],
+    queryKey: ['/api/all-links'],
     queryFn: async () => {
-      const response = await fetch('/api/links');
-      if (!response.ok) {
-        throw new Error('Failed to fetch links');
+      // Fetch guest session links
+      const guestResponse = await fetch('/api/links');
+      if (!guestResponse.ok) {
+        throw new Error('Failed to fetch guest session links');
       }
-      return response.json();
+      const guestLinks = await guestResponse.json();
+      
+      // Fetch viewer links
+      const viewerResponse = await fetch('/api/viewer-links');
+      if (!viewerResponse.ok) {
+        throw new Error('Failed to fetch viewer links');
+      }
+      const viewerLinks = await viewerResponse.json();
+      
+      // Combine and mark link types
+      const allLinks: GeneratedLink[] = [
+        ...guestLinks.map((link: any) => ({ ...link, type: 'guest' as const })),
+        ...viewerLinks.map((link: any) => ({ ...link, type: 'viewer' as const }))
+      ];
+      
+      // Sort by creation date (newest first)
+      return allLinks.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
     },
   });
 
@@ -63,12 +83,13 @@ export default function Links() {
 
   // Mutations for link operations
   const deleteLinkMutation = useMutation({
-    mutationFn: async (linkId: string) => {
-      const response = await fetch(`/api/links/${linkId}`, {
+    mutationFn: async ({ linkId, linkType }: { linkId: string; linkType: 'guest' | 'viewer' }) => {
+      const endpoint = linkType === 'guest' ? `/api/links/${linkId}` : `/api/viewer-links/${linkId}`;
+      const response = await fetch(endpoint, {
         method: 'DELETE',
       });
       if (!response.ok) {
-        throw new Error('Failed to delete link');
+        throw new Error(`Failed to delete ${linkType} link`);
       }
       return response.json();
     },
@@ -141,12 +162,12 @@ export default function Links() {
     setPreviewingLink(null);
   };
 
-  const deleteLink = (linkId: string) => {
+  const deleteLink = (linkId: string, linkType: 'guest' | 'viewer') => {
     if (previewingLink === linkId) {
       stopPreview();
     }
 
-    deleteLinkMutation.mutate(linkId, {
+    deleteLinkMutation.mutate({ linkId, linkType }, {
       onSuccess: () => {
         toast({
           title: "Link Deleted",
@@ -181,7 +202,7 @@ export default function Links() {
 
   const clearAllLinks = () => {
     // Delete all links one by one
-    links.forEach((link: GeneratedLink) => deleteLink(link.id));
+    links.forEach((link: GeneratedLink) => deleteLink(link.id, link.type));
     stopPreview();
   };
 
@@ -267,11 +288,20 @@ export default function Links() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold va-text-primary" data-testid={`text-stream-${link.id}`}>
-                            {link.streamName}
+                            {link.type === 'guest' ? link.streamName : link.returnFeed || 'Viewer Link'}
                           </h3>
-                          <Badge variant="outline" className="va-text-green border-va-primary">
-                            {link.returnFeed}
+                          <Badge variant="outline" className={
+                            link.type === 'guest' 
+                              ? "va-text-green border-va-primary" 
+                              : "bg-purple-500/20 text-purple-400 border-purple-500/50"
+                          }>
+                            {link.type === 'guest' ? 'Guest Session' : 'Return Feed Viewer'}
                           </Badge>
+                          {link.type === 'guest' && link.returnFeed && (
+                            <Badge variant="outline" className="va-text-green border-va-primary">
+                              Return: {link.returnFeed}
+                            </Badge>
+                          )}
                           {link.chatEnabled && (
                             <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 border-blue-500/50">
                               Chat
@@ -339,39 +369,56 @@ export default function Links() {
                         <i className="fas fa-copy mr-2"></i>
                         {link.shortLink ? 'Copy Short Link' : 'Copy'}
                       </Button>
+                      {/* Preview Button - Only for guest sessions */}
+                      {link.type === 'guest' && link.streamName && (
+                        <Button 
+                          onClick={() => previewStream(link.streamName!, link.id)}
+                          variant="outline"
+                          size="sm"
+                          className="va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
+                          disabled={previewingLink === link.id}
+                          data-testid={`button-preview-${link.id}`}
+                        >
+                          <i className={`fas ${previewingLink === link.id ? 'fa-spinner fa-spin' : 'fa-play'} mr-2`}></i>
+                          {previewingLink === link.id ? 'Previewing...' : 'Preview'}
+                        </Button>
+                      )}
+                      
+                      {/* Open Button - Different logic for guest vs viewer */}
                       <Button 
-                        onClick={() => previewStream(link.streamName, link.id)}
-                        variant="outline"
-                        size="sm"
-                        className="va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
-                        disabled={previewingLink === link.id}
-                        data-testid={`button-preview-${link.id}`}
-                      >
-                        <i className={`fas ${previewingLink === link.id ? 'fa-spinner fa-spin' : 'fa-play'} mr-2`}></i>
-                        {previewingLink === link.id ? 'Previewing...' : 'Preview'}
-                      </Button>
-                      <Button 
-                        onClick={() => window.open(`/viewer?stream=${encodeURIComponent(link.streamName)}`, '_blank')}
+                        onClick={() => {
+                          if (link.type === 'guest') {
+                            window.open(`/viewer?stream=${encodeURIComponent(link.streamName || '')}`, '_blank');
+                          } else {
+                            // For viewer links, open the studio-viewer page directly
+                            window.open(link.url, '_blank');
+                          }
+                        }}
                         variant="outline"
                         size="sm"
                         className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
                         data-testid={`button-open-${link.id}`}
                       >
                         <i className="fas fa-external-link-alt mr-2"></i>
-                        Open
+                        {link.type === 'guest' ? 'Open Guest Session' : 'Open Viewer'}
                       </Button>
+                      
+                      {/* Ingest Link - Only for guest sessions */}
+                      {link.type === 'guest' && link.streamName && (
+                        <Button 
+                          onClick={() => copyIngestLink(link.streamName!)}
+                          variant="outline"
+                          size="sm"
+                          className="border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white"
+                          data-testid={`button-copy-ingest-${link.id}`}
+                        >
+                          <i className="fas fa-broadcast-tower mr-2"></i>
+                          Copy Ingest Link
+                        </Button>
+                      )}
+                      
                       <Button 
-                        onClick={() => copyIngestLink(link.streamName)}
-                        variant="outline"
-                        size="sm"
-                        className="border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white"
-                        data-testid={`button-copy-ingest-${link.id}`}
-                      >
-                        <i className="fas fa-broadcast-tower mr-2"></i>
-                        Copy Ingest Link
-                      </Button>
-                      <Button 
-                        onClick={() => deleteLink(link.id)}
+                        onClick={() => deleteLink(link.id, link.type)}
                         variant="outline"
                         size="sm"
                         className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
