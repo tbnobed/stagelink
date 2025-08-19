@@ -1,6 +1,6 @@
 # Overview
 
-Virtual Audience Platform is a professional live streaming solution built with React and Express that enables real-time video publishing and audience interaction capabilities. The application provides a comprehensive streaming platform with WHIP/WHEP protocol support, live chat integration, and QR code generation for easy session sharing. Users can generate streaming links, manage guest sessions, and interact with live video streams through an intuitive web interface.
+Virtual Audience Platform is a professional live streaming solution that provides both a modern React web application and standalone HTML files for SRS server deployment. The platform enables real-time video publishing and audience interaction with WHIP/WHEP protocol support, live chat integration, and QR code generation for easy session sharing. Users can generate streaming links, manage guest sessions, and interact with live video streams through both the React interface and static HTML pages.
 
 # User Preferences
 
@@ -52,6 +52,7 @@ Preferred communication style: Simple, everyday language.
 - **Live Chat**: Integrated chat functionality for audience interaction
 - **Responsive Design**: Mobile-first approach with Tailwind responsive utilities
 - **Error Handling**: Comprehensive error boundaries and toast notifications
+- **Standalone HTML Files**: Basic HTML pages for direct SRS server deployment (`/public/index.html`, `/public/gui.html`, `/public/session.html`)
 
 # External Dependencies
 

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Virtual Audience Platform</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background-color: #121212;
+      color: #f0f0f0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .navbar {
+      background-color: #1e1e1e;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid #333;
+    }
+
+    .navbar img {
+      height: 52px;
+      margin-right: 10px;
+    }
+
+    .navbar span {
+      font-size: 18px;
+      font-weight: bold;
+      color: #00d084;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #f0f0f0;
+    }
+
+    .hero .highlight {
+      color: #00d084;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: #cccccc;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 30px;
+      margin-bottom: 60px;
+    }
+
+    .card {
+      background-color: #1e1e1e;
+      border-radius: 16px;
+      padding: 30px;
+      border: 1px solid #333;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: #00d084;
+      transform: translateY(-5px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .card-icon {
+      background-color: rgba(0, 208, 132, 0.2);
+      padding: 12px;
+      border-radius: 8px;
+      margin-right: 15px;
+      font-size: 24px;
+      color: #00d084;
+    }
+
+    .card h3 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0;
+      color: #f0f0f0;
+    }
+
+    .card p {
+      color: #cccccc;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .features-list {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 25px;
+    }
+
+    .features-list li {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      color: #cccccc;
+    }
+
+    .features-list .check {
+      color: #00d084;
+      margin-right: 10px;
+    }
+
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 15px 20px;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background-color: #00d084;
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background-color: #00b073;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      color: #00d084;
+      border: 2px solid #00d084;
+    }
+
+    .btn-secondary:hover {
+      background-color: #00d084;
+      color: #000;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+  <img src="https://cdn2.obedtv.live:8088/obedtv.png" alt="OBTV Logo">
+  <span>Virtual Audience HUB</span>
+</div>
+
+<!-- Main Content -->
+<div class="container">
+  <!-- Hero Section -->
+  <div class="hero">
+    <h1>Virtual Audience <span class="highlight">Platform</span></h1>
+    <p>Professional live streaming solution with real-time video publishing and audience interaction capabilities</p>
+  </div>
+
+  <!-- Feature Cards -->
+  <div class="cards-grid">
+    <!-- Guest Session Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📹</div>
+        <h3>Guest Session</h3>
+      </div>
+      <p>Start publishing your live video stream with real-time codec information and session statistics</p>
+      <ul class="features-list">
+        <li><span class="check">✓</span> WHIP/WHEP Protocol Support</li>
+        <li><span class="check">✓</span> Real-time Video Streaming</li>
+        <li><span class="check">✓</span> Live Chat Integration</li>
+      </ul>
+      <a href="session.html" class="btn btn-primary">Launch Guest Session</a>
+    </div>
+
+    <!-- Link Generator Card -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">🔗</div>
+        <h3>Link Generator</h3>
+      </div>
+      <p>Create custom guest links with studio return feeds and chat configuration options</p>
+      <ul class="features-list">
+        <li><span class="check">✓</span> Custom Stream Names</li>
+        <li><span class="check">✓</span> Studio Return Feed Selection</li>
+        <li><span class="check">✓</span> QR Code Generation</li>
+      </ul>
+      <a href="gui.html" class="btn btn-secondary">Open Link Generator</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

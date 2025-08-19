@@ -26,7 +26,7 @@ export default function Generator() {
       return;
     }
 
-    const baseURL = "https://cdn2.obedtv.live:8088/players/session.html";
+    const baseURL = "https://cdn2.obedtv.live:8088/session.html";
     const url = `${baseURL}?stream=${encodeURIComponent(streamName.trim())}&return=${encodeURIComponent(returnFeed)}&chat=${enableChat}`;
     setGeneratedLink(url);
     setShowQR(false);
@@ -75,7 +75,7 @@ export default function Generator() {
     }
 
     const canvas = qrCanvasRef.current;
-    if (!canvas || !window.QRCode) {
+    if (!canvas || !(window as any).QRCode) {
       toast({
         title: "Error",
         description: "QR code library not loaded.",
@@ -84,7 +84,7 @@ export default function Generator() {
       return;
     }
 
-    window.QRCode.toCanvas(canvas, generatedLink, {
+    (window as any).QRCode.toCanvas(canvas, generatedLink, {
       width: 200,
       margin: 2,
       color: {
