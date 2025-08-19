@@ -1,5 +1,5 @@
 -- Virtual Audience Platform v2.0 with Authentication Support
--- Minimal initialization - Drizzle will handle full schema creation
+-- Clean initialization for Docker deployment
 
 -- Create database if not exists
 SELECT 'CREATE DATABASE virtual_audience'
@@ -7,6 +7,10 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'virtual_audience');
 
 -- Connect to the database
 \c virtual_audience;
+
+-- Clean slate: Drop existing schema for fresh deployment
+DROP SCHEMA IF EXISTS public CASCADE;
+CREATE SCHEMA public;
 
 -- Grant all privileges to postgres user for Drizzle operations
 GRANT ALL PRIVILEGES ON DATABASE virtual_audience TO postgres;

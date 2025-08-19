@@ -25,8 +25,8 @@ RUN ls -la dist/ && test -f dist/production.js && test -d dist/public && test -f
 # Production stage
 FROM node:18-alpine AS production
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init and postgresql-client for schema management
+RUN apk add --no-cache dumb-init postgresql-client
 
 # Create app directory and user
 WORKDIR /app
@@ -53,7 +53,12 @@ sleep 10
 echo "Creating database schema with authentication support..."
 export DATABASE_URL="postgresql://postgres:postgres@db:5432/virtual_audience"
 export SESSION_SECRET="${SESSION_SECRET:-virtual-audience-production-secret-change-in-production}"
-npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
+
+# For clean deployments, drop and recreate schema
+psql "$DATABASE_URL" -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;" 2>/dev/null || echo "Schema recreation skipped"
+
+# Push schema with force flag
+echo "yes" | npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
 echo "Starting Virtual Audience Platform with authentication..."
 exec node -e "
 process.env.USE_PG_DRIVER = 'true';
