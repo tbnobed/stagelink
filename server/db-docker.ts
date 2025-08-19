@@ -1,6 +1,6 @@
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import * as schema from "@shared/schema";
+const { Pool } = require('pg');
+const { drizzle } = require('drizzle-orm/node-postgres');
+const schema = require('./schema.js');
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -8,9 +8,11 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ 
+const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
   ssl: false
 });
 
-export const db = drizzle(pool, { schema });
+const db = drizzle(pool, { schema });
+
+module.exports = { pool, db };

@@ -16,8 +16,11 @@ COPY . .
 # Build the application
 RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
 
+# Build Docker-specific database configuration
+RUN npx esbuild server/db-docker.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/db-docker.js
+
 # Verify build output
-RUN ls -la dist/ && test -f dist/production.js && test -d dist/public
+RUN ls -la dist/ && test -f dist/production.js && test -d dist/public && test -f dist/db-docker.js
 
 # Production stage
 FROM node:18-alpine AS production
@@ -52,7 +55,7 @@ echo "Creating database schema..."
 export DATABASE_URL="postgresql://postgres:postgres@db:5432/virtual_audience"
 npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
 echo "Using Docker-specific database configuration..."
-cp server/db-docker.ts dist/db.js
+cp dist/db-docker.js dist/db.js
 echo "Starting application..."
 exec node dist/production.js
 EOF
