@@ -18,37 +18,37 @@ export default function Home() {
 
         {/* Feature Cards */}
         <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {/* Guest Session Card */}
+          {/* Links Management Card */}
           <div className="va-bg-dark-surface rounded-2xl p-8 border va-border-dark hover:border-va-primary/50 transition-all duration-300 hover:transform hover:scale-105">
             <div className="flex items-center mb-6">
               <div className="bg-va-primary/20 p-3 rounded-lg mr-4">
-                <i className="fas fa-video va-text-green text-2xl"></i>
+                <i className="fas fa-eye va-text-green text-2xl"></i>
               </div>
-              <h3 className="text-2xl font-semibold va-text-primary">Guest Session</h3>
+              <h3 className="text-2xl font-semibold va-text-primary">Links</h3>
             </div>
             <p className="va-text-secondary mb-6">
-              Start publishing your live video stream with real-time codec information and session statistics
+              View and manage all your generated streaming links with preview and monitoring capabilities
             </p>
             <ul className="space-y-2 mb-6 va-text-secondary">
               <li className="flex items-center">
                 <i className="fas fa-check va-text-green mr-3"></i>
-                WHIP/WHEP Protocol Support
+                Stream Preview & Monitoring
               </li>
               <li className="flex items-center">
                 <i className="fas fa-check va-text-green mr-3"></i>
-                Real-time Video Streaming
+                Full-Screen Viewer Access
               </li>
               <li className="flex items-center">
                 <i className="fas fa-check va-text-green mr-3"></i>
-                Live Chat Integration
+                RTMP Ingest Link Generation
               </li>
             </ul>
             <Link
-              href="/session"
+              href="/links"
               className="w-full va-bg-primary hover:va-bg-primary-dark text-va-dark-bg font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center"
-              data-testid="button-launch-session"
+              data-testid="button-view-links"
             >
-              Launch Guest Session
+              View Generated Links
             </Link>
           </div>
 

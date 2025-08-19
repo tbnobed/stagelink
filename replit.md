@@ -14,6 +14,8 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Added dedicated Viewer page (/viewer) for full-screen WHEP playback of guest streams
 - "Open" button in Links page now opens full-screen viewer instead of guest session page
 - Added "Copy Ingest Link" button that generates RTMP ingest URLs: rtmp://cdn2.obedtv.live/live/{StreamName}
+- Replaced Guest Session card with Links card on the home page per user request
+- Removed Session link from main navigation menu
 
 # User Preferences
 
