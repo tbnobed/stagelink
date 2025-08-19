@@ -19,9 +19,11 @@ RUN npx vite build && npx esbuild server/production.ts --platform=node --package
 # Build Docker-specific database configuration  
 RUN npx esbuild server/db-docker.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/db-docker.js --external:../shared/schema.js
 
-# Build authentication modules separately to ensure they're available
+# Build authentication modules and utilities separately to ensure they're available
+RUN mkdir -p dist/utils
 RUN npx esbuild server/setup-admin.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/setup-admin.js
 RUN npx esbuild server/auth.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/auth.js
+RUN npx esbuild server/utils/shortCode.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/utils/shortCode.js
 
 # Verify build output
 RUN ls -la dist/ && test -f dist/production.js && test -d dist/public && test -f dist/db-docker.js
@@ -55,16 +57,16 @@ RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
 echo "Waiting for database..."
 sleep 10
-echo "Creating database schema with authentication support..."
+echo "Creating database schema with authentication and URL shortening support..."
 export DATABASE_URL="postgresql://postgres:postgres@db:5432/virtual_audience"
 export SESSION_SECRET="${SESSION_SECRET:-virtual-audience-production-secret-change-in-production}"
 
 # For clean deployments, drop and recreate schema
 psql "$DATABASE_URL" -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;" 2>/dev/null || echo "Schema recreation skipped"
 
-# Push schema with force flag
+# Push schema with force flag (includes new short_links table)
 echo "yes" | npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
-echo "Starting Virtual Audience Platform with authentication..."
+echo "Starting Virtual Audience Platform with authentication and URL shortening..."
 exec node -e "
 process.env.USE_PG_DRIVER = 'true';
 process.env.SESSION_SECRET = process.env.SESSION_SECRET;

@@ -1,14 +1,16 @@
 # Virtual Audience Platform v2.0 - Authentication Deployment Guide
 
-## 🔐 Authentication Features
+## 🔐 Authentication & URL Shortening Features
 
-Virtual Audience Platform now includes a complete authentication system:
+Virtual Audience Platform now includes a complete authentication system with URL shortening:
 
 - **User Management**: Admin and user roles with role-based access control
 - **Secure Authentication**: Custom username/password authentication with scrypt hashing
 - **Session Management**: PostgreSQL-backed sessions for scalability
 - **Profile Management**: Users can change passwords securely
 - **Admin Panel**: Admins can create/delete users and manage platform
+- **URL Shortening**: 6-character short links that hide technical parameters from end users
+- **Link Security**: Automatic cleanup of expired links with proper error handling
 
 ## 🚀 Quick Deployment (Production Ready)
 
@@ -72,7 +74,9 @@ The system creates a default admin account on first startup:
 ### User Capabilities
 - Access streaming features (Generator, Links, Viewer)
 - Change their own password via Profile page
-- Create and manage streaming links
+- Create and manage streaming links with expiration settings
+- Generate short URLs that hide technical parameters from guests
+- Share QR codes for easy access to streaming sessions
 
 ## 🔒 Security Features
 
@@ -187,6 +191,24 @@ docker-compose logs -f
 - Regular PostgreSQL backups recommended
 - Monitor disk usage for session and user data
 - Consider user cleanup policies for inactive accounts
+- Expired links and short links are automatically cleaned up
+
+## 🔗 URL Shortening Features
+
+### Short Link Generation
+- Automatically generates 6-character alphanumeric codes (excludes confusing characters)
+- Format: `/s/abc123` redirects to full streaming URLs
+- Hides technical parameters (stream name, return feed, chat settings) from end users
+
+### Link Security
+- Expired links are immediately deleted when accessed
+- Invalid or deleted links show proper error pages
+- No orphaned links remain in the database after cleanup
+
+### User Experience
+- Short links display prominently as "recommended" option
+- QR codes default to using short links for better scanning
+- Copy/share functions prioritize short links for cleaner sharing
 
 ## 🚨 Security Recommendations
 
