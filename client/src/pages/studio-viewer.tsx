@@ -17,6 +17,7 @@ export default function StudioViewer() {
   const [hasError, setHasError] = useState(false);
   const [videoStats, setVideoStats] = useState<any>(null);
   const [chatEnabled, setChatEnabled] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [returnFeed, setReturnFeed] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
@@ -40,6 +41,7 @@ export default function StudioViewer() {
 
     setReturnFeed(returnParam);
     setChatEnabled(chatParam === 'true');
+    setShowChat(chatParam === 'true');
   }, [setLocation, toast]);
 
   // Cleanup on unmount
@@ -83,8 +85,8 @@ export default function StudioViewer() {
       // Set up the video element
       videoRef.current.srcObject = playerRef.current.stream;
       
-      // Build the WHEP URL for the return feed
-      const whepUrl = `https://cdn2.obedtv.live:8088/rtc/v1/whep/?app=live&stream=${returnFeed}`;
+      // Build the WHEP URL for the return feed - using same port as streaming.ts
+      const whepUrl = `https://cdn2.obedtv.live:1990/rtc/v1/whep/?app=live&stream=${returnFeed}`;
       console.log('Connecting to WHEP URL:', whepUrl);
       
       // Start WHEP playback
@@ -319,16 +321,46 @@ export default function StudioViewer() {
                   </div>
                 )}
 
-                {chatEnabled && (
-                  <div className="va-bg-dark-surface-2 rounded-lg p-4">
-                    <h4 className="font-medium va-text-primary flex items-center mb-2">
-                      <i className="fas fa-comments mr-2 va-text-purple"></i>
-                      Live Chat
-                    </h4>
-                    <div className="text-sm va-text-secondary">
-                      <p>Chat functionality is enabled for this viewer session.</p>
-                      <p className="mt-2 text-xs">Note: Chat integration can be implemented as needed.</p>
+                {chatEnabled && showChat && (
+                  <div className="va-bg-dark-surface-2 rounded-lg overflow-hidden">
+                    <div className="va-bg-dark-border p-3 border-b va-border-dark">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium va-text-primary flex items-center">
+                          <i className="fas fa-comments mr-2 va-text-green"></i>
+                          Live Chat
+                        </h4>
+                        <Button 
+                          onClick={() => setShowChat(false)}
+                          variant="ghost"
+                          size="sm"
+                          className="va-text-secondary hover:va-text-primary"
+                          data-testid="button-hide-chat"
+                        >
+                          <i className="fas fa-times"></i>
+                        </Button>
+                      </div>
                     </div>
+                    <div className="h-96">
+                      <iframe 
+                        src="https://dev.blabb.me/room/pe9gg8" 
+                        className="w-full h-full border-none"
+                        data-testid="iframe-chat"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {chatEnabled && !showChat && (
+                  <div className="text-center">
+                    <Button 
+                      onClick={() => setShowChat(true)}
+                      variant="outline"
+                      className="va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
+                      data-testid="button-show-chat"
+                    >
+                      <i className="fas fa-comments mr-2"></i>
+                      Show Chat
+                    </Button>
                   </div>
                 )}
 
