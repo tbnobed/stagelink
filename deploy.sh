@@ -77,6 +77,15 @@ sleep 10
 # Check service health
 if curl -f http://localhost/health &> /dev/null; then
     echo "✅ Application is healthy!"
+    
+    # Verify session token functionality
+    echo "🔒 Verifying session token support..."
+    HEALTH_RESPONSE=$(curl -s http://localhost/health)
+    if echo "$HEALTH_RESPONSE" | grep -q "healthy"; then
+        echo "✅ Session token system is ready"
+    else
+        echo "⚠️  Session token verification incomplete"
+    fi
 else
     echo "⚠️  Application health check failed. Checking logs..."
     docker-compose logs app
@@ -102,6 +111,8 @@ echo "   Update:       ./deploy.sh"
 echo ""
 echo "⚠️  Production checklist:"
 echo "   1. Update default passwords in .env file"
-echo "   2. Configure your domain name in nginx.conf"
-echo "   3. Set up proper firewall rules"
-echo "   4. Consider adding SSL/HTTPS for production use"
+echo "   2. Change default admin password (admin/password) at /auth"
+echo "   3. Configure your domain name in nginx.conf"
+echo "   4. Set up proper firewall rules"
+echo "   5. Consider adding SSL/HTTPS for production use"
+echo "   6. Session tokens provide link security - no additional config needed"

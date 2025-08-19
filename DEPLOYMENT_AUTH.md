@@ -11,6 +11,7 @@ Virtual Audience Platform now includes a complete authentication system with URL
 - **Admin Panel**: Admins can create/delete users and manage platform
 - **URL Shortening**: 6-character short links that hide technical parameters from end users
 - **Link Security**: Automatic cleanup of expired links with proper error handling
+- **Session Tokens**: Single-use tokens prevent history replay attacks and link sharing abuse
 
 ## 🚀 Quick Deployment (Production Ready)
 
@@ -72,6 +73,42 @@ The system creates a default admin account on first startup:
 1. Log in at `http://your-domain/auth`
 2. Click your username → "Profile"
 3. Change password in the profile section
+
+## 🔒 Session Token Security
+
+Virtual Audience Platform v2.0 includes advanced session token security to prevent link abuse:
+
+### How Session Tokens Work
+
+- **Single-Use Links**: Each streaming link includes a unique session token that can only be used once
+- **Replay Attack Prevention**: Used tokens cannot be reused, even if bookmarked or shared
+- **Automatic Expiration**: Tokens expire with their parent link or after 24 hours by default
+- **Token Validation**: Pages validate tokens before allowing access to streaming features
+
+### Security Benefits
+
+1. **Prevents Link Sharing Abuse**: Links can't be shared indefinitely between users
+2. **Stops History Replay**: Bookmarked links become invalid after first use
+3. **Controlled Access**: Each session is tracked and monitored
+4. **Clean Cleanup**: Expired tokens are automatically removed from the database
+
+### Database Schema Updates
+
+The session token feature adds a new `session_tokens` table with:
+- Token ID and expiration tracking
+- Foreign key relationships to links and viewer links
+- Consumption status to prevent reuse
+- User tracking for audit purposes
+
+### For Developers
+
+Session tokens are automatically generated when:
+- Creating new streaming links via `/api/links`
+- Creating new viewer links via `/api/viewer-links`
+
+Token validation happens at:
+- `/api/validate-token` endpoint for token verification
+- Session and studio-viewer pages before streaming access
 
 ## 👥 User Management
 
