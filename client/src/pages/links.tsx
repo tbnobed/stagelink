@@ -24,8 +24,8 @@ export default function Links() {
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
 
-  // Fetch both guest session links and viewer links
-  const { data: links = [], isLoading, error } = useQuery({
+  // Fetch both guest session links and viewer links with automatic refresh
+  const { data: links = [], isLoading, error, refetch } = useQuery({
     queryKey: ['/api/all-links'],
     queryFn: async () => {
       // Fetch guest session links
@@ -53,6 +53,9 @@ export default function Links() {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     },
+    refetchInterval: 5000, // Automatically refresh every 5 seconds
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
+    refetchOnMount: true, // Always refresh on component mount
   });
 
   const isLinkExpired = (link: GeneratedLink): boolean => {
@@ -93,8 +96,43 @@ export default function Links() {
       }
       return response.json();
     },
+    onMutate: async ({ linkId }) => {
+      // Cancel any outgoing refetches to avoid race conditions
+      await queryClient.cancelQueries({ queryKey: ['/api/all-links'] });
+      
+      // Get current data
+      const previousLinks = queryClient.getQueryData(['/api/all-links']);
+      
+      // Optimistically remove the link from the UI immediately
+      queryClient.setQueryData(['/api/all-links'], (old: any[]) => 
+        old ? old.filter((link: any) => link.id !== linkId) : []
+      );
+      
+      // Return context with previous data for rollback
+      return { previousLinks };
+    },
     onSuccess: () => {
+      toast({
+        title: "Link Deleted",
+        description: "The link has been removed from your list",
+      });
+    },
+    onError: (error: Error, variables, context) => {
+      // Rollback optimistic update if the mutation fails
+      if (context?.previousLinks) {
+        queryClient.setQueryData(['/api/all-links'], context.previousLinks);
+      }
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      // Refetch to ensure data consistency regardless of success/failure
+      queryClient.invalidateQueries({ queryKey: ['/api/all-links'] });
       queryClient.invalidateQueries({ queryKey: ['/api/links'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/viewer-links'] });
     },
   });
 
@@ -109,7 +147,10 @@ export default function Links() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate all link-related queries to ensure UI updates immediately  
+      queryClient.invalidateQueries({ queryKey: ['/api/all-links'] });
       queryClient.invalidateQueries({ queryKey: ['/api/links'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/viewer-links'] });
     },
   });
 
@@ -167,21 +208,7 @@ export default function Links() {
       stopPreview();
     }
 
-    deleteLinkMutation.mutate({ linkId, linkType }, {
-      onSuccess: () => {
-        toast({
-          title: "Link Deleted",
-          description: "The link has been removed from your list",
-        });
-      },
-      onError: () => {
-        toast({
-          title: "Error",
-          description: "Failed to delete link",
-          variant: "destructive",
-        });
-      },
-    });
+    deleteLinkMutation.mutate({ linkId, linkType });
   };
 
   const copyIngestLink = (streamName: string) => {
