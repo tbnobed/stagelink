@@ -6,7 +6,9 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Fixed SRS SDK script loading by updating paths to use https://cdn2.obedtv.live:8088/players/js/
 - Resolved TypeScript errors for QRCode library integration
 - Verified WHIP/WHEP streaming protocols are working correctly with WebRTC connections
-- Link generator creates proper URLs formatted as: https://cdn2.obedtv.live:8088/players/session.html?stream=guest1&return=studio1&chat=true
+- Updated link generator to point to current Replit server instead of external CDN
+- Removed stats section from homepage per user request
+- Generated links now use dynamic host: window.location.host/session?stream=guest1&return=studio1&chat=true
 
 # User Preferences
 
