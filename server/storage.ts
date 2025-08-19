@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull } from "drizzle-orm";
@@ -27,18 +27,35 @@ export interface IStorage {
   createShortLink(shortLink: InsertShortLink, userId?: number): Promise<ShortLink>;
   deleteShortLink(code: string): Promise<boolean>;
   deleteExpiredShortLinks(): Promise<number>;
+  
+  // Viewer Links
+  getAllViewerLinks(): Promise<ViewerLink[]>;
+  createViewerLink(link: InsertViewerLink, userId?: number): Promise<ViewerLink>;
+  deleteViewerLink(id: string): Promise<boolean>;
+  deleteExpiredViewerLinks(): Promise<number>;
+  
+  // Short Viewer Links
+  getShortViewerLink(code: string): Promise<ShortViewerLink | undefined>;
+  getShortViewerLinkByParams(returnFeed: string, chatEnabled: boolean): Promise<ShortViewerLink | undefined>;
+  createShortViewerLink(shortViewerLink: InsertShortViewerLink, userId?: number): Promise<ShortViewerLink>;
+  deleteShortViewerLink(code: string): Promise<boolean>;
+  deleteExpiredShortViewerLinks(): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private links: Map<string, GeneratedLink>;
   private shortLinks: Map<string, ShortLink>;
+  private viewerLinks: Map<string, ViewerLink>;
+  private shortViewerLinks: Map<string, ShortViewerLink>;
   private userIdCounter: number = 1;
 
   constructor() {
     this.users = new Map();
     this.links = new Map();
     this.shortLinks = new Map();
+    this.viewerLinks = new Map();
+    this.shortViewerLinks = new Map();
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -208,6 +225,110 @@ export class MemStorage implements IStorage {
     for (const [code, link] of Array.from(this.shortLinks.entries())) {
       if (link.expiresAt && link.expiresAt <= now) {
         this.shortLinks.delete(code);
+        deletedCount++;
+      }
+    }
+    
+    return deletedCount;
+  }
+
+  // Viewer Links Methods
+  async getAllViewerLinks(): Promise<ViewerLink[]> {
+    const now = new Date();
+    const allLinks = Array.from(this.viewerLinks.values());
+    
+    // Filter out expired links
+    return allLinks.filter(link => !link.expiresAt || link.expiresAt > now);
+  }
+
+  async createViewerLink(insertViewerLink: InsertViewerLink, userId?: number): Promise<ViewerLink> {
+    const viewerLink: ViewerLink = {
+      ...insertViewerLink,
+      chatEnabled: insertViewerLink.chatEnabled ?? false,
+      createdAt: new Date(),
+      expiresAt: insertViewerLink.expiresAt ? new Date(insertViewerLink.expiresAt) : null,
+      createdBy: userId || null,
+    };
+    this.viewerLinks.set(viewerLink.id, viewerLink);
+    return viewerLink;
+  }
+
+  async deleteViewerLink(id: string): Promise<boolean> {
+    return this.viewerLinks.delete(id);
+  }
+
+  async deleteExpiredViewerLinks(): Promise<number> {
+    const now = new Date();
+    let deletedCount = 0;
+    
+    for (const [id, link] of Array.from(this.viewerLinks.entries())) {
+      if (link.expiresAt && link.expiresAt <= now) {
+        this.viewerLinks.delete(id);
+        deletedCount++;
+      }
+    }
+    
+    return deletedCount;
+  }
+
+  // Short Viewer Links Methods
+  async getShortViewerLink(code: string): Promise<ShortViewerLink | undefined> {
+    const link = this.shortViewerLinks.get(code);
+    if (!link) {
+      return undefined;
+    }
+    
+    // Check if link has expired
+    if (link.expiresAt && link.expiresAt <= new Date()) {
+      // Clean up expired link
+      this.shortViewerLinks.delete(code);
+      return undefined;
+    }
+    
+    return link;
+  }
+
+  async getShortViewerLinkByParams(returnFeed: string, chatEnabled: boolean): Promise<ShortViewerLink | undefined> {
+    const entries = Array.from(this.shortViewerLinks.entries());
+    for (const [code, link] of entries) {
+      if (link.returnFeed === returnFeed && link.chatEnabled === chatEnabled) {
+        
+        // Check if link has expired
+        if (link.expiresAt && link.expiresAt <= new Date()) {
+          // Clean up expired link
+          this.shortViewerLinks.delete(code);
+          continue;
+        }
+        
+        return link;
+      }
+    }
+    return undefined;
+  }
+
+  async createShortViewerLink(insertShortViewerLink: InsertShortViewerLink, userId?: number): Promise<ShortViewerLink> {
+    const shortViewerLink: ShortViewerLink = {
+      ...insertShortViewerLink,
+      chatEnabled: insertShortViewerLink.chatEnabled ?? false,
+      createdAt: new Date(),
+      expiresAt: insertShortViewerLink.expiresAt ? new Date(insertShortViewerLink.expiresAt) : null,
+      createdBy: userId || null,
+    };
+    this.shortViewerLinks.set(shortViewerLink.id, shortViewerLink);
+    return shortViewerLink;
+  }
+
+  async deleteShortViewerLink(code: string): Promise<boolean> {
+    return this.shortViewerLinks.delete(code);
+  }
+
+  async deleteExpiredShortViewerLinks(): Promise<number> {
+    const now = new Date();
+    let deletedCount = 0;
+    
+    for (const [code, link] of Array.from(this.shortViewerLinks.entries())) {
+      if (link.expiresAt && link.expiresAt <= now) {
+        this.shortViewerLinks.delete(code);
         deletedCount++;
       }
     }
@@ -404,6 +525,143 @@ export class DatabaseStorage implements IStorage {
         and(
           isNotNull(shortLinks.expiresAt),
           lt(shortLinks.expiresAt, now)
+        )
+      );
+    return result.rowCount || 0;
+  }
+
+  // Viewer Links Methods
+  async getAllViewerLinks(): Promise<ViewerLink[]> {
+    const now = new Date();
+    const allLinks = await db.select().from(viewerLinks);
+    
+    // Filter out expired links
+    return allLinks.filter((link: ViewerLink) => !link.expiresAt || link.expiresAt > now);
+  }
+
+  async createViewerLink(insertViewerLink: InsertViewerLink, userId?: number): Promise<ViewerLink> {
+    const [viewerLink] = await db
+      .insert(viewerLinks)
+      .values({
+        ...insertViewerLink,
+        chatEnabled: insertViewerLink.chatEnabled ?? false,
+        createdAt: new Date(),
+        expiresAt: insertViewerLink.expiresAt ? new Date(insertViewerLink.expiresAt) : null,
+        createdBy: userId || null,
+      })
+      .returning();
+    return viewerLink;
+  }
+
+  async deleteViewerLink(id: string): Promise<boolean> {
+    // Get the link details before deleting it
+    const [deletedLink] = await db.select().from(viewerLinks).where(eq(viewerLinks.id, id));
+    
+    const result = await db
+      .delete(viewerLinks)
+      .where(eq(viewerLinks.id, id));
+    
+    // If link was deleted, also clean up associated short viewer links
+    if ((result.rowCount ?? 0) > 0 && deletedLink) {
+      await db
+        .delete(shortViewerLinks)
+        .where(
+          and(
+            eq(shortViewerLinks.returnFeed, deletedLink.returnFeed),
+            eq(shortViewerLinks.chatEnabled, deletedLink.chatEnabled)
+          )
+        );
+    }
+    
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteExpiredViewerLinks(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .delete(viewerLinks)
+      .where(
+        and(
+          isNotNull(viewerLinks.expiresAt),
+          lt(viewerLinks.expiresAt, now)
+        )
+      );
+    return result.rowCount || 0;
+  }
+
+  // Short Viewer Links Methods
+  async getShortViewerLink(code: string): Promise<ShortViewerLink | undefined> {
+    const [link] = await db.select().from(shortViewerLinks).where(eq(shortViewerLinks.id, code));
+    
+    if (!link) {
+      return undefined;
+    }
+    
+    // Check if link has expired
+    if (link.expiresAt && link.expiresAt <= new Date()) {
+      // Clean up expired link immediately
+      await this.deleteShortViewerLink(code);
+      return undefined;
+    }
+    
+    return link;
+  }
+
+  async getShortViewerLinkByParams(returnFeed: string, chatEnabled: boolean): Promise<ShortViewerLink | undefined> {
+    const [link] = await db
+      .select()
+      .from(shortViewerLinks)
+      .where(
+        and(
+          eq(shortViewerLinks.returnFeed, returnFeed),
+          eq(shortViewerLinks.chatEnabled, chatEnabled)
+        )
+      )
+      .limit(1);
+    
+    if (!link) {
+      return undefined;
+    }
+    
+    // Check if link has expired
+    if (link.expiresAt && link.expiresAt <= new Date()) {
+      // Clean up expired link immediately
+      await this.deleteShortViewerLink(link.id);
+      return undefined;
+    }
+    
+    return link;
+  }
+
+  async createShortViewerLink(insertShortViewerLink: InsertShortViewerLink, userId?: number): Promise<ShortViewerLink> {
+    const [shortViewerLink] = await db
+      .insert(shortViewerLinks)
+      .values({
+        ...insertShortViewerLink,
+        chatEnabled: insertShortViewerLink.chatEnabled ?? false,
+        createdAt: new Date(),
+        expiresAt: insertShortViewerLink.expiresAt ? new Date(insertShortViewerLink.expiresAt) : null,
+        createdBy: userId || null,
+      })
+      .returning();
+    return shortViewerLink;
+  }
+
+  async deleteShortViewerLink(code: string): Promise<boolean> {
+    const result = await db
+      .delete(shortViewerLinks)
+      .where(eq(shortViewerLinks.id, code));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteExpiredShortViewerLinks(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .delete(shortViewerLinks)
+      .where(
+        and(
+          isNotNull(shortViewerLinks.expiresAt),
+          lt(shortViewerLinks.expiresAt, now)
         )
       );
     return result.rowCount || 0;

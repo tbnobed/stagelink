@@ -163,6 +163,180 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Viewer Links API routes (authenticated users)
+  app.get('/api/viewer-links', requireAuth, async (req, res) => {
+    try {
+      console.log('Fetching all viewer links...');
+      const links = await storage.getAllViewerLinks();
+      
+      // For each viewer link, try to find corresponding short viewer link
+      const linksWithShortLinks = await Promise.all(
+        links.map(async (link) => {
+          // Find short viewer link with matching parameters
+          const shortLink = await storage.getShortViewerLinkByParams(
+            link.returnFeed, 
+            link.chatEnabled
+          );
+          
+          return {
+            ...link,
+            shortLink: shortLink ? `/sv/${shortLink.id}` : null,
+            shortCode: shortLink?.id || null,
+          };
+        })
+      );
+      
+      console.log('Viewer links fetched successfully:', links.length, 'links');
+      res.json(linksWithShortLinks);
+    } catch (error) {
+      console.error('Failed to fetch viewer links:', error);
+      res.status(500).json({ error: 'Failed to fetch viewer links' });
+    }
+  });
+
+  app.post('/api/viewer-links', requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const { id, returnFeed, chatEnabled, url, expiresAt } = req.body;
+      
+      const viewerLink = await storage.createViewerLink({
+        id,
+        returnFeed,
+        chatEnabled: chatEnabled ?? false,
+        url,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      }, userId);
+
+      res.json(viewerLink);
+    } catch (error) {
+      console.error('Failed to create viewer link:', error);
+      res.status(500).json({ error: 'Failed to create viewer link' });
+    }
+  });
+
+  app.delete('/api/viewer-links/:id', requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deleteViewerLink(req.params.id);
+      if (success) {
+        res.json({ message: 'Viewer link deleted successfully' });
+      } else {
+        res.status(404).json({ error: 'Viewer link not found' });
+      }
+    } catch (error) {
+      console.error('Failed to delete viewer link:', error);
+      res.status(500).json({ error: 'Failed to delete viewer link' });
+    }
+  });
+
+  app.delete('/api/viewer-links/expired', requireAuth, async (req, res) => {
+    try {
+      const deletedCount = await storage.deleteExpiredViewerLinks();
+      res.json({ deletedCount, message: `${deletedCount} expired viewer links deleted` });
+    } catch (error) {
+      console.error('Failed to delete expired viewer links:', error);
+      res.status(500).json({ error: 'Failed to delete expired viewer links' });
+    }
+  });
+
+  // Short viewer link creation
+  app.post('/api/short-viewer-links', requireAuth, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const { returnFeed, chatEnabled, expiresAt } = req.body;
+      
+      // Generate unique short code with 'v' prefix for viewer links
+      const shortCode = await generateUniqueShortCode(async (code) => {
+        const existing = await storage.getShortViewerLink(`v${code}`);
+        return !!existing;
+      });
+
+      const shortViewerLink = await storage.createShortViewerLink({
+        id: `v${shortCode}`,
+        returnFeed,
+        chatEnabled: chatEnabled ?? false,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      }, userId);
+
+      res.json(shortViewerLink);
+    } catch (error) {
+      console.error('Failed to create short viewer link:', error);
+      res.status(500).json({ error: 'Failed to create short viewer link' });
+    }
+  });
+
+  // Short viewer link resolution
+  app.get('/sv/:code', async (req, res) => {
+    try {
+      const shortViewerLink = await storage.getShortViewerLink(req.params.code);
+      if (!shortViewerLink) {
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Viewer Link Not Found - Virtual Audience Platform</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #e2e8f0; }
+              .container { max-width: 600px; margin: 0 auto; }
+              h1 { color: #ef4444; margin-bottom: 20px; }
+              p { margin-bottom: 15px; line-height: 1.6; }
+              .code { background: #1e293b; padding: 10px; border-radius: 5px; font-family: monospace; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Viewer Link Not Found</h1>
+              <p>The short viewer link <span class="code">/sv/${req.params.code}</span> was not found or has expired.</p>
+              <p>This could happen if:</p>
+              <ul style="text-align: left; display: inline-block;">
+                <li>The link has expired based on its configured duration</li>
+                <li>The link was deleted by an administrator</li>
+                <li>The link code is invalid or mistyped</li>
+              </ul>
+              <p>Please contact the person who shared this link for a new one.</p>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+
+      // Check if the link has expired
+      if (shortViewerLink.expiresAt && new Date() > shortViewerLink.expiresAt) {
+        // Clean up the expired link
+        await storage.deleteShortViewerLink(req.params.code);
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Viewer Link Expired - Virtual Audience Platform</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #e2e8f0; }
+              .container { max-width: 600px; margin: 0 auto; }
+              h1 { color: #f59e0b; margin-bottom: 20px; }
+              p { margin-bottom: 15px; line-height: 1.6; }
+              .code { background: #1e293b; padding: 10px; border-radius: 5px; font-family: monospace; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Viewer Link Expired</h1>
+              <p>The short viewer link <span class="code">/sv/${req.params.code}</span> has expired.</p>
+              <p>This link was configured with an expiration time and is no longer valid.</p>
+              <p>Please contact the person who shared this link to request a new one.</p>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+
+      // Redirect to viewer page with return feed
+      const redirectUrl = `/studio-viewer?return=${encodeURIComponent(shortViewerLink.returnFeed)}&chat=${shortViewerLink.chatEnabled}`;
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Error resolving short viewer link:', error);
+      res.status(500).send('Internal server error');
+    }
+  });
+
   // Short link creation
   app.post('/api/short-links', requireAuth, async (req, res) => {
     try {

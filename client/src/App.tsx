@@ -11,6 +11,7 @@ import Generator from "@/pages/generator";
 import Session from "@/pages/session";
 import Links from "@/pages/links";
 import Viewer from "@/pages/viewer";
+import StudioViewer from "@/pages/studio-viewer";
 import AuthPage from "@/pages/auth-page";
 import AdminPage from "@/pages/admin-page";
 import ProfilePage from "@/pages/profile-page";
@@ -28,6 +29,7 @@ function Router() {
         <ProtectedRoute path="/admin" component={AdminPage} adminOnly />
         <Route path="/session" component={Session} />
         <Route path="/viewer" component={Viewer} />
+        <Route path="/studio-viewer" component={StudioViewer} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
       </Switch>

@@ -65,3 +65,38 @@ export const insertShortLinkSchema = createInsertSchema(shortLinks).omit({
 });
 export type InsertShortLink = z.infer<typeof insertShortLinkSchema>;
 export type ShortLink = typeof shortLinks.$inferSelect;
+
+// Viewer links table for return feed viewing
+export const viewerLinks = pgTable("viewer_links", {
+  id: text("id").primaryKey(),
+  returnFeed: text("return_feed").notNull(),
+  chatEnabled: boolean("chat_enabled").notNull().default(false),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+export const insertViewerLinkSchema = createInsertSchema(viewerLinks).omit({
+  createdAt: true,
+  createdBy: true,
+});
+export type InsertViewerLink = z.infer<typeof insertViewerLinkSchema>;
+export type ViewerLink = typeof viewerLinks.$inferSelect;
+
+// Short viewer links table for URL shortening
+export const shortViewerLinks = pgTable("short_viewer_links", {
+  id: text("id").primaryKey(), // Short code like "v1b2c3"
+  returnFeed: text("return_feed").notNull(),
+  chatEnabled: boolean("chat_enabled").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+export const insertShortViewerLinkSchema = createInsertSchema(shortViewerLinks).omit({
+  createdAt: true,
+  createdBy: true,
+});
+export type InsertShortViewerLink = z.infer<typeof insertShortViewerLinkSchema>;
+export type ShortViewerLink = typeof shortViewerLinks.$inferSelect;
