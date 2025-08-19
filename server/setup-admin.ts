@@ -12,7 +12,7 @@ export async function createDefaultAdmin() {
     }
 
     // Create default admin user
-    const hashedPassword = await hashPassword('admin123');
+    const hashedPassword = await hashPassword('password');
     const admin = await storage.createUser({
       username: 'admin',
       password: hashedPassword,
@@ -25,7 +25,7 @@ export async function createDefaultAdmin() {
       username: admin.username,
       role: admin.role
     });
-    console.log('Login with: username=admin, password=admin123');
+    console.log('Login with: username=admin, password=password');
     
   } catch (error) {
     console.error('Failed to create default admin user:', error);
