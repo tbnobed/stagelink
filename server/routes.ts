@@ -1,8 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, requireAuth, requireAdmin } from "./auth";
+import { insertUserSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
   // Health check endpoint for Docker health checks
   app.get('/health', (req, res) => {
     res.status(200).json({
@@ -13,8 +17,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Links API routes
-  app.get('/api/links', async (req, res) => {
+  // User management routes (Admin only)
+  app.get('/api/users', requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const safeUsers = users.map(user => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      }));
+      res.json(safeUsers);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
+  app.post('/api/users', requireAdmin, async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      const { hashPassword } = await import('./auth');
+      const hashedPassword = await hashPassword(userData.password);
+      
+      const user = await storage.createUser({
+        ...userData,
+        password: hashedPassword,
+      });
+
+      res.status(201).json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      });
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      res.status(500).json({ error: 'Failed to create user' });
+    }
+  });
+
+  app.delete('/api/users/:id', requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+      
+      const success = await storage.deleteUser(userId);
+      if (success) {
+        res.sendStatus(204);
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      res.status(500).json({ error: 'Failed to delete user' });
+    }
+  });
+
+  // Links API routes (authenticated users)
+  app.get('/api/links', requireAuth, async (req, res) => {
     try {
       console.log('Fetching all links...');
       const links = await storage.getAllLinks();
@@ -26,10 +93,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/links', async (req, res) => {
+  app.post('/api/links', requireAuth, async (req, res) => {
     try {
       console.log('Creating link with data:', req.body);
-      const link = await storage.createLink(req.body);
+      const userId = (req.user as any)?.id;
+      const link = await storage.createLink(req.body, userId);
       console.log('Link created successfully:', link);
       res.json(link);
     } catch (error) {
@@ -38,8 +106,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/links/:id', async (req, res) => {
+  app.delete('/api/links/:id', requireAuth, async (req, res) => {
     try {
+      // TODO: Add ownership check for non-admin users
       const success = await storage.deleteLink(req.params.id);
       if (success) {
         res.json({ success: true });
@@ -51,7 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/links', async (req, res) => {
+  app.delete('/api/links', requireAdmin, async (req, res) => {
     try {
       const deletedCount = await storage.deleteExpiredLinks();
       res.json({ deletedCount });

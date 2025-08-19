@@ -7,27 +7,31 @@ import { eq, lt, and, isNotNull } from "drizzle-orm";
 // you might need
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  deleteUser(id: number): Promise<boolean>;
+  updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined>;
   
   // Generated Links
   getAllLinks(): Promise<GeneratedLink[]>;
-  createLink(link: InsertGeneratedLink): Promise<GeneratedLink>;
+  createLink(link: InsertGeneratedLink, userId?: number): Promise<GeneratedLink>;
   deleteLink(id: string): Promise<boolean>;
   deleteExpiredLinks(): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private users: Map<number, User>;
   private links: Map<string, GeneratedLink>;
+  private userIdCounter: number = 1;
 
   constructor() {
     this.users = new Map();
     this.links = new Map();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
+  async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
 
@@ -38,10 +42,38 @@ export class MemStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const id = this.userIdCounter++;
+    const user: User = { 
+      ...insertUser, 
+      id,
+      email: insertUser.email || null,
+      role: insertUser.role || 'user',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     this.users.set(id, user);
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser: User = {
+      ...user,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   async getAllLinks(): Promise<GeneratedLink[]> {
@@ -52,12 +84,13 @@ export class MemStorage implements IStorage {
     return allLinks.filter(link => !link.expiresAt || link.expiresAt > now);
   }
 
-  async createLink(insertLink: InsertGeneratedLink): Promise<GeneratedLink> {
+  async createLink(insertLink: InsertGeneratedLink, userId?: number): Promise<GeneratedLink> {
     const link: GeneratedLink = {
       ...insertLink,
       chatEnabled: insertLink.chatEnabled ?? false,
       createdAt: new Date(),
       expiresAt: insertLink.expiresAt ? new Date(insertLink.expiresAt) : null,
+      createdBy: userId || null,
     };
     this.links.set(link.id, link);
     return link;
@@ -83,7 +116,7 @@ export class MemStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: string): Promise<User | undefined> {
+  async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
@@ -96,7 +129,32 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values({
+        ...insertUser,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount > 0;
+  }
+
+  async updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
       .returning();
     return user;
   }
@@ -111,7 +169,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(generatedLinks);
   }
 
-  async createLink(insertLink: InsertGeneratedLink): Promise<GeneratedLink> {
+  async createLink(insertLink: InsertGeneratedLink, userId?: number): Promise<GeneratedLink> {
     const [link] = await db
       .insert(generatedLinks)
       .values({
@@ -119,6 +177,7 @@ export class DatabaseStorage implements IStorage {
         chatEnabled: insertLink.chatEnabled ?? false,
         createdAt: new Date(),
         expiresAt: insertLink.expiresAt ? new Date(insertLink.expiresAt) : null,
+        createdBy: userId || null,
       })
       .returning();
     return link;
