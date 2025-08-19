@@ -16,6 +16,7 @@ services:
       - PGUSER=postgres
       - PGPASSWORD=postgres
       - PGDATABASE=virtual_audience
+      - SESSION_SECRET=virtual-audience-production-secret-change-in-production
     depends_on:
       db:
         condition: service_healthy

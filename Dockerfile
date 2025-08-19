@@ -50,12 +50,14 @@ RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
 echo "Waiting for database..."
 sleep 10
-echo "Creating database schema..."
+echo "Creating database schema with authentication support..."
 export DATABASE_URL="postgresql://postgres:postgres@db:5432/virtual_audience"
+export SESSION_SECRET="${SESSION_SECRET:-virtual-audience-production-secret-change-in-production}"
 npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
-echo "Starting application with PostgreSQL driver..."
+echo "Starting Virtual Audience Platform with authentication..."
 exec node -e "
 process.env.USE_PG_DRIVER = 'true';
+process.env.SESSION_SECRET = process.env.SESSION_SECRET;
 import('./dist/production.js');
 "
 EOF
