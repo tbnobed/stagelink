@@ -122,38 +122,30 @@ export async function startPlayback(videoElement: HTMLVideoElement, streamName: 
       await player.play(url);
       videoElement.srcObject = player.stream;
       
-      // Wait for connection to be established with resilience for brief disconnections
+      // Wait for connection to be established - simplified for debugging
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
+          console.log(`Connection timeout after 10 seconds for stream: ${streamName}`);
           reject(new Error('Connection timeout'));
-        }, 15000); // 15 second timeout
-
-        let connectedCount = 0;
-        const requiredStableConnections = 3; // Require 3 consecutive "connected" checks
+        }, 10000); // 10 second timeout
 
         const checkConnection = () => {
+          console.log(`Checking connection state: ${player.pc.connectionState} for stream: ${streamName}`);
           if (player.pc.connectionState === 'connected') {
-            connectedCount++;
-            console.log(`WHEP connection stable check ${connectedCount}/${requiredStableConnections} for stream: ${streamName}`);
-            
-            if (connectedCount >= requiredStableConnections) {
-              clearTimeout(timeout);
-              console.log(`WHEP playback connection confirmed stable for stream: ${streamName}`);
-              resolve(player);
-              return;
-            }
-          } else {
-            connectedCount = 0; // Reset count if not connected
-            if (player.pc.connectionState === 'failed') {
-              clearTimeout(timeout);
-              reject(new Error('Connection failed'));
-              return;
-            }
+            clearTimeout(timeout);
+            console.log(`WHEP playback connection established for stream: ${streamName}`);
+            resolve(player);
+            return;
+          } else if (player.pc.connectionState === 'failed') {
+            clearTimeout(timeout);
+            reject(new Error('Connection failed'));
+            return;
           }
           
-          setTimeout(checkConnection, 200); // Check every 200ms
+          setTimeout(checkConnection, 500); // Check every 500ms
         };
         
+        // Start checking immediately
         checkConnection();
       });
       
