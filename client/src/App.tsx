@@ -13,6 +13,7 @@ import Links from "@/pages/links";
 import Viewer from "@/pages/viewer";
 import AuthPage from "@/pages/auth-page";
 import AdminPage from "@/pages/admin-page";
+import ProfilePage from "@/pages/profile-page";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,6 +24,7 @@ function Router() {
         <ProtectedRoute path="/" component={Home} />
         <ProtectedRoute path="/generator" component={Generator} />
         <ProtectedRoute path="/links" component={Links} />
+        <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/admin" component={AdminPage} adminOnly />
         <Route path="/session" component={Session} />
         <Route path="/viewer" component={Viewer} />

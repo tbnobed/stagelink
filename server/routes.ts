@@ -129,6 +129,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Change password
+  app.post("/api/change-password", requireAuth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const user = req.user!;
+
+      // Verify current password
+      const existingUser = await storage.getUserByUsername(user.username);
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Import comparePasswords function from auth module
+      const authModule = await import("./auth");
+      const isValidPassword = await authModule.comparePasswords(currentPassword, existingUser.password);
+      if (!isValidPassword) {
+        return res.status(400).json({ error: "Current password is incorrect" });
+      }
+
+      // Hash new password and update
+      const hashedNewPassword = await authModule.hashPassword(newPassword);
+      await storage.updateUserPassword(user.id, hashedNewPassword);
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

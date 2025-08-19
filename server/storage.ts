@@ -13,6 +13,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   deleteUser(id: number): Promise<boolean>;
   updateUser(id: number, updates: Partial<InsertUser>): Promise<User | undefined>;
+  updateUserPassword(id: number, hashedPassword: string): Promise<void>;
   
   // Generated Links
   getAllLinks(): Promise<GeneratedLink[]>;
@@ -74,6 +75,15 @@ export class MemStorage implements IStorage {
     };
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async updateUserPassword(id: number, hashedPassword: string): Promise<void> {
+    const user = this.users.get(id);
+    if (user) {
+      user.password = hashedPassword;
+      user.updatedAt = new Date();
+      this.users.set(id, user);
+    }
   }
 
   async getAllLinks(): Promise<GeneratedLink[]> {
@@ -157,6 +167,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async updateUserPassword(id: number, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id));
   }
 
   async getAllLinks(): Promise<GeneratedLink[]> {
