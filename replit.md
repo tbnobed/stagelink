@@ -60,6 +60,8 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Proper error pages shown for expired, deleted, or invalid short link codes
 - Added REST API endpoints: POST /api/short-links, DELETE /api/short-links/:code
 - Short links persist in PostgreSQL database alongside regular links with foreign key relationships
+- **FIXED**: Added automatic cleanup of orphaned short links when regular links are deleted
+- Created production cleanup tools (cleanup-orphaned-shortlinks.sql, fix-production-orphaned-links.sh)
 
 ### Authentication System Implementation (August 19, 2025)
 - Implemented complete custom authentication system with Passport.js using scrypt password hashing

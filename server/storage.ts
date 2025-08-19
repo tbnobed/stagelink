@@ -115,7 +115,23 @@ export class MemStorage implements IStorage {
   }
 
   async deleteLink(id: string): Promise<boolean> {
-    return this.links.delete(id);
+    // Get the link before deleting it
+    const deletedLink = this.links.get(id);
+    const linkDeleted = this.links.delete(id);
+    
+    // Also delete any short links associated with this regular link
+    if (linkDeleted && deletedLink) {
+      // Remove short links that match this link's parameters
+      for (const [shortId, shortLink] of Array.from(this.shortLinks.entries())) {
+        if (shortLink.streamName === deletedLink.streamName && 
+            shortLink.returnFeed === deletedLink.returnFeed &&
+            shortLink.chatEnabled === deletedLink.chatEnabled) {
+          this.shortLinks.delete(shortId);
+        }
+      }
+    }
+    
+    return linkDeleted;
   }
 
   async deleteExpiredLinks(): Promise<number> {
@@ -258,9 +274,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteLink(id: string): Promise<boolean> {
+    // Get the link details before deleting it
+    const [deletedLink] = await db.select().from(generatedLinks).where(eq(generatedLinks.id, id));
+    
     const result = await db
       .delete(generatedLinks)
       .where(eq(generatedLinks.id, id));
+    
+    // If link was deleted, also clean up associated short links
+    if ((result.rowCount ?? 0) > 0 && deletedLink) {
+      await db
+        .delete(shortLinks)
+        .where(
+          and(
+            eq(shortLinks.streamName, deletedLink.streamName),
+            eq(shortLinks.returnFeed, deletedLink.returnFeed),
+            eq(shortLinks.chatEnabled, deletedLink.chatEnabled)
+          )
+        );
+    }
+    
     return (result.rowCount ?? 0) > 0;
   }
 
