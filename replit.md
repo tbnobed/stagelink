@@ -2,6 +2,12 @@
 
 Virtual Audience Platform is a professional live streaming solution built with React and Express that enables real-time video publishing and audience interaction capabilities. The application provides a comprehensive streaming platform with WHIP/WHEP protocol support, live chat integration, and QR code generation for easy session sharing. Users can generate streaming links, manage guest sessions, and interact with live video streams through an intuitive web interface.
 
+## Recent Changes (August 19, 2025)
+- Fixed SRS SDK script loading by updating paths to use https://cdn2.obedtv.live:8088/players/js/
+- Resolved TypeScript errors for QRCode library integration
+- Verified WHIP/WHEP streaming protocols are working correctly with WebRTC connections
+- Link generator creates proper URLs formatted as: https://cdn2.obedtv.live:8088/players/session.html?stream=guest1&return=studio1&chat=true
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.

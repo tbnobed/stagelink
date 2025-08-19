@@ -1,9 +1,10 @@
-// Global variables for SRS SDK
+// Global variables for SRS SDK and QR Code library
 declare global {
   interface Window {
     SrsRtcWhipWhepAsync: any;
     SrsRtcFormatStats: any;
     parse_query_string: any;
+    QRCode: any;
   }
 }
 
