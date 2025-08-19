@@ -368,8 +368,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
       }
 
-      // Redirect to viewer page with return feed
-      const redirectUrl = `/studio-viewer?return=${encodeURIComponent(shortViewerLink.returnFeed)}&chat=${shortViewerLink.chatEnabled}`;
+      // Find the corresponding viewer link to get the session token
+      const viewerLinks = await storage.getAllViewerLinks();
+      const matchingViewerLink = viewerLinks.find(link => 
+        link.returnFeed === shortViewerLink.returnFeed && 
+        link.chatEnabled === shortViewerLink.chatEnabled &&
+        (!link.expiresAt || new Date() <= link.expiresAt)
+      );
+
+      if (!matchingViewerLink) {
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Viewer Link Invalid - Virtual Audience Platform</title>
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #e2e8f0; }
+              .container { max-width: 600px; margin: 0 auto; }
+              h1 { color: #ef4444; margin-bottom: 20px; }
+              p { margin-bottom: 15px; line-height: 1.6; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Viewer Link Invalid</h1>
+              <p>The associated viewer session could not be found or has expired.</p>
+              <p>Please request a new viewer link.</p>
+            </div>
+          </body>
+          </html>
+        `);
+      }
+
+      // Redirect to viewer page with return feed and session token
+      const redirectUrl = `/studio-viewer?return=${encodeURIComponent(shortViewerLink.returnFeed)}&chat=${shortViewerLink.chatEnabled}&token=${matchingViewerLink.sessionToken}`;
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Error resolving short viewer link:', error);
