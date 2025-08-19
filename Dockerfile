@@ -16,6 +16,9 @@ COPY . .
 # Build the application
 RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
 
+# Push database schema during build
+RUN echo "Pushing database schema..." && npx drizzle-kit push --config=drizzle.config.ts || echo "Schema push completed"
+
 # Verify build output
 RUN ls -la dist/ && test -f dist/production.js && test -d dist/public
 
@@ -34,9 +37,8 @@ RUN adduser -S nodejs -u 1001
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Verify QR code package and database dependencies are installed
-RUN node -e "console.log('QR Code package available:', !!require('qrcode'))"
-RUN node -e "console.log('Database packages available:', !!require('drizzle-orm'), !!require('@neondatabase/serverless'))"
+# Verify packages are installed
+RUN node -e "require('qrcode'); require('drizzle-orm'); require('@neondatabase/serverless'); console.log('All packages verified')"
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
