@@ -99,6 +99,22 @@ export default function Links() {
     });
   };
 
+  const copyIngestLink = (streamName: string) => {
+    const ingestUrl = `rtmp://cdn2.obedtv.live/live/${streamName}`;
+    navigator.clipboard.writeText(ingestUrl).then(() => {
+      toast({
+        title: "Copied!",
+        description: "RTMP ingest link copied to clipboard",
+      });
+    }).catch(() => {
+      toast({
+        title: "Copy Failed",
+        description: "Could not copy to clipboard",
+        variant: "destructive",
+      });
+    });
+  };
+
   const clearAllLinks = () => {
     setLinks([]);
     localStorage.removeItem('virtualAudienceLinks');
@@ -209,6 +225,16 @@ export default function Links() {
                       >
                         <i className="fas fa-external-link-alt mr-2"></i>
                         Open
+                      </Button>
+                      <Button 
+                        onClick={() => copyIngestLink(link.streamName)}
+                        variant="outline"
+                        size="sm"
+                        className="border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white"
+                        data-testid={`button-copy-ingest-${link.id}`}
+                      >
+                        <i className="fas fa-broadcast-tower mr-2"></i>
+                        Copy Ingest Link
                       </Button>
                       <Button 
                         onClick={() => deleteLink(link.id)}
