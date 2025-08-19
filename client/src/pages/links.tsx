@@ -367,7 +367,7 @@ export default function Links() {
                               </code>
                             </div>
                           )}
-                          {/* Full Link - Secondary Display */}
+                          {/* Full Link - Hidden unless needed for debugging
                           <div className="va-bg-dark-surface-2 rounded p-3">
                             <div className="flex items-center gap-2 mb-1">
                               <i className="fas fa-link text-gray-400 text-xs"></i>
@@ -377,6 +377,7 @@ export default function Links() {
                               {link.url}
                             </code>
                           </div>
+                          */}
                         </div>
                       </div>
                     </div>
