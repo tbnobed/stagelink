@@ -6,12 +6,18 @@ Updated Docker configuration for Virtual Audience Platform v2.0 with QR code sup
 
 ## What's Updated
 
+### Critical Storage Fix
+- ✅ **MAJOR**: Fixed link persistence issue - links no longer disappear on restart
+- ✅ Migrated from MemStorage (in-memory) to DatabaseStorage (PostgreSQL)
+- ✅ Links now persist permanently in database across container restarts
+- ✅ Added automatic expired link cleanup
+
 ### Dockerfile Improvements
 - ✅ Added QR code package verification in production build
+- ✅ Added database dependency verification (drizzle-orm, @neondatabase/serverless)
 - ✅ Updated to Node.js 18 Alpine for latest security patches
 - ✅ Enhanced build verification with output checks
 - ✅ Improved health check timing for production stability
-- ✅ Added proper dependency installation for QR code generation
 
 ### New Files Added
 - **docker-compose.prod.yml** - Production-optimized configuration with resource limits
@@ -26,9 +32,18 @@ Updated Docker configuration for Virtual Audience Platform v2.0 with QR code sup
 
 ## Deployment Commands
 
+### Migration to Persistent Storage
+```bash
+# Migrate existing deployment to persistent database storage
+./migrate-to-database.sh
+
+# Clean migration (removes old data)
+./migrate-to-database.sh --clean
+```
+
 ### Development Deployment
 ```bash
-# Standard development deployment
+# Standard development deployment with persistent storage
 docker-compose up -d
 ```
 

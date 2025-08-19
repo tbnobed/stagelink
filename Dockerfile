@@ -34,8 +34,9 @@ RUN adduser -S nodejs -u 1001
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Verify QR code package is installed
+# Verify QR code package and database dependencies are installed
 RUN node -e "console.log('QR Code package available:', !!require('qrcode'))"
+RUN node -e "console.log('Database packages available:', !!require('drizzle-orm'), !!require('@neondatabase/serverless'))"
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
