@@ -53,10 +53,11 @@ sleep 10
 echo "Creating database schema..."
 export DATABASE_URL="postgresql://postgres:postgres@db:5432/virtual_audience"
 npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
-echo "Using Docker-specific database configuration..."
-cp dist/db-docker.js dist/db.js
-echo "Starting application..."
-exec node dist/production.js
+echo "Starting application with PostgreSQL driver..."
+exec node -e "
+process.env.USE_PG_DRIVER = 'true';
+import('./dist/production.js');
+"
 EOF
 
 RUN chmod +x /app/start.sh && chown nodejs:nodejs /app/start.sh

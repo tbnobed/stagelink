@@ -1,0 +1,61 @@
+virtual-audience-app-v2  | [✓] Changes applied
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | npm notice New major version of npm available! 10.8.2 -> 11.5.2
+virtual-audience-app-v2  | npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+virtual-audience-app-v2  | npm notice To update run: npm install -g npm@11.5.2
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | Using Docker-specific database configuration...
+virtual-audience-app-v2  | Starting application...
+virtual-audience-app-v2  | 9:46:36 AM [express] serving on port 5000
+virtual-audience-app-v2  | Creating link with data: {
+virtual-audience-app-v2  |   id: '1755596802780',
+virtual-audience-app-v2  |   streamName: 'Obed657',
+virtual-audience-app-v2  |   returnFeed: 'livestream5',
+virtual-audience-app-v2  |   chatEnabled: true,
+virtual-audience-app-v2  |   url: 'https://dev.stagelinq.com/session?stream=Obed657&return=livestream5&chat=true',
+virtual-audience-app-v2  |   expiresAt: null
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | Failed to create link: ErrorEvent {
+virtual-audience-app-v2  |   [Symbol(kTarget)]: WebSocket {
+virtual-audience-app-v2  |     _events: [Object: null prototype] {
+virtual-audience-app-v2  |       error: [Function],
+virtual-audience-app-v2  |       message: [Function],
+virtual-audience-app-v2  |       close: [Function],
+virtual-audience-app-v2  |       open: [Function]
+virtual-audience-app-v2  |     },
+virtual-audience-app-v2  |     _eventsCount: 4,
+virtual-audience-app-v2  |     _maxListeners: undefined,
+virtual-audience-app-v2  |     _binaryType: 'arraybuffer',
+virtual-audience-app-v2  |     _closeCode: 1006,
+virtual-audience-app-v2  |     _closeFrameReceived: false,
+virtual-audience-app-v2  |     _closeFrameSent: false,
+virtual-audience-app-v2  |     _closeMessage: <Buffer >,
+virtual-audience-app-v2  |     _closeTimer: null,
+virtual-audience-app-v2  |     _errorEmitted: true,
+virtual-audience-app-v2  |     _extensions: {},
+virtual-audience-app-v2  |     _paused: false,
+virtual-audience-app-v2  |     _protocol: '',
+virtual-audience-app-v2  |     _readyState: 3,
+virtual-audience-app-v2  |     _receiver: null,
+virtual-audience-app-v2  |     _sender: null,
+virtual-audience-app-v2  |     _socket: null,
+virtual-audience-app-v2  |     _bufferedAmount: 0,
+virtual-audience-app-v2  |     _isServer: false,
+virtual-audience-app-v2  |     _redirects: 0,
+virtual-audience-app-v2  |     _autoPong: true,
+virtual-audience-app-v2  |     _url: 'ws://db/v2',
+virtual-audience-app-v2  |     _req: null,
+virtual-audience-app-v2  |     [Symbol(kCapture)]: false
+virtual-audience-app-v2  |   },
+virtual-audience-app-v2  |   [Symbol(kType)]: 'error',
+virtual-audience-app-v2  |   [Symbol(kError)]: Error: connect ECONNREFUSED 172.18.0.2:80
+virtual-audience-app-v2  |       at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1555:16) {
+virtual-audience-app-v2  |     errno: -111,
+virtual-audience-app-v2  |     code: 'ECONNREFUSED',
+virtual-audience-app-v2  |     syscall: 'connect',
+virtual-audience-app-v2  |     address: '172.18.0.2',
+virtual-audience-app-v2  |     port: 80
+virtual-audience-app-v2  |   },
+virtual-audience-app-v2  |   [Symbol(kMessage)]: 'connect ECONNREFUSED 172.18.0.2:80'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | 9:46:43 AM [express] POST /api/links 500 in 20ms :: {"error":"Failed to create link"}
