@@ -28,8 +28,28 @@ export default function Generator() {
 
     const baseURL = `${window.location.protocol}//${window.location.host}/session`;
     const url = `${baseURL}?stream=${encodeURIComponent(streamName.trim())}&return=${encodeURIComponent(returnFeed)}&chat=${enableChat}`;
+    
+    // Save to localStorage
+    const newLink = {
+      id: Date.now().toString(),
+      streamName: streamName.trim(),
+      returnFeed: returnFeed,
+      chatEnabled: enableChat,
+      url: url,
+      createdAt: new Date().toISOString()
+    };
+
+    const existingLinks = JSON.parse(localStorage.getItem('virtualAudienceLinks') || '[]');
+    const updatedLinks = [newLink, ...existingLinks];
+    localStorage.setItem('virtualAudienceLinks', JSON.stringify(updatedLinks));
+
     setGeneratedLink(url);
     setShowQR(false);
+
+    toast({
+      title: "Link Generated",
+      description: "Link saved to your links page",
+    });
   };
 
   const copyToClipboard = async () => {
@@ -182,7 +202,17 @@ export default function Generator() {
 
           {/* Generated Output */}
           <div className="va-bg-dark-surface rounded-2xl p-8 border va-border-dark">
-            <h3 className="text-xl font-semibold va-text-primary mb-6">Generated Link</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold va-text-primary">Generated Link</h3>
+              <a 
+                href="/links" 
+                className="text-sm va-text-green hover:underline flex items-center"
+                data-testid="link-view-all"
+              >
+                <i className="fas fa-list mr-2"></i>
+                View All Links
+              </a>
+            </div>
             
             <div className="space-y-6">
               {/* Link Output */}

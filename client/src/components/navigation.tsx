@@ -6,7 +6,8 @@ export default function Navigation() {
   const navItems = [
     { path: "/", label: "Home", icon: "fas fa-home" },
     { path: "/generator", label: "Generator", icon: "fas fa-link" },
-    { path: "/session", label: "Session", icon: "fas fa-video" }
+    { path: "/session", label: "Session", icon: "fas fa-video" },
+    { path: "/links", label: "Links", icon: "fas fa-list" }
   ];
 
   return (
