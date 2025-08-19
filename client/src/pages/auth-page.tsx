@@ -161,7 +161,6 @@ export default function AuthPage() {
           </CardContent>
         </Card>
       </div>
-
       {/* Right side - Hero */}
       <div className="flex-1 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-8">
         <div className="max-w-md text-center">
@@ -169,7 +168,7 @@ export default function AuthPage() {
             <img 
               src="/stagelinq-logo.png" 
               alt="StageLinq Logo" 
-              className="h-80 w-auto"
+              className="h-80 w-auto pl-[0px] pr-[0px] mt-[-105px] mb-[-105px] pt-[-15px] pb-[-15px]"
               data-testid="stagelinq-logo"
             />
           </div>
