@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { startPlayback } from "@/lib/streaming";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 
 interface GeneratedLink {
   id: string;
@@ -10,26 +12,37 @@ interface GeneratedLink {
   returnFeed: string;
   chatEnabled: boolean;
   url: string;
-  createdAt: Date;
-  expiresAt?: Date;
+  createdAt: string | Date;
+  expiresAt?: string | Date | null;
 }
 
 export default function Links() {
-  const [links, setLinks] = useState<GeneratedLink[]>([]);
   const [previewingLink, setPreviewingLink] = useState<string | null>(null);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
 
+  // Fetch links from API
+  const { data: links = [], isLoading, error } = useQuery({
+    queryKey: ['/api/links'],
+    queryFn: async () => {
+      const response = await fetch('/api/links');
+      if (!response.ok) {
+        throw new Error('Failed to fetch links');
+      }
+      return response.json();
+    },
+  });
+
   const isLinkExpired = (link: GeneratedLink): boolean => {
     if (!link.expiresAt) return false;
-    return new Date() > link.expiresAt;
+    return new Date() > new Date(link.expiresAt);
   };
 
   const getTimeUntilExpiry = (link: GeneratedLink): string => {
     if (!link.expiresAt) return "Never expires";
     
     const now = new Date();
-    const diff = link.expiresAt.getTime() - now.getTime();
+    const diff = new Date(link.expiresAt).getTime() - now.getTime();
     
     if (diff <= 0) return "Expired";
     
@@ -46,38 +59,36 @@ export default function Links() {
     }
   };
 
-  useEffect(() => {
-    // Load saved links from localStorage
-    const savedLinks = localStorage.getItem('virtualAudienceLinks');
-    if (savedLinks) {
-      try {
-        const parsedLinks = JSON.parse(savedLinks).map((link: any) => ({
-          ...link,
-          createdAt: new Date(link.createdAt),
-          expiresAt: link.expiresAt ? new Date(link.expiresAt) : undefined
-        }));
-        
-        // Filter out expired links
-        const now = new Date();
-        const validLinks = parsedLinks.filter((link: GeneratedLink) => 
-          !link.expiresAt || link.expiresAt > now
-        );
-        
-        // Update localStorage if any links were removed
-        if (validLinks.length !== parsedLinks.length) {
-          localStorage.setItem('virtualAudienceLinks', JSON.stringify(validLinks));
-          toast({
-            title: "Expired Links Removed",
-            description: `${parsedLinks.length - validLinks.length} expired links were automatically removed`,
-          });
-        }
-        
-        setLinks(validLinks);
-      } catch (error) {
-        console.error('Error loading saved links:', error);
+  // Mutations for link operations
+  const deleteLinkMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      const response = await fetch(`/api/links/${linkId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete link');
       }
-    }
-  }, []);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/links'] });
+    },
+  });
+
+  const deleteExpiredMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/links', {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete expired links');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/links'] });
+    },
+  });
 
   const copyToClipboard = async (url: string) => {
     try {
@@ -129,17 +140,24 @@ export default function Links() {
   };
 
   const deleteLink = (linkId: string) => {
-    const updatedLinks = links.filter(link => link.id !== linkId);
-    setLinks(updatedLinks);
-    localStorage.setItem('virtualAudienceLinks', JSON.stringify(updatedLinks));
-    
     if (previewingLink === linkId) {
       stopPreview();
     }
 
-    toast({
-      title: "Link Deleted",
-      description: "The link has been removed from your list",
+    deleteLinkMutation.mutate(linkId, {
+      onSuccess: () => {
+        toast({
+          title: "Link Deleted",
+          description: "The link has been removed from your list",
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to delete link",
+          variant: "destructive",
+        });
+      },
     });
   };
 
@@ -160,39 +178,33 @@ export default function Links() {
   };
 
   const clearAllLinks = () => {
-    setLinks([]);
-    localStorage.removeItem('virtualAudienceLinks');
+    // Delete all links one by one
+    links.forEach((link: GeneratedLink) => deleteLink(link.id));
     stopPreview();
-    
-    toast({
-      title: "All Links Cleared",
-      description: "Your link history has been cleared",
-    });
   };
 
   const removeExpiredLinks = () => {
-    const now = new Date();
-    const validLinks = links.filter(link => !link.expiresAt || link.expiresAt > now);
-    const expiredCount = links.length - validLinks.length;
-    
-    if (expiredCount === 0) {
-      toast({
-        title: "No Expired Links",
-        description: "All links are still valid",
-      });
-      return;
-    }
-    
-    setLinks(validLinks);
-    localStorage.setItem('virtualAudienceLinks', JSON.stringify(validLinks));
-    
-    if (previewingLink && !validLinks.find(l => l.id === previewingLink)) {
-      stopPreview();
-    }
-    
-    toast({
-      title: "Expired Links Removed",
-      description: `${expiredCount} expired link${expiredCount !== 1 ? 's' : ''} removed`,
+    deleteExpiredMutation.mutate(undefined, {
+      onSuccess: (data: any) => {
+        if (data.deletedCount === 0) {
+          toast({
+            title: "No Expired Links",
+            description: "All links are still valid",
+          });
+        } else {
+          toast({
+            title: "Expired Links Removed",
+            description: `${data.deletedCount} expired link${data.deletedCount !== 1 ? 's' : ''} removed`,
+          });
+        }
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to remove expired links",
+          variant: "destructive",
+        });
+      },
     });
   };
 
@@ -247,7 +259,7 @@ export default function Links() {
               </div>
             ) : (
               <div className="space-y-4">
-                {links.map((link) => (
+                {links.map((link: GeneratedLink) => (
                   <div key={link.id} className="va-bg-dark-surface rounded-lg p-6 border va-border-dark hover:border-va-primary/50 transition-colors">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
@@ -278,9 +290,9 @@ export default function Links() {
                           )}
                         </div>
                         <div className="text-sm va-text-secondary mb-3 space-y-1">
-                          <div>Created: {link.createdAt.toLocaleString()}</div>
+                          <div>Created: {new Date(link.createdAt).toLocaleString()}</div>
                           {link.expiresAt && (
-                            <div>Expires: {link.expiresAt.toLocaleString()}</div>
+                            <div>Expires: {new Date(link.expiresAt).toLocaleString()}</div>
                           )}
                         </div>
                         <div className="va-bg-dark-surface-2 rounded p-3 mb-4">
@@ -403,7 +415,7 @@ export default function Links() {
                     <div className="flex justify-between">
                       <span className="va-text-secondary">Stream:</span>
                       <span className="va-text-primary font-mono text-xs">
-                        {links.find(l => l.id === previewingLink)?.streamName}
+                        {links.find((l: GeneratedLink) => l.id === previewingLink)?.streamName}
                       </span>
                     </div>
                   </div>

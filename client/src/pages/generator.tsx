@@ -18,7 +18,7 @@ export default function Generator() {
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
-  const generateLink = () => {
+  const generateLink = async () => {
     if (!streamName.trim()) {
       toast({
         title: "Error",
@@ -39,20 +39,36 @@ export default function Generator() {
       expiresAt = new Date(now.getTime() + (hours * 60 * 60 * 1000));
     }
     
-    // Save to localStorage
+    // Save to server
     const newLink = {
       id: Date.now().toString(),
       streamName: streamName.trim(),
       returnFeed: returnFeed,
       chatEnabled: enableChat,
       url: url,
-      createdAt: new Date().toISOString(),
-      expiresAt: expiresAt ? expiresAt.toISOString() : undefined
+      expiresAt: expiresAt || null
     };
 
-    const existingLinks = JSON.parse(localStorage.getItem('virtualAudienceLinks') || '[]');
-    const updatedLinks = [newLink, ...existingLinks];
-    localStorage.setItem('virtualAudienceLinks', JSON.stringify(updatedLinks));
+    try {
+      const response = await fetch('/api/links', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newLink),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save link');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save link to server",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setGeneratedLink(url);
     setShowQR(false);
