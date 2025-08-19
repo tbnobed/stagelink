@@ -12,7 +12,8 @@ export default function Session() {
   const [showChat, setShowChat] = useState(false);
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
-  const [returnFeedStatus, setReturnFeedStatus] = useState<'connecting' | 'connected' | 'failed' | 'retrying'>('connecting');
+  const [returnFeedStatus, setReturnFeedStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed' | 'retrying'>('disconnected');
+  const [isReturnFeedStarted, setIsReturnFeedStarted] = useState(false);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
   const initializationRef = useRef(false);
@@ -89,46 +90,8 @@ export default function Session() {
         app: 'live'
       });
 
-      // Start playback immediately
-      if (playerVideoRef.current) {
-        const feedStream = returnStream || stream || 'obed2';
-        console.log('Guest session attempting to connect to return feed:', feedStream);
-        console.log('URL params - stream:', stream, 'return:', returnStream, 'chat:', chatEnabled);
-        
-        setReturnFeedStatus('connecting');
-        try {
-          await startPlayback(playerVideoRef.current, feedStream);
-          console.log('Return feed playback completed successfully, setting status to connected');
-          setReturnFeedStatus('connected');
-        } catch (error) {
-          console.error('Return feed connection failed:', error);
-          setReturnFeedStatus('failed');
-          toast({
-            title: "Return Feed Connection Issue",
-            description: "Having trouble connecting to the return feed. Retrying in background...",
-            variant: "destructive",
-          });
-          
-          // Retry after a delay
-          setTimeout(async () => {
-            const retryFeedStream = returnStream || stream || 'obed2';
-            console.log('Retrying return feed connection to:', retryFeedStream);
-            setReturnFeedStatus('retrying');
-            try {
-              await startPlayback(playerVideoRef.current!, retryFeedStream);
-              console.log('Return feed retry completed successfully, setting status to connected');
-              setReturnFeedStatus('connected');
-              toast({
-                title: "Return Feed Connected",
-                description: "Successfully connected to the return feed",
-              });
-            } catch (retryError) {
-              console.error('Return feed retry failed:', retryError);
-              setReturnFeedStatus('failed');
-            }
-          }, 5000);
-        }
-      }
+      // Don't auto-start return feed, let user start it manually
+      setReturnFeedStatus('disconnected');
     };
 
     validateTokenAndInitialize();
@@ -138,6 +101,48 @@ export default function Session() {
   useEffect(() => {
     console.log('Return feed status changed to:', returnFeedStatus);
   }, [returnFeedStatus]);
+
+  const startReturnFeed = async () => {
+    if (!playerVideoRef.current) return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnStream = urlParams.get('return');
+    const stream = urlParams.get('stream');
+    const feedStream = returnStream || stream || 'obed2';
+    
+    setReturnFeedStatus('connecting');
+    setIsReturnFeedStarted(true);
+    
+    try {
+      await startPlayback(playerVideoRef.current, feedStream);
+      setReturnFeedStatus('connected');
+      toast({
+        title: "Return Feed Connected",
+        description: `Connected to return feed: ${feedStream}`,
+      });
+    } catch (error) {
+      console.error('Return feed connection failed:', error);
+      setReturnFeedStatus('failed');
+      setIsReturnFeedStarted(false);
+      toast({
+        title: "Connection Failed",
+        description: `Could not connect to return feed: ${feedStream}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopReturnFeed = () => {
+    setReturnFeedStatus('disconnected');
+    setIsReturnFeedStarted(false);
+    if (playerVideoRef.current) {
+      playerVideoRef.current.srcObject = null;
+    }
+    toast({
+      title: "Return Feed Disconnected",
+      description: "Return feed has been stopped",
+    });
+  };
 
   const togglePublishing = async () => {
     if (!isPublishing) {
@@ -312,8 +317,24 @@ export default function Session() {
                 {returnFeedStatus === 'connecting' && 'Connecting...'}
                 {returnFeedStatus === 'retrying' && 'Retrying...'}
                 {returnFeedStatus === 'failed' && 'Connection Failed'}
+                {returnFeedStatus === 'disconnected' && 'Disconnected'}
               </span>
             </div>
+
+            {/* Return Feed Control Button */}
+            <Button 
+              onClick={isReturnFeedStarted ? stopReturnFeed : startReturnFeed}
+              className={`w-full font-semibold mb-4 ${
+                isReturnFeedStarted
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : 'va-bg-primary hover:va-bg-primary-dark text-va-dark-bg'
+              }`}
+              data-testid="button-toggle-return-feed"
+              disabled={returnFeedStatus === 'connecting'}
+            >
+              <i className={`fas ${isReturnFeedStarted ? 'fa-stop' : 'fa-play'} mr-2`}></i>
+              {isReturnFeedStarted ? 'Stop Return Feed' : 'Start Return Feed'}
+            </Button>
 
             {/* Return Video Element */}
             <div className="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
