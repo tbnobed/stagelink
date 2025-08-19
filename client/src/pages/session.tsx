@@ -87,9 +87,14 @@ export default function Session() {
 
       // Start playback immediately
       if (playerVideoRef.current) {
+        const feedStream = returnStream || stream || 'obed2';
+        console.log('Guest session attempting to connect to return feed:', feedStream);
+        console.log('URL params - stream:', stream, 'return:', returnStream, 'chat:', chatEnabled);
+        
         setReturnFeedStatus('connecting');
         try {
-          await startPlayback(playerVideoRef.current, returnStream || stream || 'obed2');
+          await startPlayback(playerVideoRef.current, feedStream);
+          console.log('Return feed playback completed successfully, setting status to connected');
           setReturnFeedStatus('connected');
         } catch (error) {
           console.error('Return feed connection failed:', error);
@@ -102,9 +107,12 @@ export default function Session() {
           
           // Retry after a delay
           setTimeout(async () => {
+            const retryFeedStream = returnStream || stream || 'obed2';
+            console.log('Retrying return feed connection to:', retryFeedStream);
             setReturnFeedStatus('retrying');
             try {
-              await startPlayback(playerVideoRef.current!, returnStream || stream || 'obed2');
+              await startPlayback(playerVideoRef.current!, retryFeedStream);
+              console.log('Return feed retry completed successfully, setting status to connected');
               setReturnFeedStatus('connected');
               toast({
                 title: "Return Feed Connected",
@@ -120,7 +128,12 @@ export default function Session() {
     };
 
     validateTokenAndInitialize();
-  }, [toast, setLocation]);
+  }, []); // Remove dependencies to prevent re-running
+
+  // Add debugging for status changes
+  useEffect(() => {
+    console.log('Return feed status changed to:', returnFeedStatus);
+  }, [returnFeedStatus]);
 
   const togglePublishing = async () => {
     if (!isPublishing) {
