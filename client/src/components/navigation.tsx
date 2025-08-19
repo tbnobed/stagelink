@@ -23,7 +23,7 @@ export default function Navigation() {
                 target.src = "https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=52";
               }}
             />
-            <span className="va-text-green font-bold text-lg">StageLink</span>
+            <span className="va-text-green font-bold text-lg">StageLinQ</span>
           </div>
           <div className="flex space-x-4">
             {navItems.map((item) => (
