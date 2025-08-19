@@ -109,9 +109,13 @@ Virtual Audience Platform is a professional live streaming solution built with R
 - Enhanced startPlayback function with automatic retry mechanism (up to 5 attempts with 2-second delays)
 - Added WebRTC connection state monitoring with detailed console logging for debugging
 - Improved error handling and user notifications for connection failures
-- Updated session.tsx with visual status indicators (Connected/Connecting/Retrying/Failed)
-- Updated studio-viewer.tsx to use improved startPlayback function with retry logic
-- Return feeds now connect immediately instead of requiring long wait times
+- **CRITICAL FIX**: Resolved "Connecting..." infinite loop bug in Session page by implementing manual start/stop controls
+- Updated session.tsx to match Studio Viewer page architecture with manual return feed controls
+- Session page no longer auto-starts return feed to prevent React state re-rendering issues
+- Added manual "Start Return Feed" and "Stop Return Feed" buttons for reliable connection control
+- Return feeds now connect immediately and reliably when manually started by users
+- **DOCKER FIX**: Updated init.sql with proper session_token columns in short_links and short_viewer_links tables
+- Fixed Docker production deployment database schema to support session token system
 - WHEP connections now properly report connection state changes and ICE connection status
 
 # User Preferences

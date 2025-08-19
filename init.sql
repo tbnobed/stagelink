@@ -1,5 +1,6 @@
 -- Virtual Audience Platform v2.0 with Authentication and Session Token Support
--- Clean initialization for Docker deployment
+-- Clean initialization for Docker deployment - UPDATED with session token fixes
+-- Fixed: Added session_token columns to short_links and short_viewer_links tables
 
 -- Create database if not exists
 SELECT 'CREATE DATABASE virtual_audience'
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS "short_links" (
         "id" varchar(6) PRIMARY KEY NOT NULL,
         "link_id" varchar NOT NULL,
         "created_at" timestamp DEFAULT now() NOT NULL,
+        "session_token" varchar,
         CONSTRAINT "short_links_link_id_links_id_fk" FOREIGN KEY ("link_id") REFERENCES "links"("id") ON DELETE cascade ON UPDATE no action
 );
 
@@ -80,9 +82,10 @@ CREATE TABLE IF NOT EXISTS "viewer_links" (
 -- Short viewer links table for URL shortening
 CREATE TABLE IF NOT EXISTS "short_viewer_links" (
         "id" varchar(6) PRIMARY KEY NOT NULL,
-        "return_feed" varchar NOT NULL,
-        "chat_enabled" boolean DEFAULT false NOT NULL,
-        "created_at" timestamp DEFAULT now() NOT NULL
+        "viewer_link_id" varchar NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "session_token" varchar,
+        CONSTRAINT "short_viewer_links_viewer_link_id_viewer_links_id_fk" FOREIGN KEY ("viewer_link_id") REFERENCES "viewer_links"("id") ON DELETE cascade ON UPDATE no action
 );
 
 -- Session tokens table for reusable link security
