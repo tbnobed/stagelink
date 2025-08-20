@@ -5,7 +5,6 @@ declare global {
     SrsRtcFormatStats: any;
     parse_query_string: any;
     QRCode: any;
-    $: any;
   }
 }
 
@@ -34,12 +33,7 @@ export async function startPublishing(videoElement: HTMLVideoElement | null): Pr
   }
 
   if (!window.SrsRtcWhipWhepAsync) {
-    console.error('SRS SDK not available. Scripts loaded:', {
-      jquery: !!window.$,
-      SrsRtcWhipWhepAsync: !!window.SrsRtcWhipWhepAsync,
-      SrsRtcFormatStats: !!window.SrsRtcFormatStats
-    });
-    throw new Error('SRS SDK not loaded - please refresh the page and try again');
+    throw new Error('SRS SDK not loaded');
   }
 
   // Clean up existing session
@@ -57,7 +51,7 @@ export async function startPublishing(videoElement: HTMLVideoElement | null): Pr
   };
 
   try {
-    const url = `http://cdn2.obedtv.live:1990/rtc/v1/whip/?app=${config.app}&stream=${config.stream}`;
+    const url = `https://cdn2.obedtv.live:1990/rtc/v1/whip/?app=${config.app}&stream=${config.stream}`;
     await sdk.publish(url, {
       camera: true,
       screen: false,
@@ -122,7 +116,7 @@ export async function startPlayback(videoElement: HTMLVideoElement, streamName: 
         console.log(`WHEP ICE connection state: ${player.pc.iceConnectionState}`);
       });
 
-      const url = `http://cdn2.obedtv.live:1990/rtc/v1/whep/?app=${config.app}&stream=${streamName}`;
+      const url = `https://cdn2.obedtv.live:1990/rtc/v1/whep/?app=${config.app}&stream=${streamName}`;
       console.log(`WHEP URL: ${url}`);
       
       await player.play(url);
