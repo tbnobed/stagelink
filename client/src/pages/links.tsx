@@ -177,14 +177,24 @@ export default function Links() {
   };
 
   const previewStream = async (streamName: string, linkId: string) => {
-    if (!previewVideoRef.current) return;
-
     console.log(`Starting preview for stream: ${streamName}`);
-    console.log('Video element:', previewVideoRef.current);
     console.log('SRS SDK available:', !!window.SrsRtcWhipWhepAsync);
 
+    // Set the previewing link first so the video element gets rendered
+    setPreviewingLink(linkId);
+
+    // Wait for the video element to be rendered
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    if (!previewVideoRef.current) {
+      console.error('Video element not found after setting preview link');
+      setPreviewingLink(null);
+      return;
+    }
+
+    console.log('Video element:', previewVideoRef.current);
+
     try {
-      setPreviewingLink(linkId);
       console.log('Calling startPlayback...');
       await startPlayback(previewVideoRef.current, streamName);
       console.log('Preview started successfully');
