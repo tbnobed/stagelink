@@ -77,7 +77,7 @@ export default function Session() {
           
           // Create a guest user context for chat
           setGuestUser({
-            id: 999999, // Special guest user ID
+            id: null, // Guest users don't have database IDs
             username: `Guest_${stream || 'User'}`,
             role: 'user'
           });

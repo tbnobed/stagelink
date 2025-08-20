@@ -52,6 +52,7 @@ export interface IStorage {
   getChatParticipants(sessionId: string): Promise<ChatParticipant[]>;
   addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant>;
   updateParticipantStatus(sessionId: string, userId: number, isOnline: boolean): Promise<void>;
+  updateParticipantStatusByUsername(sessionId: string, username: string, isOnline: boolean): Promise<void>;
   removeParticipant(sessionId: string, userId: number): Promise<void>;
 }
 
@@ -533,6 +534,23 @@ export class MemStorage implements IStorage {
           and(
             eq(chatParticipants.sessionId, sessionId),
             eq(chatParticipants.userId, userId)
+          )
+        );
+    }
+  }
+
+  async updateParticipantStatusByUsername(sessionId: string, username: string, isOnline: boolean): Promise<void> {
+    if (this.isDatabaseMode) {
+      await this.db!.update(chatParticipants)
+        .set({
+          isOnline,
+          lastSeenAt: new Date(),
+        })
+        .where(
+          and(
+            eq(chatParticipants.sessionId, sessionId),
+            eq(chatParticipants.username, username),
+            eq(chatParticipants.userId, null) // Only update guest users
           )
         );
     }
