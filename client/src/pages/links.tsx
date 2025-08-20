@@ -59,35 +59,6 @@ export default function Links() {
     }
   }, [chatHistory, showChatForLink]);
 
-  // Handle restart after chat closes
-  useEffect(() => {
-    if (restartNeeded && links) {
-      console.log(`Processing restart for ${restartNeeded}`);
-      
-      // Find the link to get stream name
-      const link = links.find(l => l.id === restartNeeded);
-      if (link) {
-        const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
-        
-        if (streamName) {
-          console.log(`Restarting preview for stream: ${streamName}`);
-          
-          // Stop current preview
-          stopPreview(restartNeeded);
-          
-          // Small delay then restart
-          setTimeout(() => {
-            console.log(`Starting fresh preview for ${streamName}`);
-            previewStream(streamName, restartNeeded);
-          }, 300);
-        }
-      }
-      
-      // Clear the restart flag
-      setRestartNeeded(null);
-    }
-  }, [restartNeeded, links]);
-
   // Cleanup WebSocket connections when component unmounts
   useEffect(() => {
     return () => {
@@ -132,6 +103,35 @@ export default function Links() {
     refetchOnWindowFocus: true, // Refresh when user returns to tab
     refetchOnMount: true, // Always refresh on component mount
   });
+
+  // Handle restart after chat closes (must be after links declaration)
+  useEffect(() => {
+    if (restartNeeded && links && links.length > 0) {
+      console.log(`Processing restart for ${restartNeeded}`);
+      
+      // Find the link to get stream name
+      const link = links.find(l => l.id === restartNeeded);
+      if (link) {
+        const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
+        
+        if (streamName) {
+          console.log(`Restarting preview for stream: ${streamName}`);
+          
+          // Stop current preview
+          stopPreview(restartNeeded);
+          
+          // Small delay then restart
+          setTimeout(() => {
+            console.log(`Starting fresh preview for ${streamName}`);
+            previewStream(streamName, restartNeeded);
+          }, 300);
+        }
+      }
+      
+      // Clear the restart flag
+      setRestartNeeded(null);
+    }
+  }, [restartNeeded, links]);
 
   const isLinkExpired = (link: GeneratedLink): boolean => {
     if (!link.expiresAt) return false;
