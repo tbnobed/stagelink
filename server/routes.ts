@@ -596,8 +596,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Chat API Routes
-  app.get('/api/chat/messages/:sessionId', requireAuth, async (req, res) => {
+  // Chat API Routes - Public access for guests and authenticated users
+  app.get('/api/chat/messages/:sessionId', async (req, res) => {
     try {
       const { sessionId } = req.params;
       const limit = parseInt(req.query.limit as string) || 50;
@@ -609,7 +609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/chat/participants/:sessionId', requireAuth, async (req, res) => {
+  app.get('/api/chat/participants/:sessionId', async (req, res) => {
     try {
       const { sessionId } = req.params;
       const participants = await storage.getChatParticipants(sessionId);
@@ -617,33 +617,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to fetch chat participants:', error);
       res.status(500).json({ error: 'Failed to fetch chat participants' });
-    }
-  });
-
-  // Get chat messages for a session
-  app.get('/api/chat/messages/:sessionId', requireAuth, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const limit = parseInt(req.query.limit as string) || 50;
-      
-      const messages = await storage.getChatMessages(sessionId, limit);
-      res.json(messages);
-    } catch (error) {
-      console.error('Error fetching chat messages:', error);
-      res.status(500).json({ error: 'Failed to fetch messages' });
-    }
-  });
-
-  // Get chat participants for a session
-  app.get('/api/chat/participants/:sessionId', requireAuth, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      
-      const participants = await storage.getChatParticipants(sessionId);
-      res.json(participants);
-    } catch (error) {
-      console.error('Error fetching chat participants:', error);
-      res.status(500).json({ error: 'Failed to fetch participants' });
     }
   });
 

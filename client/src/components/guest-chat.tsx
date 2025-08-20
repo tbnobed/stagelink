@@ -55,6 +55,16 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
             username: guestUser.username,
             role: guestUser.role,
           }));
+          
+          // Fetch existing messages
+          fetch(`/api/chat/messages/${sessionId}`)
+            .then(res => res.json())
+            .then(data => {
+              if (Array.isArray(data)) {
+                setMessages(data);
+              }
+            })
+            .catch(err => console.error('Failed to fetch messages:', err));
         };
 
         wsRef.current.onmessage = (event) => {
@@ -116,7 +126,7 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
     if (!newMessage.trim() || !isConnected || !wsRef.current) return;
 
     wsRef.current.send(JSON.stringify({
-      type: 'send_message',
+      type: 'message',
       sessionId,
       content: newMessage.trim(),
       messageType: 'individual',
@@ -138,8 +148,11 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
       return true;
     }
     
-    // For individual messages, show if user is sender or recipient
-    return message.senderId === guestUser.id || message.recipientId === guestUser.id;
+    // For individual messages, show if user is sender or intended recipient
+    // Also show messages that don't have a specific recipient (public to session)
+    return message.senderId === guestUser.id || 
+           message.recipientId === guestUser.id || 
+           (!message.recipientId && message.messageType === 'individual');
   };
 
   if (!enabled) {

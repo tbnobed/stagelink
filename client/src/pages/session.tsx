@@ -19,6 +19,7 @@ export default function Session() {
   const [returnFeedStatus, setReturnFeedStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed' | 'retrying'>('disconnected');
   const [isReturnFeedStarted, setIsReturnFeedStarted] = useState(false);
   const [guestUser, setGuestUser] = useState<any>(null);
+  const [linkId, setLinkId] = useState<string | null>(null);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
   const initializationRef = useRef(false);
@@ -72,6 +73,7 @@ export default function Session() {
           }
           
           setTokenValid(true);
+          setLinkId(result.linkId);
           
           // Create a guest user context for chat
           setGuestUser({
@@ -387,9 +389,9 @@ export default function Session() {
               </div>
 
             {/* Chat Container */}
-            {showChat && streamName && guestUser && (
+            {showChat && linkId && guestUser && (
               <GuestChat 
-                sessionId={streamName}
+                sessionId={linkId}
                 enabled={showChat}
                 guestUser={guestUser}
                 className="h-96"
