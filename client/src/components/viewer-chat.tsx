@@ -22,10 +22,15 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
   const inputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const viewerIdRef = useRef<number | null>(null);
 
-  // Create viewer user object EXACTLY like session page guest user
+  // Generate unique positive viewer ID (based on timestamp + random to avoid conflicts)
+  if (!viewerIdRef.current) {
+    viewerIdRef.current = Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 10000);
+  }
+
   const viewerUser = {
-    id: 999999, // EXACT same ID as session page guest
+    id: viewerIdRef.current,
     username: viewerUsername || `Viewer_${sessionId}`,
     role: 'user'
   };
@@ -35,7 +40,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Connect to WebSocket when enabled - EXACT COPY from guest chat
+  // Connect to WebSocket when enabled
   useEffect(() => {
     if (!enabled || !viewerUser || !sessionId) return;
 
@@ -51,7 +56,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
           setIsConnected(true);
           setError(null);
 
-          // Send join message - EXACT COPY from guest chat
+          // Send join message
           wsRef.current?.send(JSON.stringify({
             type: 'join',
             sessionId,
@@ -60,7 +65,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
             role: viewerUser.role,
           }));
           
-          // Fetch existing messages - EXACT COPY from guest chat
+          // Fetch existing messages
           fetch(`/api/chat/messages/${sessionId}`)
             .then(res => res.json())
             .then(data => {
@@ -145,7 +150,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !isConnected || !wsRef.current) return;
 
-    // Send message - EXACT COPY from guest chat
+    // Send message
     wsRef.current.send(JSON.stringify({
       type: 'chat_message',
       sessionId,
