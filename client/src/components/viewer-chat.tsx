@@ -29,11 +29,8 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
     viewerIdRef.current = Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 10000);
   }
 
-  const viewerUser = {
-    id: viewerIdRef.current,
-    username: viewerUsername || `Viewer_${sessionId}`,
-    role: 'user'
-  };
+  const viewerId = viewerIdRef.current;
+  const username = viewerUsername || `Viewer_${sessionId}`;
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -42,7 +39,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
 
   // Connect to WebSocket when enabled
   useEffect(() => {
-    if (!enabled || !viewerUser || !sessionId) return;
+    if (!enabled || !viewerId || !sessionId) return;
 
     const connect = () => {
       try {
@@ -60,9 +57,9 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
           wsRef.current?.send(JSON.stringify({
             type: 'join',
             sessionId,
-            userId: viewerUser.id,
-            username: viewerUser.username,
-            role: viewerUser.role,
+            userId: viewerId,
+            username: username,
+            role: 'user',
           }));
           
           // Fetch existing messages
@@ -104,13 +101,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
           console.log(`Viewer Chat WebSocket disconnected: ${event.code} ${event.reason}`);
           setIsConnected(false);
           
-          // Attempt to reconnect after 3 seconds if still enabled
-          if (enabled && viewerUser) {
-            console.log('Attempting to reconnect in 3 seconds...');
-            reconnectTimeoutRef.current = setTimeout(() => {
-              connect();
-            }, 3000);
-          }
+          // Don't auto-reconnect to prevent loops - user can refresh page if needed
         };
 
         wsRef.current.onerror = (error) => {
@@ -138,7 +129,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
         wsRef.current = null;
       }
     };
-  }, [enabled, viewerUser, sessionId]);
+  }, [enabled, sessionId, viewerId, username]);
 
   // Focus input when connected
   useEffect(() => {
