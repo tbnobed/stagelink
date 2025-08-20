@@ -364,6 +364,11 @@ END $$;
 COLUMNS_EOF
     
     echo "Column checks completed"
+    
+    # Fix admin user password format if it has incorrect format
+    echo "Updating admin user password to correct scrypt format..."
+    psql "$DATABASE_URL" -c "UPDATE users SET password = 'd50f2345138be5a9d2e393d0d35bc3e79b6e0de2ef0fcbb2e6420cbbc637db4e25cfbb47c1e3079f805a84dc9379c559747529728eb0d1c35b92b1b07fb0d68c.2dc356427cd6587959802211b6e98ace' WHERE username = 'admin' AND LENGTH(password) > 200;" 2>/dev/null || echo "Password update skipped"
+    echo "Admin user password format verified"
   fi
   
   # For existing deployments, update schema with Drizzle

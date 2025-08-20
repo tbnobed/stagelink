@@ -107,7 +107,7 @@ CREATE INDEX IF NOT EXISTS "session_tokens_expires_at_idx" ON "session_tokens" (
 
 -- Create default admin user (password: password - MUST be changed in production)
 INSERT INTO "users" ("username", "email", "password", "role")
-VALUES ('admin', 'admin@stagelinq.com', 'c0d8b0e936e6b11b04f9b57eee62d387.9c5e1e96e8c00e5b4b6e8c51c9b6c8b1a2e8c9b6e8c00e5b4b6e8c51c9b6c8b1', 'admin')
+VALUES ('admin', 'admin@stagelinq.com', 'd50f2345138be5a9d2e393d0d35bc3e79b6e0de2ef0fcbb2e6420cbbc637db4e25cfbb47c1e3079f805a84dc9379c559747529728eb0d1c35b92b1b07fb0d68c.2dc356427cd6587959802211b6e98ace', 'admin')
 ON CONFLICT ("username") DO NOTHING;
 
 -- Notify successful initialization
