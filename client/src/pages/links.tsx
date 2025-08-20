@@ -857,6 +857,9 @@ export default function Links() {
                               <div className="text-xs mt-1 opacity-75">
                                 WHEP connection active
                               </div>
+                              <div className="text-xs mt-1 opacity-50">
+                                Ready: {videosReady.has(link.id) ? 'YES' : 'NO'}
+                              </div>
                             </div>
                           </div>
                         )}
