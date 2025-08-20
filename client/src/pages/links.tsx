@@ -28,6 +28,7 @@ export default function Links() {
   const [previewingLinks, setPreviewingLinks] = useState<Set<string>>(new Set());
   const [videosReady, setVideosReady] = useState<Set<string>>(new Set());
   const [showChatForLink, setShowChatForLink] = useState<string | null>(null);
+  const [restartNeeded, setRestartNeeded] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<{[sessionId: string]: string}>({});
 
   const [chatHistory, setChatHistory] = useState<{[sessionId: string]: any[]}>({});
@@ -57,6 +58,35 @@ export default function Links() {
       }, 100);
     }
   }, [chatHistory, showChatForLink]);
+
+  // Handle restart after chat closes
+  useEffect(() => {
+    if (restartNeeded && links) {
+      console.log(`Processing restart for ${restartNeeded}`);
+      
+      // Find the link to get stream name
+      const link = links.find(l => l.id === restartNeeded);
+      if (link) {
+        const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
+        
+        if (streamName) {
+          console.log(`Restarting preview for stream: ${streamName}`);
+          
+          // Stop current preview
+          stopPreview(restartNeeded);
+          
+          // Small delay then restart
+          setTimeout(() => {
+            console.log(`Starting fresh preview for ${streamName}`);
+            previewStream(streamName, restartNeeded);
+          }, 300);
+        }
+      }
+      
+      // Clear the restart flag
+      setRestartNeeded(null);
+    }
+  }, [restartNeeded, links]);
 
   // Cleanup WebSocket connections when component unmounts
   useEffect(() => {
@@ -512,44 +542,14 @@ export default function Links() {
       setShowChatForLink(null);
       disconnectFromChatWebSocket(linkId);
       
-      try {
-        console.log(`DEBUG: Starting restart logic for ${linkId}`);
-        console.log(`DEBUG: links array length: ${links?.length || 0}, viewerLinksData length: ${viewerLinksData?.length || 0}`);
-        
-        // When switching back from chat to preview, completely stop and restart
-        const allLinks = [...(links || []), ...(viewerLinksData || [])];
-        const link = allLinks.find(l => l.id === linkId);
-        const wasPreviewingBeforeChat = previewingLinks.has(linkId);
-        
-        console.log(`DEBUG: allLinks length: ${allLinks.length}`);
-        console.log(`Link found: ${!!link}, was previewing before chat: ${wasPreviewingBeforeChat}`);
-        console.log(`Link details:`, link);
-        console.log(`Current previewingLinks:`, Array.from(previewingLinks));
-        
-        if (link && wasPreviewingBeforeChat) {
-          const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
-          console.log(`Stream name: ${streamName}, link type: ${link.type}`);
-          
-          if (streamName) {
-            console.log(`Completely restarting preview for ${streamName} after closing chat`);
-            
-            // COMPLETE STOP - use existing stopPreview function
-            stopPreview(linkId);
-            
-            // Wait a moment for cleanup
-            setTimeout(() => {
-              console.log(`Starting fresh preview for ${streamName}`);
-              // FRESH START - use existing previewStream function
-              previewStream(streamName, linkId);
-            }, 200);
-          } else {
-            console.log(`No stream name found for restart`);
-          }
-        } else {
-          console.log(`Restart conditions not met - Link: ${!!link}, Was previewing: ${wasPreviewingBeforeChat}`);
-        }
-      } catch (error) {
-        console.error(`Error in restart logic for ${linkId}:`, error);
+      // Check if this link was being previewed before chat opened
+      const wasPreviewingBeforeChat = previewingLinks.has(linkId);
+      console.log(`Was previewing before chat: ${wasPreviewingBeforeChat}`);
+      
+      if (wasPreviewingBeforeChat) {
+        console.log(`Need to restart preview for ${linkId}`);
+        // Set a flag to restart on next render cycle
+        setRestartNeeded(linkId);
       }
     } else {
       console.log(`Opening chat for ${linkId}`);
