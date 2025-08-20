@@ -51,7 +51,7 @@ export async function startPublishing(videoElement: HTMLVideoElement | null): Pr
   };
 
   try {
-    const url = `https://cdn2.obedtv.live:1990/rtc/v1/whip/?app=${config.app}&stream=${config.stream}`;
+    const url = `http://cdn2.obedtv.live:1990/rtc/v1/whip/?app=${config.app}&stream=${config.stream}`;
     await sdk.publish(url, {
       camera: true,
       screen: false,
@@ -116,7 +116,7 @@ export async function startPlayback(videoElement: HTMLVideoElement, streamName: 
         console.log(`WHEP ICE connection state: ${player.pc.iceConnectionState}`);
       });
 
-      const url = `https://cdn2.obedtv.live:1990/rtc/v1/whep/?app=${config.app}&stream=${streamName}`;
+      const url = `http://cdn2.obedtv.live:1990/rtc/v1/whep/?app=${config.app}&stream=${streamName}`;
       console.log(`WHEP URL: ${url}`);
       
       await player.play(url);
