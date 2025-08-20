@@ -180,7 +180,36 @@ MIGRATE_EOF
     
     echo "Session token migration completed"
   else
-    echo "Session tokens table exists - checking for any missing columns..."
+    echo "Session tokens table exists - checking for any missing tables and columns..."
+    
+    # Ensure viewer_links tables exist even if session_tokens exists
+    psql "$DATABASE_URL" << 'TABLES_EOF'
+-- Create viewer_links table if it doesn't exist
+CREATE TABLE IF NOT EXISTS "viewer_links" (
+        "id" varchar PRIMARY KEY NOT NULL,
+        "return_feed" varchar NOT NULL,
+        "chat_enabled" boolean DEFAULT false NOT NULL,
+        "url" text NOT NULL,
+        "expires_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "created_by" integer NOT NULL,
+        "session_token" varchar,
+        CONSTRAINT "viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+);
+
+-- Create generated_viewer_links table if it doesn't exist (alternative naming)
+CREATE TABLE IF NOT EXISTS "generated_viewer_links" (
+        "id" varchar PRIMARY KEY NOT NULL,
+        "return_feed" varchar NOT NULL,
+        "chat_enabled" boolean DEFAULT false NOT NULL,
+        "url" text NOT NULL,
+        "expires_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "created_by" integer NOT NULL,
+        "session_token" varchar,
+        CONSTRAINT "generated_viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+);
+TABLES_EOF
     
     # Ensure all session_token columns exist even if table exists - handle both old and new table names
     psql "$DATABASE_URL" << 'COLUMNS_EOF'
