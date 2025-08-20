@@ -57,6 +57,17 @@ export function useViewerChat({ sessionId, enabled, viewerUsername }: UseViewerC
           username: viewerUsername,
           role: 'user', // Viewers are treated as regular users
         }));
+        
+        // Fetch existing messages via REST API (same as GuestChat)
+        fetch(`/api/chat/messages/${sessionId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              console.log('Fetched initial messages for viewer:', data.length, 'messages');
+              setMessages(data);
+            }
+          })
+          .catch(err => console.error('Failed to fetch initial messages:', err));
       };
 
       wsRef.current.onmessage = (event) => {
@@ -77,10 +88,8 @@ export function useViewerChat({ sessionId, enabled, viewerUsername }: UseViewerC
               }
               break;
             case 'message_history':
-              if (data.messages) {
-                console.log('Setting message history in viewer chat:', data.messages.length, 'messages');
-                setMessages(data.messages);
-              }
+              // Ignore message history from WebSocket since we fetch via REST API
+              console.log('Ignoring WebSocket message history - using REST API instead');
               break;
             case 'participants_list':
               if (data.participants) {
