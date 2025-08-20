@@ -306,7 +306,7 @@ export default function Links() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {links.map((link: GeneratedLink) => (
               <div key={link.id} className="va-bg-dark-surface rounded-lg border va-border-dark hover:border-va-primary/50 transition-all duration-200 hover:shadow-lg overflow-hidden">
                 {/* Preview Window */}
@@ -355,36 +355,36 @@ export default function Links() {
                 </div>
 
                 {/* Card Content */}
-                <div className="p-4">
+                <div className="p-6">
                   {/* Header */}
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-semibold va-text-primary truncate" data-testid={`text-stream-${link.id}`}>
+                  <div className="mb-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-xl font-semibold va-text-primary truncate" data-testid={`text-stream-${link.id}`}>
                         {link.type === 'guest' ? link.streamName : link.returnFeed || 'Viewer Link'}
                       </h3>
                     </div>
-                    <div className="flex flex-wrap gap-1 mb-2">
+                    <div className="flex flex-wrap gap-2 mb-3">
                       <Badge variant="outline" className={
                         link.type === 'guest' 
-                          ? "va-text-green border-va-primary text-xs" 
-                          : "bg-purple-500/20 text-purple-400 border-purple-500/50 text-xs"
+                          ? "va-text-green border-va-primary text-sm px-3 py-1" 
+                          : "bg-purple-500/20 text-purple-400 border-purple-500/50 text-sm px-3 py-1"
                       }>
-                        {link.type === 'guest' ? 'Guest' : 'Viewer'}
+                        {link.type === 'guest' ? 'Guest Session' : 'Return Feed Viewer'}
                       </Badge>
                       {link.type === 'guest' && link.returnFeed && (
-                        <Badge variant="outline" className="va-text-green border-va-primary text-xs">
+                        <Badge variant="outline" className="va-text-green border-va-primary text-sm px-3 py-1">
                           Return: {link.returnFeed}
                         </Badge>
                       )}
                       {link.chatEnabled && (
-                        <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
-                          Chat
+                        <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-sm px-3 py-1">
+                          Chat Enabled
                         </Badge>
                       )}
                       {link.expiresAt && (
                         <Badge 
                           variant="outline" 
-                          className={`text-xs ${
+                          className={`text-sm px-3 py-1 ${
                             isLinkExpired(link) 
                               ? 'bg-red-500/20 text-red-400 border-red-500/50' 
                               : 'bg-orange-500/20 text-orange-400 border-orange-500/50'
@@ -399,19 +399,19 @@ export default function Links() {
 
                   {/* Link Display */}
                   {link.shortLink && (
-                    <div className="va-bg-dark-surface-2 rounded p-2 mb-3">
-                      <div className="flex items-center gap-1 mb-1">
-                        <i className="fas fa-star text-va-primary text-xs"></i>
-                        <span className="text-xs va-text-primary font-medium">Share Link</span>
+                    <div className="va-bg-dark-surface-2 rounded p-3 mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <i className="fas fa-star text-va-primary text-sm"></i>
+                        <span className="text-sm va-text-primary font-medium">Share Link</span>
                       </div>
-                      <code className="text-xs va-text-green font-mono break-all" data-testid={`text-short-url-${link.id}`}>
+                      <code className="text-sm va-text-green font-mono break-all" data-testid={`text-short-url-${link.id}`}>
                         {`${window.location.origin}${link.shortLink}`}
                       </code>
                     </div>
                   )}
 
                   {/* Timestamps */}
-                  <div className="text-xs va-text-secondary mb-3 space-y-1">
+                  <div className="text-sm va-text-secondary mb-4 space-y-1">
                     <div>Created: {new Date(link.createdAt).toLocaleString()}</div>
                     {link.expiresAt && (
                       <div>Expires: {new Date(link.expiresAt).toLocaleString()}</div>
@@ -419,9 +419,9 @@ export default function Links() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {/* Primary Actions Row */}
-                    <div className="flex gap-1">
+                    <div className="flex gap-2">
                       <Button 
                         onClick={() => copyToClipboard(
                           link.shortLink 
@@ -429,12 +429,12 @@ export default function Links() {
                             : link.url
                         )}
                         variant="outline"
-                        size="sm"
-                        className="flex-1 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg text-xs"
+                        size="default"
+                        className="flex-1 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
                         data-testid={`button-copy-${link.id}`}
                       >
-                        <i className="fas fa-copy mr-1"></i>
-                        Copy
+                        <i className="fas fa-copy mr-2"></i>
+                        Copy Link
                       </Button>
                       <Button 
                         onClick={() => {
@@ -445,37 +445,37 @@ export default function Links() {
                           }
                         }}
                         variant="outline"
-                        size="sm"
-                        className="flex-1 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs"
+                        size="default"
+                        className="flex-1 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
                         data-testid={`button-open-${link.id}`}
                       >
-                        <i className="fas fa-external-link-alt mr-1"></i>
-                        Open
+                        <i className="fas fa-external-link-alt mr-2"></i>
+                        Open Session
                       </Button>
                     </div>
                     
                     {/* Secondary Actions Row */}
-                    <div className="flex gap-1">
+                    <div className="flex gap-2">
                       {link.type === 'guest' && link.streamName && (
                         <Button 
                           onClick={() => copyIngestLink(link.streamName!)}
                           variant="outline"
-                          size="sm"
-                          className="flex-1 border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white text-xs"
+                          size="default"
+                          className="flex-1 border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white"
                           data-testid={`button-copy-ingest-${link.id}`}
                         >
-                          <i className="fas fa-broadcast-tower mr-1"></i>
-                          Ingest
+                          <i className="fas fa-broadcast-tower mr-2"></i>
+                          Copy Ingest
                         </Button>
                       )}
                       <Button 
                         onClick={() => deleteLink(link.id, link.type)}
                         variant="outline"
-                        size="sm"
-                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs"
+                        size="default"
+                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
                         data-testid={`button-delete-${link.id}`}
                       >
-                        <i className="fas fa-trash mr-1"></i>
+                        <i className="fas fa-trash mr-2"></i>
                         Delete
                       </Button>
                     </div>
