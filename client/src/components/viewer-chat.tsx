@@ -143,7 +143,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
 
     // Send message
     wsRef.current.send(JSON.stringify({
-      type: 'chat_message',
+      type: 'message',
       sessionId,
       content: newMessage.trim(),
       messageType: 'individual',
