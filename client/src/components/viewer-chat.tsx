@@ -8,12 +8,10 @@ import { format } from 'date-fns';
 
 interface ViewerChatProps {
   sessionId: string;
-  enabled: boolean;
-  viewerUsername?: string;
   className?: string;
 }
 
-export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' }: ViewerChatProps) {
+export function ViewerChat({ sessionId, className = '' }: ViewerChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -22,24 +20,22 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
   const inputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const viewerIdRef = useRef<number | null>(null);
 
-  // Generate unique positive viewer ID (based on timestamp + random to avoid conflicts)
-  if (!viewerIdRef.current) {
-    viewerIdRef.current = Math.floor(Date.now() / 1000) + Math.floor(Math.random() * 10000);
-  }
-
-  const viewerId = viewerIdRef.current;
-  const username = viewerUsername || `Viewer_${sessionId}`;
+  // Create viewer user object (same structure as guest chat)
+  const viewerUser = {
+    id: Date.now(), // Generate unique positive viewer ID
+    username: `Viewer_${sessionId}_${Date.now()}`,
+    role: 'viewer'
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Connect to WebSocket when enabled
+  // Connect to WebSocket (copying exact logic from guest chat)
   useEffect(() => {
-    if (!enabled || !viewerId || !sessionId) return;
+    if (!viewerUser || !sessionId) return;
 
     const connect = () => {
       try {
@@ -57,9 +53,9 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
           wsRef.current?.send(JSON.stringify({
             type: 'join',
             sessionId,
-            userId: viewerId,
-            username: username,
-            role: 'user',
+            userId: viewerUser.id,
+            username: viewerUser.username,
+            role: viewerUser.role,
           }));
           
           // Fetch existing messages
@@ -101,7 +97,11 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
           console.log(`Viewer Chat WebSocket disconnected: ${event.code} ${event.reason}`);
           setIsConnected(false);
           
-          // Don't auto-reconnect to prevent loops - user can refresh page if needed
+          // Attempt to reconnect after 3 seconds
+          console.log('Attempting to reconnect in 3 seconds...');
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connect();
+          }, 3000);
         };
 
         wsRef.current.onerror = (error) => {
@@ -129,19 +129,18 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
         wsRef.current = null;
       }
     };
-  }, [enabled, sessionId, viewerId, username]);
+  }, [viewerUser, sessionId]);
 
   // Focus input when connected
   useEffect(() => {
-    if (isConnected && enabled) {
+    if (isConnected) {
       inputRef.current?.focus();
     }
-  }, [isConnected, enabled]);
+  }, [isConnected]);
 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !isConnected || !wsRef.current) return;
 
-    // Send message
     wsRef.current.send(JSON.stringify({
       type: 'message',
       sessionId,
@@ -159,83 +158,117 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
     }
   };
 
-  if (!enabled) {
-    return null;
-  }
+  const shouldShowMessage = (message: ChatMessage) => {
+    // Viewers can see broadcast messages and public messages
+    if (message.messageType === 'broadcast' || message.messageType === 'system') {
+      return true;
+    }
+    
+    // For individual messages, show if user is sender or intended recipient
+    // Also show messages that don't have a specific recipient (public to session)
+    return message.senderId === viewerUser.id || 
+           message.recipientId === viewerUser.id || 
+           (!message.recipientId && message.messageType === 'individual');
+  };
 
   return (
-    <div className={`va-bg-dark-surface border va-border-dark rounded-lg flex flex-col ${className}`}>
+    <div className={`va-bg-dark-surface-2 rounded-lg overflow-hidden flex flex-col ${className}`} data-testid="container-viewer-chat">
       {/* Header */}
-      <div className="p-3 border-b va-border-dark flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="font-medium va-text-primary">Chat</h3>
-          <Badge variant="outline" className="text-xs">
-            Viewer
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${
-            isConnected ? 'bg-green-500' : 'bg-red-500'
-          }`} />
+      <div className="va-bg-dark-border p-3 border-b va-border-dark flex items-center justify-between">
+        <h4 className="font-medium va-text-primary flex items-center">
+          <i className="fas fa-comments mr-2 va-text-green"></i>
+          Live Chat
+        </h4>
+        <div className="flex items-center space-x-2">
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
           <span className="text-xs va-text-secondary">
             {isConnected ? 'Connected' : 'Disconnected'}
           </span>
         </div>
       </div>
 
-      {/* Error Message */}
+      {/* Error Display */}
       {error && (
-        <div className="p-3 bg-red-500/10 border-b va-border-dark">
-          <p className="text-sm text-red-400">{error}</p>
+        <div className="p-3 bg-red-500/20 border-b border-red-500/50">
+          <p className="text-red-400 text-sm">
+            <i className="fas fa-exclamation-triangle mr-2"></i>
+            {error}
+          </p>
         </div>
       )}
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-3">
-        <div className="space-y-3">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className="flex flex-col space-y-1"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium va-text-primary">
-                  {message.senderName}
-                </span>
-                <span className="text-xs va-text-secondary">
-                  {format(new Date(message.createdAt), 'h:mm a')}
-                </span>
+      <ScrollArea className="flex-1 min-h-0">
+        <div className="p-3 space-y-3">
+          {messages.filter(shouldShowMessage).map((message) => {
+            const isMyMessage = message.senderId === viewerUser.id;
+            return (
+              <div 
+                key={message.id}
+                className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`max-w-[80%] ${isMyMessage ? 'ml-4' : 'mr-4'}`}>
+                  <div className={`p-3 rounded-lg ${
+                    message.messageType === 'broadcast'
+                      ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                      : isMyMessage 
+                        ? 'va-bg-primary/20 va-text-primary'
+                        : 'va-bg-dark-surface va-text-primary'
+                  }`}>
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium text-sm">
+                          {message.senderName}
+                        </span>
+                        {message.messageType === 'broadcast' && (
+                          <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/50">
+                            Broadcast
+                          </Badge>
+                        )}
+                        {message.messageType === 'individual' && message.recipientId && (
+                          <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/50">
+                            Private
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs va-text-secondary ml-2">
+                        {format(new Date(message.createdAt), 'HH:mm')}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm va-text-secondary">{message.content}</p>
-            </div>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
       {/* Message Input */}
-      <div className="p-3 border-t va-border-dark">
-        <div className="flex gap-2">
-          <Input
-            ref={inputRef}
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={isConnected ? "Type a message..." : "Connecting..."}
-            disabled={!isConnected}
-            className="flex-1"
-            data-testid="input-chat-message"
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!newMessage.trim() || !isConnected}
-            size="sm"
-            data-testid="button-send-message"
-          >
-            Send
-          </Button>
+      {isConnected && (
+        <div className="p-3 border-t va-border-dark">
+          <div className="flex space-x-2">
+            <Input
+              ref={inputRef}
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type a message..."
+              className="flex-1 va-bg-dark-surface va-border-dark va-text-primary placeholder:va-text-secondary"
+              data-testid="input-viewer-chat-message"
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!newMessage.trim()}
+              className="va-bg-primary hover:va-bg-primary-dark text-va-dark-bg"
+              data-testid="button-send-viewer-message"
+            >
+              <i className="fas fa-paper-plane"></i>
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
