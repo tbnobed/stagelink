@@ -21,6 +21,16 @@ interface ChatWebSocketMessage {
 }
 
 export function useViewerChat({ sessionId, enabled, viewerUsername }: UseViewerChatProps) {
+  // Temporarily disabled - using GuestChat instead
+  return {
+    messages: [],
+    participants: [],
+    isConnected: false,
+    error: null,
+    sendMessage: () => {},
+    disconnect: () => {},
+    canSendBroadcast: false
+  };
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [participants, setParticipants] = useState<ChatParticipant[]>([]);
   const [isConnected, setIsConnected] = useState(false);

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { startPlayback, initializeStreaming } from "@/lib/streaming";
-import { ViewerChat } from "@/components/viewer-chat";
+import { GuestChat } from "@/components/guest-chat";
 
 // Global variables for SRS SDK
 declare global {
@@ -395,9 +395,14 @@ export default function StudioViewer() {
                     >
                       <i className="fas fa-times"></i>
                     </Button>
-                    <ViewerChat 
+                    <GuestChat 
                       sessionId={returnFeed}
                       enabled={showChat}
+                      guestUser={{
+                        id: 999999, // Fixed viewer ID like in the original working system
+                        username: viewerUsername || `Viewer_${returnFeed}`,
+                        role: 'user'
+                      }}
                       className="h-96"
                     />
                   </div>
