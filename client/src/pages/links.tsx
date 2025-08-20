@@ -512,11 +512,15 @@ export default function Links() {
       setShowChatForLink(null);
       disconnectFromChatWebSocket(linkId);
       
+      console.log(`DEBUG: Starting restart logic for ${linkId}`);
+      console.log(`DEBUG: links array length: ${links?.length || 0}, viewerLinksData length: ${viewerLinksData?.length || 0}`);
+      
       // When switching back from chat to preview, completely stop and restart
       const allLinks = [...(links || []), ...(viewerLinksData || [])];
       const link = allLinks.find(l => l.id === linkId);
       const wasPreviewingBeforeChat = previewingLinks.has(linkId);
       
+      console.log(`DEBUG: allLinks length: ${allLinks.length}`);
       console.log(`Link found: ${!!link}, was previewing before chat: ${wasPreviewingBeforeChat}`);
       console.log(`Link details:`, link);
       console.log(`Current previewingLinks:`, Array.from(previewingLinks));
