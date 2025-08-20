@@ -23,6 +23,7 @@ export default function StudioViewer() {
   const [returnFeed, setReturnFeed] = useState("");
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
+  const [linkId, setLinkId] = useState<string>("");
   const [guestUser, setGuestUser] = useState<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
@@ -70,6 +71,7 @@ export default function StudioViewer() {
           }
           
           setTokenValid(true);
+          setLinkId(result.linkId); // Store the link ID for chat session
         } catch (error) {
           console.error('Token validation failed:', error);
           toast({
@@ -402,7 +404,7 @@ export default function StudioViewer() {
                       <i className="fas fa-times"></i>
                     </Button>
                     <GuestChat 
-                      sessionId={returnFeed}
+                      sessionId={linkId}
                       enabled={showChat}
                       guestUser={guestUser}
                       className="h-96"
