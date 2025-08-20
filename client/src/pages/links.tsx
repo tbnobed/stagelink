@@ -20,8 +20,8 @@ interface GeneratedLink {
 }
 
 export default function Links() {
-  const [previewingLink, setPreviewingLink] = useState<string | null>(null);
-  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const [previewingLinks, setPreviewingLinks] = useState<Set<string>>(new Set());
+  const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const { toast } = useToast();
 
   // Fetch both guest session links and viewer links with automatic refresh
@@ -180,23 +180,28 @@ export default function Links() {
     console.log(`Starting preview for stream: ${streamName}`);
     console.log('SRS SDK available:', !!window.SrsRtcWhipWhepAsync);
 
-    // Set the previewing link first so the video element gets rendered
-    setPreviewingLink(linkId);
+    // Add the link to previewing set
+    setPreviewingLinks(prev => new Set([...prev, linkId]));
 
     // Wait for the video element to be rendered
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    if (!previewVideoRef.current) {
+    const videoElement = previewVideoRefs.current.get(linkId);
+    if (!videoElement) {
       console.error('Video element not found after setting preview link');
-      setPreviewingLink(null);
+      setPreviewingLinks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(linkId);
+        return newSet;
+      });
       return;
     }
 
-    console.log('Video element:', previewVideoRef.current);
+    console.log('Video element:', videoElement);
 
     try {
       console.log('Calling startPlayback...');
-      await startPlayback(previewVideoRef.current, streamName);
+      await startPlayback(videoElement, streamName);
       console.log('Preview started successfully');
       toast({
         title: "Preview Started",
@@ -209,20 +214,30 @@ export default function Links() {
         description: `Failed to start preview: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
-      setPreviewingLink(null);
+      setPreviewingLinks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(linkId);
+        return newSet;
+      });
     }
   };
 
-  const stopPreview = () => {
-    if (previewVideoRef.current) {
-      previewVideoRef.current.srcObject = null;
+  const stopPreview = (linkId: string) => {
+    const videoElement = previewVideoRefs.current.get(linkId);
+    if (videoElement) {
+      videoElement.srcObject = null;
     }
-    setPreviewingLink(null);
+    previewVideoRefs.current.delete(linkId);
+    setPreviewingLinks(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(linkId);
+      return newSet;
+    });
   };
 
   const deleteLink = (linkId: string, linkType: 'guest' | 'viewer') => {
-    if (previewingLink === linkId) {
-      stopPreview();
+    if (previewingLinks.has(linkId)) {
+      stopPreview(linkId);
     }
 
     deleteLinkMutation.mutate({ linkId, linkType });
@@ -245,9 +260,10 @@ export default function Links() {
   };
 
   const clearAllLinks = () => {
+    // Stop all previews first
+    previewingLinks.forEach(linkId => stopPreview(linkId));
     // Delete all links one by one
     links.forEach((link: GeneratedLink) => deleteLink(link.id, link.type));
-    stopPreview();
   };
 
   const removeExpiredLinks = () => {
@@ -328,9 +344,13 @@ export default function Links() {
               <div key={link.id} className="va-bg-dark-surface rounded-lg border va-border-dark hover:border-va-primary/50 transition-all duration-200 hover:shadow-lg overflow-hidden">
                 {/* Preview Window */}
                 <div className="relative bg-black aspect-video">
-                  {previewingLink === link.id ? (
+                  {previewingLinks.has(link.id) ? (
                     <video 
-                      ref={previewingLink === link.id ? previewVideoRef : undefined}
+                      ref={(el) => {
+                        if (el) {
+                          previewVideoRefs.current.set(link.id, el);
+                        }
+                      }}
                       autoPlay 
                       muted 
                       controls 
@@ -358,9 +378,9 @@ export default function Links() {
                       </div>
                     </div>
                   )}
-                  {previewingLink === link.id && (
+                  {previewingLinks.has(link.id) && (
                     <Button 
-                      onClick={stopPreview}
+                      onClick={() => stopPreview(link.id)}
                       variant="outline"
                       size="sm"
                       className="absolute top-2 right-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
