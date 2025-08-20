@@ -6,6 +6,15 @@ The Virtual Audience Platform is a professional live streaming solution that ena
 
 Preferred communication style: Simple, everyday language.
 
+# Recent Changes
+
+## Chat System Architecture Fix (August 20, 2025)
+- **Issue**: Viewer link chat synchronization was broken due to architectural confusion
+- **Root Cause**: Viewer links were incorrectly trying to connect to streaming session chats instead of having independent chats
+- **Solution**: Each link (streaming or viewer) now has completely independent chat using its own ID as session ID
+- **Result**: Viewer link "livestream5" (ID: 1755726594404) has separate chat from streaming link "testchat2" (ID: 1755726580017)
+- **Lesson**: Keep chat architecture simple - each link gets its own chat session using its own ID
+
 # System Architecture
 
 ## Frontend Architecture
