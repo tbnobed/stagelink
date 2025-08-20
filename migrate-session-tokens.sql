@@ -12,27 +12,48 @@ CREATE TABLE IF NOT EXISTS "session_tokens" (
         CONSTRAINT "session_tokens_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
 );
 
--- Add session_token column to links table if it doesn't exist
+-- Add session_token column to links table if it doesn't exist - handle both old and new table names
 DO $$ 
 BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='links' AND column_name='session_token') THEN
-        ALTER TABLE "links" ADD COLUMN "session_token" varchar;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='generated_links') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='generated_links' AND column_name='session_token') THEN
+            ALTER TABLE "generated_links" ADD COLUMN "session_token" varchar;
+            RAISE NOTICE 'Added session_token column to generated_links table';
+        END IF;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='links') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='links' AND column_name='session_token') THEN
+            ALTER TABLE "links" ADD COLUMN "session_token" varchar;
+            RAISE NOTICE 'Added session_token column to links table';
+        END IF;
     END IF;
 END $$;
 
--- Add session_token column to viewer_links table if it doesn't exist
+-- Add session_token column to viewer_links table if it doesn't exist - handle both old and new table names
 DO $$ 
 BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='viewer_links' AND column_name='session_token') THEN
-        ALTER TABLE "viewer_links" ADD COLUMN "session_token" varchar;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='generated_viewer_links') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='generated_viewer_links' AND column_name='session_token') THEN
+            ALTER TABLE "generated_viewer_links" ADD COLUMN "session_token" varchar;
+            RAISE NOTICE 'Added session_token column to generated_viewer_links table';
+        END IF;
+    END IF;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='viewer_links') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='viewer_links' AND column_name='session_token') THEN
+            ALTER TABLE "viewer_links" ADD COLUMN "session_token" varchar;
+            RAISE NOTICE 'Added session_token column to viewer_links table';
+        END IF;
     END IF;
 END $$;
 
 -- Add session_token column to short_links table if it doesn't exist
 DO $$ 
 BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='short_links' AND column_name='session_token') THEN
-        ALTER TABLE "short_links" ADD COLUMN "session_token" varchar;
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='short_links') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='short_links' AND column_name='session_token') THEN
+            ALTER TABLE "short_links" ADD COLUMN "session_token" varchar;
+            RAISE NOTICE 'Added session_token column to short_links table';
+        END IF;
     END IF;
 END $$;
 
