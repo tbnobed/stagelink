@@ -285,30 +285,15 @@ class ChatWebSocketServer {
       }
     }
 
-    // Save message to database only for real users (not guest/viewer users)
-    let chatMessage;
-    if (senderClient.userId > 0) {
-      chatMessage = await storage.createChatMessage({
-        sessionId: message.sessionId,
-        senderId: senderClient.userId,
-        senderName: senderClient.username,
-        recipientId: message.recipientId || null,
-        messageType,
-        content: message.content,
-      });
-    } else {
-      // Create temporary message object for guest/viewer users
-      chatMessage = {
-        id: Date.now(), // Temporary ID for guest messages
-        sessionId: message.sessionId,
-        senderId: senderClient.userId,
-        senderName: senderClient.username,
-        recipientId: message.recipientId || null,
-        messageType,
-        content: message.content,
-        createdAt: new Date(),
-      };
-    }
+    // Save all messages to database, including guest/viewer messages
+    const chatMessage = await storage.createChatMessage({
+      sessionId: message.sessionId,
+      senderId: senderClient.userId,
+      senderName: senderClient.username,
+      recipientId: message.recipientId || null,
+      messageType,
+      content: message.content,
+    });
 
     // Broadcast the message to appropriate recipients
     const recipients = this.getMessageRecipients(message.sessionId, messageType, message.recipientId);

@@ -15,20 +15,126 @@ interface ViewerChatProps {
 }
 
 export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' }: ViewerChatProps) {
-  const { messages, participants, isConnected, error, sendMessage } = useViewerChat({
-    sessionId,
-    enabled,
-    viewerUsername,
-  });
-  
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Create viewer user object like session page
+  const viewerUser = {
+    id: 999999, // Same ID as session page guest
+    username: viewerUsername || `Viewer_${sessionId}`,
+    role: 'user'
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Connect to WebSocket when enabled - EXACT copy from GuestChat
+  useEffect(() => {
+    if (!enabled || !viewerUser || !sessionId) return;
+
+    const connect = () => {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/chat`;
+        
+        wsRef.current = new WebSocket(wsUrl);
+
+        wsRef.current.onopen = () => {
+          console.log('Viewer Chat WebSocket connected');
+          setIsConnected(true);
+          setError(null);
+
+          // Send join message - EXACT copy from GuestChat
+          wsRef.current?.send(JSON.stringify({
+            type: 'join',
+            sessionId,
+            userId: viewerUser.id,
+            username: viewerUser.username,
+            role: viewerUser.role,
+          }));
+          
+          // Fetch existing messages - EXACT copy from GuestChat
+          fetch(`/api/chat/messages/${sessionId}`)
+            .then(res => res.json())
+            .then(data => {
+              if (Array.isArray(data)) {
+                setMessages(data);
+              }
+            })
+            .catch(err => console.error('Failed to fetch messages:', err));
+        };
+
+        wsRef.current.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            switch (data.type) {
+              case 'new_message':
+                if (data.message) {
+                  setMessages(prev => [...prev, data.message]);
+                }
+                break;
+              case 'message_history':
+                if (data.messages) {
+                  setMessages(data.messages);
+                }
+                break;
+              case 'error':
+                setError(data.error || 'Unknown error');
+                break;
+            }
+          } catch (err) {
+            console.error('Failed to parse WebSocket message:', err);
+          }
+        };
+
+        wsRef.current.onclose = (event) => {
+          console.log(`Viewer Chat WebSocket disconnected: ${event.code} ${event.reason}`);
+          setIsConnected(false);
+          
+          // Attempt to reconnect after 3 seconds if still enabled
+          if (enabled && viewerUser) {
+            console.log('Attempting to reconnect in 3 seconds...');
+            reconnectTimeoutRef.current = setTimeout(() => {
+              connect();
+            }, 3000);
+          }
+        };
+
+        wsRef.current.onerror = (error) => {
+          console.error('Viewer Chat WebSocket error:', error);
+          setError('Connection error');
+        };
+      } catch (err) {
+        console.error('Failed to connect to chat:', err);
+        setError('Failed to connect');
+      }
+    };
+
+    connect();
+
+    return () => {
+      // Clear reconnection timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      
+      // Close WebSocket connection
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [enabled, viewerUser, sessionId]);
 
   // Focus input when connected
   useEffect(() => {
@@ -38,9 +144,16 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
   }, [isConnected, enabled]);
 
   const handleSendMessage = () => {
-    if (!newMessage.trim() || !isConnected) return;
+    if (!newMessage.trim() || !isConnected || !wsRef.current) return;
 
-    sendMessage(newMessage.trim());
+    // Send message - EXACT copy from GuestChat
+    wsRef.current.send(JSON.stringify({
+      type: 'chat_message',
+      sessionId,
+      content: newMessage.trim(),
+      messageType: 'individual',
+    }));
+
     setNewMessage('');
   };
 
