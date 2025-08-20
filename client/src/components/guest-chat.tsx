@@ -25,6 +25,7 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -91,9 +92,17 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
           }
         };
 
-        wsRef.current.onclose = () => {
-          console.log('Guest Chat WebSocket disconnected');
+        wsRef.current.onclose = (event) => {
+          console.log(`Guest Chat WebSocket disconnected: ${event.code} ${event.reason}`);
           setIsConnected(false);
+          
+          // Attempt to reconnect after 3 seconds if still enabled
+          if (enabled && guestUser) {
+            console.log('Attempting to reconnect in 3 seconds...');
+            reconnectTimeoutRef.current = setTimeout(() => {
+              connect();
+            }, 3000);
+          }
         };
 
         wsRef.current.onerror = (error) => {
@@ -109,8 +118,16 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
     connect();
 
     return () => {
+      // Clear reconnection timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      
+      // Close WebSocket connection
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [enabled, guestUser, sessionId]);

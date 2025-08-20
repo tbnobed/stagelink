@@ -4,6 +4,13 @@ import { storage } from './storage';
 import { insertChatMessageSchema, insertChatParticipantSchema } from '@shared/schema';
 import { z } from 'zod';
 
+// Extend WebSocket interface to include isAlive property
+declare module 'ws' {
+  interface WebSocket {
+    isAlive?: boolean;
+  }
+}
+
 interface ChatClient {
   ws: WebSocket;
   userId: number;
@@ -48,15 +55,41 @@ class ChatWebSocketServer {
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 
       server,
-      path: '/chat'
+      path: '/chat',
+      // Add ping interval to keep connections alive
+      perMessageDeflate: false,
     });
 
     this.wss.on('connection', this.handleConnection.bind(this));
-    console.log('Chat WebSocket server initialized');
+    
+    // Set up periodic ping to keep connections alive and cleanup stale connections
+    setInterval(() => {
+      this.wss.clients.forEach((ws) => {
+        if (ws.isAlive === false) {
+          console.log('Terminating stale WebSocket connection');
+          ws.terminate();
+          return;
+        }
+        
+        ws.isAlive = false;
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.ping();
+        }
+      });
+    }, 30000); // Ping every 30 seconds
+
+    console.log('Chat WebSocket server initialized with keepalive');
   }
 
   private handleConnection(ws: WebSocket, request: any) {
     console.log('New WebSocket connection');
+
+    // Set up connection keepalive
+    ws.isAlive = true;
+    
+    ws.on('pong', () => {
+      ws.isAlive = true;
+    });
 
     ws.on('message', async (data: Buffer) => {
       try {
@@ -72,7 +105,8 @@ class ChatWebSocketServer {
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      console.log(`WebSocket closed: ${code} ${reason}`);
       this.handleDisconnection(ws);
     });
 
