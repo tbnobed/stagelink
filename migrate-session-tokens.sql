@@ -41,40 +41,37 @@ CREATE TABLE IF NOT EXISTS "session_tokens" (
 
 -- Create viewer_links table if it doesn't exist
 CREATE TABLE IF NOT EXISTS "viewer_links" (
-        "id" varchar PRIMARY KEY NOT NULL,
-        "return_feed" varchar NOT NULL,
+        "id" text PRIMARY KEY NOT NULL,
+        "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
         "url" text NOT NULL,
-        "expires_at" timestamp,
+        "session_token" text UNIQUE,
         "created_at" timestamp DEFAULT now() NOT NULL,
-        "created_by" integer NOT NULL,
-        "session_token" varchar,
-        CONSTRAINT "viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+        "expires_at" timestamp,
+        "created_by" integer REFERENCES "users"("id")
 );
 
 -- Create generated_viewer_links table if it doesn't exist (alternative naming)
 CREATE TABLE IF NOT EXISTS "generated_viewer_links" (
-        "id" varchar PRIMARY KEY NOT NULL,
-        "return_feed" varchar NOT NULL,
+        "id" text PRIMARY KEY NOT NULL,
+        "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
         "url" text NOT NULL,
-        "expires_at" timestamp,
+        "session_token" text UNIQUE,
         "created_at" timestamp DEFAULT now() NOT NULL,
-        "created_by" integer NOT NULL,
-        "session_token" varchar,
-        CONSTRAINT "generated_viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+        "expires_at" timestamp,
+        "created_by" integer REFERENCES "users"("id")
 );
 
 -- Create short_viewer_links table if it doesn't exist
 CREATE TABLE IF NOT EXISTS "short_viewer_links" (
-        "id" varchar(6) PRIMARY KEY NOT NULL,
-        "return_feed" varchar NOT NULL,
+        "id" text PRIMARY KEY NOT NULL,
+        "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
-        "session_token" varchar,
+        "session_token" text UNIQUE,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "expires_at" timestamp,
-        "created_by" integer NOT NULL,
-        CONSTRAINT "short_viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+        "created_by" integer REFERENCES "users"("id")
 );
 
 -- Add missing updated_at column to users table if it doesn't exist
@@ -90,13 +87,13 @@ DO $$
 BEGIN 
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='generated_links') THEN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='generated_links' AND column_name='session_token') THEN
-            ALTER TABLE "generated_links" ADD COLUMN "session_token" varchar;
+            ALTER TABLE "generated_links" ADD COLUMN "session_token" text UNIQUE;
             RAISE NOTICE 'Added session_token column to generated_links table';
         END IF;
     END IF;
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='links') THEN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='links' AND column_name='session_token') THEN
-            ALTER TABLE "links" ADD COLUMN "session_token" varchar;
+            ALTER TABLE "links" ADD COLUMN "session_token" text UNIQUE;
             RAISE NOTICE 'Added session_token column to links table';
         END IF;
     END IF;
@@ -107,13 +104,13 @@ DO $$
 BEGIN 
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='generated_viewer_links') THEN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='generated_viewer_links' AND column_name='session_token') THEN
-            ALTER TABLE "generated_viewer_links" ADD COLUMN "session_token" varchar;
+            ALTER TABLE "generated_viewer_links" ADD COLUMN "session_token" text UNIQUE;
             RAISE NOTICE 'Added session_token column to generated_viewer_links table';
         END IF;
     END IF;
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='viewer_links') THEN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='viewer_links' AND column_name='session_token') THEN
-            ALTER TABLE "viewer_links" ADD COLUMN "session_token" varchar;
+            ALTER TABLE "viewer_links" ADD COLUMN "session_token" text UNIQUE;
             RAISE NOTICE 'Added session_token column to viewer_links table';
         END IF;
     END IF;
@@ -124,7 +121,7 @@ DO $$
 BEGIN 
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='short_links') THEN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='short_links' AND column_name='session_token') THEN
-            ALTER TABLE "short_links" ADD COLUMN "session_token" varchar;
+            ALTER TABLE "short_links" ADD COLUMN "session_token" text UNIQUE;
             RAISE NOTICE 'Added session_token column to short_links table';
         END IF;
     END IF;
