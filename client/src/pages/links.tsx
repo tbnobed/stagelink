@@ -712,7 +712,7 @@ export default function Links() {
                         <Input
                           value={chatMessages[link.id] || ''}
                           onChange={(e) => setChatMessages(prev => ({ ...prev, [link.id]: e.target.value }))}
-                          placeholder={messageType === 'broadcast' ? "Broadcast to all users..." : `Message ${link.streamName || link.returnFeed}...`}
+                          placeholder={`Message ${link.streamName || link.returnFeed}...`}
                           className="flex-1 text-sm va-bg-dark-surface va-border-dark va-text-primary"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
