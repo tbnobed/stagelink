@@ -780,6 +780,11 @@ export default function Links() {
                               if (el.srcObject) {
                                 console.log(`Video element already has srcObject, attempting play...`);
                                 el.play().catch(e => console.error('Failed to play video:', e));
+                                // If video is already playing or ready, mark it as ready
+                                if (!el.paused || el.readyState >= 3) {
+                                  console.log(`Video already ready for link: ${link.id}, readyState: ${el.readyState}, paused: ${el.paused}`);
+                                  setVideosReady(prev => new Set([...prev, link.id]));
+                                }
                               }
                             }
                           }}
