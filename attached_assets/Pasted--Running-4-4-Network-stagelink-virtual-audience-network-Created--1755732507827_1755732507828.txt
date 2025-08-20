@@ -1,0 +1,72 @@
+[+] Running 4/4
+ ✔ Network stagelink_virtual-audience-network  Created                                                                                                                                                0.1s
+ ✔ Volume "stagelink_postgres_data"            Created                                                                                                                                                0.0s
+ ✘ Container virtual-audience-db-v2            Error                                                                                                                                                  2.3s
+ ✔ Container virtual-audience-app-v2           Created                                                                                                                                                0.0s
+dependency failed to start: container virtual-audience-db-v2 is unhealthy
+obtv-admin@stagelink:~/stagelink$ docker-compose logs -f
+virtual-audience-db-v2  | The files belonging to this database system will be owned by user "postgres".
+virtual-audience-db-v2  | This user must also own the server process.
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | The database cluster will be initialized with locale "en_US.utf8".
+virtual-audience-db-v2  | The default database encoding has accordingly been set to "UTF8".
+virtual-audience-db-v2  | The default text search configuration will be set to "english".
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | Data page checksums are disabled.
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+virtual-audience-db-v2  | creating subdirectories ... ok
+virtual-audience-db-v2  | selecting dynamic shared memory implementation ... posix
+virtual-audience-db-v2  | selecting default max_connections ... 100
+virtual-audience-db-v2  | selecting default shared_buffers ... 128MB
+virtual-audience-db-v2  | selecting default time zone ... UTC
+virtual-audience-db-v2  | creating configuration files ... ok
+virtual-audience-db-v2  | running bootstrap script ... ok
+virtual-audience-db-v2  | sh: locale: not found
+virtual-audience-db-v2  | 2025-08-20 23:28:04.195 UTC [35] WARNING:  no usable system locales were found
+virtual-audience-db-v2  | performing post-bootstrap initialization ... ok
+virtual-audience-db-v2  | syncing data to disk ... ok
+virtual-audience-db-v2  | initdb: warning: enabling "trust" authentication for local connections
+virtual-audience-db-v2  | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+virtual-audience-db-v2  |
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | Success. You can now start the database server using:
+virtual-audience-db-v2  |
+virtual-audience-db-v2  |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | waiting for server to start....2025-08-20 23:28:04.810 UTC [41] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2  | 2025-08-20 23:28:04.811 UTC [41] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2  | 2025-08-20 23:28:04.816 UTC [44] LOG:  database system was shut down at 2025-08-20 23:28:04 UTC
+virtual-audience-db-v2  | 2025-08-20 23:28:04.825 UTC [41] LOG:  database system is ready to accept connections
+virtual-audience-db-v2  |  done
+virtual-audience-db-v2  | server started
+virtual-audience-db-v2  | CREATE DATABASE
+virtual-audience-db-v2  |
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql
+virtual-audience-db-v2  | 2025-08-20 23:28:04.999 UTC [54] ERROR:  syntax error at or near "#!/" at character 1
+virtual-audience-db-v2  | 2025-08-20 23:28:04.999 UTC [54] STATEMENT:  #!/usr/bin/env sql
+virtual-audience-db-v2  |       -- Virtual Audience Platform v2.0 - Complete Production Database Schema
+virtual-audience-db-v2  |       -- This file creates the complete database schema for fresh Docker deployments
+virtual-audience-db-v2  |       -- Last updated: August 20, 2025
+virtual-audience-db-v2  |       -- Create database if not exists
+virtual-audience-db-v2  |       SELECT 'CREATE DATABASE virtual_audience'
+virtual-audience-db-v2  |       WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'virtual_audience');
+virtual-audience-db-v2  | psql:/docker-entrypoint-initdb.d/init.sql:8: ERROR:  syntax error at or near "#!/"
+virtual-audience-db-v2  | LINE 1: #!/usr/bin/env sql
+virtual-audience-db-v2  |         ^
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | PostgreSQL Database directory appears to contain a database; Skipping initialization
+virtual-audience-db-v2  |
+virtual-audience-db-v2  | 2025-08-20 23:28:05.839 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2  | 2025-08-20 23:28:05.839 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+virtual-audience-db-v2  | 2025-08-20 23:28:05.839 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+virtual-audience-db-v2  | 2025-08-20 23:28:05.842 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2  | 2025-08-20 23:28:05.847 UTC [29] LOG:  database system was interrupted; last known up at 2025-08-20 23:28:04 UTC
+virtual-audience-db-v2  | 2025-08-20 23:28:05.916 UTC [29] LOG:  database system was not properly shut down; automatic recovery in progress
+virtual-audience-db-v2  | 2025-08-20 23:28:05.919 UTC [29] LOG:  redo starts at 0/1509918
+virtual-audience-db-v2  | 2025-08-20 23:28:05.937 UTC [29] LOG:  invalid record length at 0/192D4A8: wanted 24, got 0
+virtual-audience-db-v2  | 2025-08-20 23:28:05.937 UTC [29] LOG:  redo done at 0/192D460 system usage: CPU: user: 0.00 s, system: 0.01 s, elapsed: 0.01 s
+virtual-audience-db-v2  | 2025-08-20 23:28:05.940 UTC [27] LOG:  checkpoint starting: end-of-recovery immediate wait
+virtual-audience-db-v2  | 2025-08-20 23:28:05.989 UTC [27] LOG:  checkpoint complete: wrote 921 buffers (5.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.028 s, sync=0.017 s, total=0.050 s; sync files=301, longest=0.002 s, average=0.001 s; distance=4239 kB, estimate=4239 kB
+virtual-audience-db-v2  | 2025-08-20 23:28:05.997 UTC [1] LOG:  database system is ready to accept connections
