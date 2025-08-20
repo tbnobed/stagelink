@@ -62,15 +62,23 @@ export function useViewerChat({ sessionId, enabled, viewerUsername }: UseViewerC
       wsRef.current.onmessage = (event) => {
         try {
           const data: ChatWebSocketMessage = JSON.parse(event.data);
+          console.log('Viewer chat received message:', data);
           
           switch (data.type) {
             case 'new_message':
               if (data.message) {
-                setMessages(prev => [...prev, data.message!]);
+                console.log('Adding new message to viewer chat:', data.message);
+                setMessages(prev => {
+                  // Avoid duplicates
+                  const exists = prev.some(m => m.id === data.message!.id);
+                  if (exists) return prev;
+                  return [...prev, data.message!];
+                });
               }
               break;
             case 'message_history':
               if (data.messages) {
+                console.log('Setting message history in viewer chat:', data.messages.length, 'messages');
                 setMessages(data.messages);
               }
               break;

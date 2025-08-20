@@ -318,9 +318,15 @@ class ChatWebSocketServer {
       message: chatMessage,
     };
 
+    console.log(`Broadcasting message to ${recipients.length} recipients in session ${message.sessionId}`);
+    console.log(`Message type: ${messageType}, Content: "${message.content}"`);
+    
     recipients.forEach(client => {
       if (client.ws.readyState === WebSocket.OPEN) {
+        console.log(`Sending message to ${client.username} (${client.userId})`);
         client.ws.send(JSON.stringify(messageToSend));
+      } else {
+        console.log(`Skipping ${client.username} - WebSocket not open`);
       }
     });
 
@@ -329,15 +335,21 @@ class ChatWebSocketServer {
 
   private getMessageRecipients(sessionId: string, messageType: 'individual' | 'broadcast' | 'system', recipientId?: number): ChatClient[] {
     const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
+    console.log(`Getting recipients for session ${sessionId}: ${sessionClients.length} clients`);
+    console.log(`Message type: ${messageType}, Recipient ID: ${recipientId}`);
 
     if (messageType === 'broadcast' || messageType === 'system') {
+      console.log(`Broadcast message - sending to all ${sessionClients.length} clients`);
       return sessionClients; // Send to everyone in the session
     }
 
     if (messageType === 'individual' && recipientId) {
-      return sessionClients.filter(client => client.userId === recipientId);
+      const filteredClients = sessionClients.filter(client => client.userId === recipientId);
+      console.log(`Individual message - sending to ${filteredClients.length} specific clients`);
+      return filteredClients;
     }
 
+    console.log(`Default case - sending to all ${sessionClients.length} clients`);
     return sessionClients; // Default to everyone
   }
 
