@@ -780,11 +780,18 @@ export default function Links() {
                               if (el.srcObject) {
                                 console.log(`Video element already has srcObject, attempting play...`);
                                 el.play().catch(e => console.error('Failed to play video:', e));
-                                // If video is already playing or ready, mark it as ready
-                                if (!el.paused || el.readyState >= 3) {
-                                  console.log(`Video already ready for link: ${link.id}, readyState: ${el.readyState}, paused: ${el.paused}`);
-                                  setVideosReady(prev => new Set([...prev, link.id]));
-                                }
+                                // Check if video is ready after a small delay to avoid infinite loops
+                                setTimeout(() => {
+                                  if (el && (!el.paused || el.readyState >= 3)) {
+                                    console.log(`Video already ready for link: ${link.id}, readyState: ${el.readyState}, paused: ${el.paused}`);
+                                    setVideosReady(prev => {
+                                      if (!prev.has(link.id)) {
+                                        return new Set([...prev, link.id]);
+                                      }
+                                      return prev;
+                                    });
+                                  }
+                                }, 100);
                               }
                             }
                           }}
@@ -799,17 +806,32 @@ export default function Links() {
                           onCanPlay={() => {
                             console.log(`Video can play for link: ${link.id}`);
                             // Mark video as ready when it can play
-                            setVideosReady(prev => new Set([...prev, link.id]));
+                            setVideosReady(prev => {
+                              if (!prev.has(link.id)) {
+                                return new Set([...prev, link.id]);
+                              }
+                              return prev;
+                            });
                           }}
                           onPlaying={() => {
                             console.log(`Video started playing for link: ${link.id}`);
                             // Mark video as ready immediately when it starts playing
-                            setVideosReady(prev => new Set([...prev, link.id]));
+                            setVideosReady(prev => {
+                              if (!prev.has(link.id)) {
+                                return new Set([...prev, link.id]);
+                              }
+                              return prev;
+                            });
                           }}
                           onLoadedData={() => {
                             console.log(`Video data loaded for link: ${link.id}`);
                             // Mark video as ready when data loads
-                            setVideosReady(prev => new Set([...prev, link.id]));
+                            setVideosReady(prev => {
+                              if (!prev.has(link.id)) {
+                                return new Set([...prev, link.id]);
+                              }
+                              return prev;
+                            });
                           }}
                           onPause={() => {
                             console.log(`Video paused unexpectedly for link: ${link.id}, attempting to resume...`);
