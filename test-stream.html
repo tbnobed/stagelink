@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SRS Stream Test</title>
+    <script src="https://cdn2.obedtv.live/js/srs.sdk.js"></script>
+</head>
+<body>
+    <h1>Stream Test</h1>
+    <video id="test-video" autoplay muted controls style="width: 100%; max-width: 640px;"></video>
+    <br>
+    <button onclick="testStream()">Test testchat2 Stream</button>
+    <div id="logs" style="white-space: pre-wrap; font-family: monospace; margin-top: 20px;"></div>
+
+    <script>
+        function log(msg) {
+            document.getElementById('logs').textContent += new Date().toISOString() + ': ' + msg + '\n';
+            console.log(msg);
+        }
+
+        async function testStream() {
+            const video = document.getElementById('test-video');
+            log('Testing stream: testchat2');
+            
+            try {
+                const player = new SrsRtcWhipWhepAsync();
+                const url = 'https://cdn2.obedtv.live:1990/rtc/v1/whep/?app=live&stream=testchat2';
+                log('WHEP URL: ' + url);
+                
+                await player.play(url);
+                log('Player.play() completed');
+                
+                video.srcObject = player.stream;
+                log('Video srcObject set');
+                
+                if (player.stream) {
+                    log('Stream tracks: ' + player.stream.getTracks().length);
+                    log('Video tracks: ' + player.stream.getVideoTracks().length);
+                    log('Audio tracks: ' + player.stream.getAudioTracks().length);
+                } else {
+                    log('No stream object');
+                }
+                
+                player.pc.addEventListener('connectionstatechange', () => {
+                    log('Connection state: ' + player.pc.connectionState);
+                });
+                
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

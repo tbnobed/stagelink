@@ -246,7 +246,12 @@ export default function Links() {
     try {
       console.log('Calling startPlayback...');
       await startPlayback(videoElement, streamName);
-      console.log('Preview started successfully');
+      console.log('Preview started successfully, checking video element stream...');
+      
+      // Add debugging for video element
+      console.log('Video element srcObject:', videoElement.srcObject);
+      console.log('Video element video tracks:', videoElement.srcObject?.getVideoTracks?.()?.length || 0);
+      
       toast({
         title: "Preview Started",
         description: `Now previewing stream: ${streamName}`,
@@ -269,6 +274,11 @@ export default function Links() {
   const stopPreview = (linkId: string) => {
     const videoElement = previewVideoRefs.current.get(linkId);
     if (videoElement) {
+      console.log(`Stopping preview for link: ${linkId}`);
+      // Stop all tracks if there's a stream
+      if (videoElement.srcObject && videoElement.srcObject instanceof MediaStream) {
+        videoElement.srcObject.getTracks().forEach(track => track.stop());
+      }
       videoElement.srcObject = null;
     }
     previewVideoRefs.current.delete(linkId);
@@ -498,14 +508,26 @@ export default function Links() {
         setTimeout(async () => {
           const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
           if (streamName) {
-            console.log(`Reconnecting preview for stream: ${streamName}`);
+            console.log(`Reconnecting preview for stream: ${streamName} after chat close`);
             toast({
               title: "Reconnecting Preview",
               description: `Restoring video connection for ${streamName}`,
             });
-            await previewStream(streamName, linkId);
+            
+            // Clear any existing preview state first
+            setPreviewingLinks(prev => {
+              const newSet = new Set(prev);
+              newSet.delete(linkId);
+              return newSet;
+            });
+            
+            // Wait for UI to update and reconnect
+            setTimeout(async () => {
+              console.log(`Actually reconnecting stream: ${streamName} for link: ${linkId}`);
+              await previewStream(streamName, linkId);
+            }, 300);
           }
-        }, 500);
+        }, 300);
       }
     } else {
       setShowChatForLink(linkId);
@@ -754,19 +776,45 @@ export default function Links() {
                   // Preview Window (original functionality)
                   <div className="relative bg-black aspect-video">
                     {previewingLinks.has(link.id) ? (
-                      <video 
-                        ref={(el) => {
-                          if (el) {
-                            previewVideoRefs.current.set(link.id, el);
-                          }
-                        }}
-                        autoPlay 
-                        muted 
-                        controls 
-                        playsInline 
-                        className="w-full h-full object-cover"
-                        data-testid={`video-preview-${link.id}`}
-                      />
+                      <>
+                        <video 
+                          ref={(el) => {
+                            if (el) {
+                              console.log(`Video element set for link: ${link.id}`, el);
+                              previewVideoRefs.current.set(link.id, el);
+                              // Force play if there's already a srcObject
+                              if (el.srcObject) {
+                                console.log(`Video element already has srcObject, attempting play...`);
+                                el.play().catch(e => console.error('Failed to play video:', e));
+                              }
+                            }
+                          }}
+                          autoPlay 
+                          muted 
+                          controls 
+                          playsInline 
+                          className="w-full h-full object-cover"
+                          data-testid={`video-preview-${link.id}`}
+                          onLoadStart={() => console.log(`Video loadstart for link: ${link.id}`)}
+                          onLoadedMetadata={() => console.log(`Video metadata loaded for link: ${link.id}`)}
+                          onCanPlay={() => console.log(`Video can play for link: ${link.id}`)}
+                          onPlaying={() => console.log(`Video started playing for link: ${link.id}`)}
+                          onError={(e) => console.error(`Video error for link: ${link.id}`, e)}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="text-center va-text-secondary text-sm bg-black/70 px-3 py-2 rounded-md">
+                            <div className="animate-pulse">
+                              {link.type === 'guest' ? 
+                                `Connecting to ${link.streamName} stream...` : 
+                                `Loading ${link.returnFeed} feed...`
+                              }
+                            </div>
+                            <div className="text-xs mt-1 opacity-75">
+                              WHEP connection active
+                            </div>
+                          </div>
+                        </div>
+                      </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
                         <div className="text-center">

@@ -120,7 +120,21 @@ export async function startPlayback(videoElement: HTMLVideoElement, streamName: 
       console.log(`WHEP URL: ${url}`);
       
       await player.play(url);
+      console.log('Player stream created:', player.stream);
+      console.log('Stream tracks:', player.stream?.getTracks?.()?.length || 0);
+      console.log('Video tracks:', player.stream?.getVideoTracks?.()?.length || 0);
+      console.log('Audio tracks:', player.stream?.getAudioTracks?.()?.length || 0);
+      
       videoElement.srcObject = player.stream;
+      
+      // Force play the video element
+      try {
+        console.log('Attempting to play video element...');
+        await videoElement.play();
+        console.log('Video element play successful');
+      } catch (playError) {
+        console.warn('Video element play failed (this might be normal):', playError);
+      }
       
       // Wait for connection to be established - simplified for debugging
       await new Promise((resolve, reject) => {
@@ -150,6 +164,33 @@ export async function startPlayback(videoElement: HTMLVideoElement, streamName: 
       });
       
       console.log(`WHEP playback initiated successfully for stream: ${streamName}`);
+      
+      // Additional check for video tracks after connection
+      setTimeout(() => {
+        if (videoElement.srcObject instanceof MediaStream) {
+          const videoTracks = videoElement.srcObject.getVideoTracks();
+          const audioTracks = videoElement.srcObject.getAudioTracks();
+          console.log(`Final stream state - Video tracks: ${videoTracks.length}, Audio tracks: ${audioTracks.length}`);
+          
+          // Check if video has dimensions
+          console.log(`Video element dimensions: ${videoElement.videoWidth}x${videoElement.videoHeight}`);
+          console.log(`Video element readyState: ${videoElement.readyState}`);
+          console.log(`Video element paused: ${videoElement.paused}`);
+          
+          if (videoTracks.length === 0 && audioTracks.length === 0) {
+            console.warn('No media tracks available - stream might not be active');
+          } else if (videoTracks.length === 0) {
+            console.warn('Audio-only stream detected');
+          }
+          
+          // Force video element to play if it's not playing
+          if (videoElement.paused) {
+            console.log('Video is paused, attempting to play...');
+            videoElement.play().catch(e => console.warn('Auto-play failed:', e));
+          }
+        }
+      }, 2000);
+      
       return player;
     } catch (err) {
       console.error(`WHEP play attempt ${retryCount + 1} failed:`, err);
