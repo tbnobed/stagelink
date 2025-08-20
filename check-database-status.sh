@@ -48,14 +48,33 @@ if docker-compose ps | grep -q "virtual-audience-db"; then
         echo "   💡 Run: docker-compose exec db psql -U postgres -d virtual_audience -f /path/to/restore-admin-user.sql"
     fi
     
-    # Check short links and regular links
+    # Check links and chat data
     echo ""
     echo "🔗 Checking link data..."
     LINK_COUNT=$(docker-compose exec db psql -U postgres -d virtual_audience -t -c "SELECT COUNT(*) FROM generated_links;" 2>/dev/null | tr -d ' ')
     SHORT_LINK_COUNT=$(docker-compose exec db psql -U postgres -d virtual_audience -t -c "SELECT COUNT(*) FROM short_links;" 2>/dev/null | tr -d ' ')
+    VIEWER_LINK_COUNT=$(docker-compose exec db psql -U postgres -d virtual_audience -t -c "SELECT COUNT(*) FROM viewer_links;" 2>/dev/null | tr -d ' ')
+    SHORT_VIEWER_LINK_COUNT=$(docker-compose exec db psql -U postgres -d virtual_audience -t -c "SELECT COUNT(*) FROM short_viewer_links;" 2>/dev/null | tr -d ' ')
     
-    echo "   Regular links: ${LINK_COUNT:-0}"
-    echo "   Short links: ${SHORT_LINK_COUNT:-0}"
+    echo "   Guest streaming links: ${LINK_COUNT:-0}"
+    echo "   Short guest links: ${SHORT_LINK_COUNT:-0}"
+    echo "   Viewer-only links: ${VIEWER_LINK_COUNT:-0}"
+    echo "   Short viewer links: ${SHORT_VIEWER_LINK_COUNT:-0}"
+    
+    # Check chat system
+    echo ""
+    echo "💬 Checking chat system..."
+    CHAT_MESSAGES=$(docker-compose exec db psql -U postgres -d virtual_audience -t -c "SELECT COUNT(*) FROM chat_messages;" 2>/dev/null | tr -d ' ')
+    CHAT_PARTICIPANTS=$(docker-compose exec db psql -U postgres -d virtual_audience -t -c "SELECT COUNT(*) FROM chat_participants;" 2>/dev/null | tr -d ' ')
+    
+    echo "   Total chat messages: ${CHAT_MESSAGES:-0}"
+    echo "   Active participants: ${CHAT_PARTICIPANTS:-0}"
+    
+    # Check session tokens
+    echo ""
+    echo "🔐 Checking session tokens..."
+    TOKEN_COUNT=$(docker-compose exec db psql -U postgres -d virtual_audience -t -c "SELECT COUNT(*) FROM session_tokens;" 2>/dev/null | tr -d ' ')
+    echo "   Session tokens: ${TOKEN_COUNT:-0}"
     
 else
     echo "❌ Database container is not running"
@@ -67,8 +86,24 @@ echo "📝 Database Schema Info:"
 docker-compose exec db psql -U postgres -d virtual_audience -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null || echo "   ❌ Could not access database"
 
 echo ""
-echo "💡 Next Steps:"
-echo "   1. If admin user is missing: Use restore-admin-user.sql"
-echo "   2. If all users are gone: The Docker rebuild likely reset the database"
-echo "   3. Future rebuilds will preserve data with the updated Docker script"
-echo "   4. Consider backing up user data before major deployments"
+echo "🔧 Virtual Audience Platform v2.0 Schema Verification:"
+EXPECTED_TABLES="users generated_links short_links viewer_links short_viewer_links session_tokens chat_messages chat_participants session"
+SCHEMA_CHECK=$(docker-compose exec db psql -U postgres -d virtual_audience -t -c "
+    SELECT COUNT(*) FROM information_schema.tables 
+    WHERE table_name IN ('users','generated_links','short_links','viewer_links','short_viewer_links','session_tokens','chat_messages','chat_participants','session');
+" 2>/dev/null | tr -d ' ')
+
+if [ "$SCHEMA_CHECK" = "9" ]; then
+    echo "   ✅ All v2.0 database tables present"
+else
+    echo "   ⚠️  Database schema incomplete ($SCHEMA_CHECK/9 tables found)"
+    echo "   💡 Run migration: ./apply-session-token-migration.sh"
+fi
+
+echo ""
+echo "💡 Available Actions:"
+echo "   1. If admin user missing: Use restore-admin-user.sql"
+echo "   2. If schema incomplete: Run ./apply-session-token-migration.sh"
+echo "   3. For fresh start: docker-compose down -v && docker-compose up -d"
+echo "   4. Check logs: docker-compose logs virtual-audience-app-v2"
+echo "   5. Database shell: docker-compose exec db psql -U postgres -d virtual_audience"

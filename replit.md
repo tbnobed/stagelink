@@ -8,6 +8,14 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes
 
+## Docker Database Schema Update (August 20, 2025) - COMPLETED
+- **Issue**: Docker initialization and migration files didn't match current database schema
+- **Root Cause**: Schema evolved to include chat system, proper enums, and updated types but Docker files weren't updated
+- **Solution**: Comprehensive update of init.sql, migration files, and status scripts to match TypeScript schema
+- **Result**: Docker deployments now properly initialize v2.0 database with all features
+- **Technical**: Added enums (user_role, message_type), chat tables, proper indexes, comprehensive verification
+- **Status**: FIXED - Docker database initialization matches current schema perfectly
+
 ## Chat-to-Preview Reconnection Fix (August 20, 2025) - COMPLETED
 - **Issue**: Video streams showed black windows after switching from chat back to preview mode
 - **Root Cause**: React state timing issues and complex error handling prevented restart logic from executing properly
