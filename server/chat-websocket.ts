@@ -276,8 +276,13 @@ class ChatWebSocketServer {
     } else if (message.recipientId) {
       messageType = 'individual';
     } else {
-      // Default to broadcast for admin/engineer, individual for users
-      messageType = (senderClient.role === 'admin' || senderClient.role === 'engineer') ? 'broadcast' : 'individual';
+      // For guest/viewer users (negative IDs), make their messages public (broadcast-like)
+      // For authenticated users: admin/engineer -> broadcast, regular users -> individual
+      if (senderClient.userId < 0) {
+        messageType = 'broadcast'; // Viewer messages are treated as public
+      } else {
+        messageType = (senderClient.role === 'admin' || senderClient.role === 'engineer') ? 'broadcast' : 'individual';
+      }
     }
 
     // Save message to database only for real users (not guest/viewer users)
