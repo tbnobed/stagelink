@@ -398,7 +398,6 @@ export default function StudioViewer() {
                     <ViewerChat 
                       sessionId={returnFeed}
                       enabled={showChat}
-                      viewerUsername={viewerUsername}
                       className="h-96"
                     />
                   </div>
