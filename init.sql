@@ -25,9 +25,18 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres;
 
 -- Create full database schema for Virtual Audience Platform v2.0
 
--- Create enums first
-CREATE TYPE user_role AS ENUM ('admin', 'engineer', 'user');
-CREATE TYPE message_type AS ENUM ('individual', 'broadcast', 'system');
+-- Create enums first (safe creation)
+DO $$ BEGIN
+    CREATE TYPE user_role AS ENUM ('admin', 'engineer', 'user');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE message_type AS ENUM ('individual', 'broadcast', 'system');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Session storage table for authentication sessions
 CREATE TABLE IF NOT EXISTS "session" (
