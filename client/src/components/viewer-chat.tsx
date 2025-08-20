@@ -51,34 +51,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
     }
   };
 
-  const shouldShowMessage = (message: ChatMessage) => {
-    // Viewers can see broadcast messages, system messages, and public messages
-    return message.messageType === 'broadcast' || 
-           message.messageType === 'system' || 
-           !message.recipientId; // Public messages (no specific recipient)
-  };
 
-  const getMessageBadgeColor = (message: ChatMessage) => {
-    switch (message.messageType) {
-      case 'broadcast':
-        return 'bg-blue-500/20 text-blue-400';
-      case 'system':
-        return 'bg-yellow-500/20 text-yellow-400';
-      default:
-        return 'bg-gray-500/20 text-gray-400';
-    }
-  };
-
-  const getMessageBadgeText = (message: ChatMessage) => {
-    switch (message.messageType) {
-      case 'broadcast':
-        return 'Broadcast';
-      case 'system':
-        return 'System';
-      default:
-        return 'Public';
-    }
-  };
 
   if (!enabled) {
     return null;
@@ -114,16 +87,23 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
       {/* Messages */}
       <ScrollArea className="flex-1 p-3">
         <div className="space-y-3">
-          {messages.filter(shouldShowMessage).map((message) => (
+          {messages.map((message) => (
             <div key={message.id} className="va-bg-dark-surface-2 rounded-lg p-3">
               <div className="flex items-start justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium va-text-primary text-sm">
                     {message.senderName}
                   </span>
-                  <Badge className={`text-xs ${getMessageBadgeColor(message)}`}>
-                    {getMessageBadgeText(message)}
-                  </Badge>
+                  {message.messageType === 'broadcast' && (
+                    <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/50">
+                      Broadcast
+                    </Badge>
+                  )}
+                  {message.messageType === 'individual' && message.recipientId && (
+                    <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/50">
+                      Private
+                    </Badge>
+                  )}
                 </div>
                 <span className="text-xs va-text-secondary">
                   {format(new Date(message.createdAt), 'HH:mm')}
