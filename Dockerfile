@@ -213,7 +213,8 @@ CREATE TABLE IF NOT EXISTS "generated_viewer_links" (
         CONSTRAINT "generated_viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
 );
 
--- Create short_viewer_links table if it doesn't exist with correct schema
+-- Fix short_viewer_links table structure - drop and recreate with correct schema
+DROP TABLE IF EXISTS "short_viewer_links";
 CREATE TABLE IF NOT EXISTS "short_viewer_links" (
         "id" varchar(6) PRIMARY KEY NOT NULL,
         "return_feed" varchar NOT NULL,
