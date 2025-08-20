@@ -25,7 +25,7 @@ export function ViewerChat({ sessionId, className = '' }: ViewerChatProps) {
   const viewerUser = {
     id: Date.now(), // Generate unique positive viewer ID
     username: `Viewer_${sessionId}_${Date.now()}`,
-    role: 'viewer'
+    role: 'user'
   };
 
   // Auto-scroll to bottom when new messages arrive
