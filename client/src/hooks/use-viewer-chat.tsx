@@ -43,9 +43,10 @@ export function useViewerChat({ sessionId, enabled, viewerUsername }: UseViewerC
         setIsConnected(true);
         setError(null);
 
-        // Generate or reuse consistent viewer ID
+        // Generate or reuse consistent viewer ID (use smaller number for DB compatibility)
         if (!viewerIdRef.current) {
-          viewerIdRef.current = Date.now();
+          // Generate a random negative ID to avoid conflicts with real user IDs
+          viewerIdRef.current = -Math.floor(Math.random() * 1000000);
         }
 
         // Send join message as a viewer (guest user)

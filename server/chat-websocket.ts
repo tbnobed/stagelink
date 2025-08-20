@@ -164,22 +164,25 @@ class ChatWebSocketServer {
     }
     this.sessionParticipants.get(message.sessionId)!.add(clientKey);
 
-    // Update participant status instead of adding new participant
-    const existingParticipants = await storage.getChatParticipants(message.sessionId);
-    const existingParticipant = existingParticipants.find(p => p.userId === message.userId);
-    
-    if (existingParticipant) {
-      // Update existing participant to online
-      await storage.updateParticipantStatus(message.sessionId, message.userId, true);
-    } else {
-      // Add new participant only if they don't exist
-      await storage.addChatParticipant({
-        sessionId: message.sessionId,
-        userId: message.userId,
-        username: message.username,
-        role: message.role,
-        isOnline: true,
-      });
+    // Only store participants in database if they have valid user IDs (positive numbers)
+    // Guest/viewer users (negative IDs) are handled in-memory only
+    if (message.userId > 0) {
+      const existingParticipants = await storage.getChatParticipants(message.sessionId);
+      const existingParticipant = existingParticipants.find(p => p.userId === message.userId);
+      
+      if (existingParticipant) {
+        // Update existing participant to online
+        await storage.updateParticipantStatus(message.sessionId, message.userId, true);
+      } else {
+        // Add new participant only if they don't exist
+        await storage.addChatParticipant({
+          sessionId: message.sessionId,
+          userId: message.userId,
+          username: message.username,
+          role: message.role,
+          isOnline: true,
+        });
+      }
     }
 
     // Send participant list to the new client
@@ -209,8 +212,10 @@ class ChatWebSocketServer {
       }
     }
 
-    // Update participant status in database
-    await storage.updateParticipantStatus(message.sessionId, message.userId, false);
+    // Update participant status in database only for real users
+    if (message.userId > 0) {
+      await storage.updateParticipantStatus(message.sessionId, message.userId, false);
+    }
 
     // Send updated participant list
     await this.sendParticipantsList(message.sessionId);
@@ -275,15 +280,30 @@ class ChatWebSocketServer {
       messageType = (senderClient.role === 'admin' || senderClient.role === 'engineer') ? 'broadcast' : 'individual';
     }
 
-    // Save message to database
-    const chatMessage = await storage.createChatMessage({
-      sessionId: message.sessionId,
-      senderId: senderClient.userId,
-      senderName: senderClient.username,
-      recipientId: message.recipientId || null,
-      messageType,
-      content: message.content,
-    });
+    // Save message to database only for real users (not guest/viewer users)
+    let chatMessage;
+    if (senderClient.userId > 0) {
+      chatMessage = await storage.createChatMessage({
+        sessionId: message.sessionId,
+        senderId: senderClient.userId,
+        senderName: senderClient.username,
+        recipientId: message.recipientId || null,
+        messageType,
+        content: message.content,
+      });
+    } else {
+      // Create temporary message object for guest/viewer users
+      chatMessage = {
+        id: Date.now(), // Temporary ID for guest messages
+        sessionId: message.sessionId,
+        senderId: senderClient.userId,
+        senderName: senderClient.username,
+        recipientId: message.recipientId || null,
+        messageType,
+        content: message.content,
+        createdAt: new Date(),
+      };
+    }
 
     // Broadcast the message to appropriate recipients
     const recipients = this.getMessageRecipients(message.sessionId, messageType, message.recipientId);
@@ -317,15 +337,29 @@ class ChatWebSocketServer {
   }
 
   private async sendParticipantsList(sessionId: string) {
-    const participants = await storage.getChatParticipants(sessionId);
+    // Get database participants (real users)
+    const dbParticipants = await storage.getChatParticipants(sessionId);
     const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
 
-    const participantsData = participants.map(p => ({
+    // Include database participants with online status
+    const participantsData = dbParticipants.map(p => ({
       userId: p.userId,
       username: p.username,
       role: p.role,
       isOnline: sessionClients.some(client => client.userId === p.userId),
     }));
+
+    // Add guest/viewer participants (negative user IDs)
+    sessionClients.forEach(client => {
+      if (client.userId < 0) {
+        participantsData.push({
+          userId: client.userId,
+          username: client.username,
+          role: client.role,
+          isOnline: true,
+        });
+      }
+    });
 
     const message = {
       type: 'participants_list',
