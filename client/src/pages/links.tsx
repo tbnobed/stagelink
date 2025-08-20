@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -29,9 +29,21 @@ export default function Links() {
   const [messageType, setMessageType] = useState<'individual' | 'broadcast'>('individual');
   const [chatHistory, setChatHistory] = useState<{[sessionId: string]: any[]}>({});
   const [chatParticipants, setChatParticipants] = useState<{[sessionId: string]: any[]}>({});
+  const [chatConnections, setChatConnections] = useState<{[sessionId: string]: WebSocket}>({});
   const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Cleanup WebSocket connections when component unmounts
+  useEffect(() => {
+    return () => {
+      Object.values(chatConnections).forEach(ws => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
+      });
+    };
+  }, [chatConnections]);
 
   // Fetch both guest session links and viewer links with automatic refresh
   const { data: links = [], isLoading, error, refetch } = useQuery({
@@ -312,13 +324,111 @@ export default function Links() {
     }
   };
 
+  const connectToChatWebSocket = (linkId: string) => {
+    if (chatConnections[linkId] || !user) return;
+
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/chat`;
+      
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log(`Chat WebSocket connected for session ${linkId}`);
+        
+        // Send join message
+        ws.send(JSON.stringify({
+          type: 'join',
+          sessionId: linkId,
+          userId: user.id,
+          username: user.username,
+          role: user.role,
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          switch (data.type) {
+            case 'new_message':
+              if (data.message) {
+                setChatHistory(prev => ({
+                  ...prev,
+                  [linkId]: [...(prev[linkId] || []), data.message]
+                }));
+              }
+              break;
+            case 'message_history':
+              if (data.messages) {
+                setChatHistory(prev => ({
+                  ...prev,
+                  [linkId]: data.messages
+                }));
+              }
+              break;
+            case 'participants_list':
+              if (data.participants) {
+                setChatParticipants(prev => ({
+                  ...prev,
+                  [linkId]: data.participants
+                }));
+              }
+              break;
+            case 'error':
+              toast({
+                title: "Chat Error",
+                description: data.error || 'Unknown chat error',
+                variant: "destructive",
+              });
+              break;
+          }
+        } catch (err) {
+          console.error('Failed to parse WebSocket message:', err);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log(`Chat WebSocket disconnected for session ${linkId}`);
+        setChatConnections(prev => {
+          const newConnections = { ...prev };
+          delete newConnections[linkId];
+          return newConnections;
+        });
+      };
+
+      ws.onerror = (error) => {
+        console.error(`WebSocket error for session ${linkId}:`, error);
+      };
+
+      setChatConnections(prev => ({ ...prev, [linkId]: ws }));
+    } catch (err) {
+      console.error('Failed to create WebSocket connection:', err);
+    }
+  };
+
+  const disconnectFromChatWebSocket = (linkId: string) => {
+    const ws = chatConnections[linkId];
+    if (ws) {
+      ws.close();
+      setChatConnections(prev => {
+        const newConnections = { ...prev };
+        delete newConnections[linkId];
+        return newConnections;
+      });
+    }
+  };
+
   const toggleChatForLink = async (linkId: string) => {
     if (showChatForLink === linkId) {
       setShowChatForLink(null);
+      disconnectFromChatWebSocket(linkId);
     } else {
       setShowChatForLink(linkId);
       // Load chat history and participants when opening chat
       await loadChatData(linkId);
+      // Connect to WebSocket for real-time updates
+      connectToChatWebSocket(linkId);
     }
   };
 
