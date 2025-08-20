@@ -5,6 +5,7 @@ declare global {
     SrsRtcFormatStats: any;
     parse_query_string: any;
     QRCode: any;
+    $: any;
   }
 }
 
@@ -33,7 +34,12 @@ export async function startPublishing(videoElement: HTMLVideoElement | null): Pr
   }
 
   if (!window.SrsRtcWhipWhepAsync) {
-    throw new Error('SRS SDK not loaded');
+    console.error('SRS SDK not available. Scripts loaded:', {
+      jquery: !!window.$,
+      SrsRtcWhipWhepAsync: !!window.SrsRtcWhipWhepAsync,
+      SrsRtcFormatStats: !!window.SrsRtcFormatStats
+    });
+    throw new Error('SRS SDK not loaded - please refresh the page and try again');
   }
 
   // Clean up existing session
