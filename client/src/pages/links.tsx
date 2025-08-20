@@ -512,40 +512,44 @@ export default function Links() {
       setShowChatForLink(null);
       disconnectFromChatWebSocket(linkId);
       
-      console.log(`DEBUG: Starting restart logic for ${linkId}`);
-      console.log(`DEBUG: links array length: ${links?.length || 0}, viewerLinksData length: ${viewerLinksData?.length || 0}`);
-      
-      // When switching back from chat to preview, completely stop and restart
-      const allLinks = [...(links || []), ...(viewerLinksData || [])];
-      const link = allLinks.find(l => l.id === linkId);
-      const wasPreviewingBeforeChat = previewingLinks.has(linkId);
-      
-      console.log(`DEBUG: allLinks length: ${allLinks.length}`);
-      console.log(`Link found: ${!!link}, was previewing before chat: ${wasPreviewingBeforeChat}`);
-      console.log(`Link details:`, link);
-      console.log(`Current previewingLinks:`, Array.from(previewingLinks));
-      
-      if (link && wasPreviewingBeforeChat) {
-        const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
-        console.log(`Stream name: ${streamName}, link type: ${link.type}`);
+      try {
+        console.log(`DEBUG: Starting restart logic for ${linkId}`);
+        console.log(`DEBUG: links array length: ${links?.length || 0}, viewerLinksData length: ${viewerLinksData?.length || 0}`);
         
-        if (streamName) {
-          console.log(`Completely restarting preview for ${streamName} after closing chat`);
+        // When switching back from chat to preview, completely stop and restart
+        const allLinks = [...(links || []), ...(viewerLinksData || [])];
+        const link = allLinks.find(l => l.id === linkId);
+        const wasPreviewingBeforeChat = previewingLinks.has(linkId);
+        
+        console.log(`DEBUG: allLinks length: ${allLinks.length}`);
+        console.log(`Link found: ${!!link}, was previewing before chat: ${wasPreviewingBeforeChat}`);
+        console.log(`Link details:`, link);
+        console.log(`Current previewingLinks:`, Array.from(previewingLinks));
+        
+        if (link && wasPreviewingBeforeChat) {
+          const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
+          console.log(`Stream name: ${streamName}, link type: ${link.type}`);
           
-          // COMPLETE STOP - use existing stopPreview function
-          stopPreview(linkId);
-          
-          // Wait a moment for cleanup
-          setTimeout(() => {
-            console.log(`Starting fresh preview for ${streamName}`);
-            // FRESH START - use existing previewStream function
-            previewStream(streamName, linkId);
-          }, 200);
+          if (streamName) {
+            console.log(`Completely restarting preview for ${streamName} after closing chat`);
+            
+            // COMPLETE STOP - use existing stopPreview function
+            stopPreview(linkId);
+            
+            // Wait a moment for cleanup
+            setTimeout(() => {
+              console.log(`Starting fresh preview for ${streamName}`);
+              // FRESH START - use existing previewStream function
+              previewStream(streamName, linkId);
+            }, 200);
+          } else {
+            console.log(`No stream name found for restart`);
+          }
         } else {
-          console.log(`No stream name found for restart`);
+          console.log(`Restart conditions not met - Link: ${!!link}, Was previewing: ${wasPreviewingBeforeChat}`);
         }
-      } else {
-        console.log(`Restart conditions not met - Link: ${!!link}, Was previewing: ${wasPreviewingBeforeChat}`);
+      } catch (error) {
+        console.error(`Error in restart logic for ${linkId}:`, error);
       }
     } else {
       console.log(`Opening chat for ${linkId}`);
