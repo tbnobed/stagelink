@@ -27,6 +27,8 @@ export default function Links() {
   const [showChatForLink, setShowChatForLink] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<{[sessionId: string]: string}>({});
   const [messageType, setMessageType] = useState<'individual' | 'broadcast'>('individual');
+  const [chatHistory, setChatHistory] = useState<{[sessionId: string]: any[]}>({});
+  const [chatParticipants, setChatParticipants] = useState<{[sessionId: string]: any[]}>({});
   const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const { toast } = useToast();
   const { user } = useAuth();
@@ -310,8 +312,34 @@ export default function Links() {
     }
   };
 
-  const toggleChatForLink = (linkId: string) => {
-    setShowChatForLink(showChatForLink === linkId ? null : linkId);
+  const toggleChatForLink = async (linkId: string) => {
+    if (showChatForLink === linkId) {
+      setShowChatForLink(null);
+    } else {
+      setShowChatForLink(linkId);
+      // Load chat history and participants when opening chat
+      await loadChatData(linkId);
+    }
+  };
+
+  const loadChatData = async (sessionId: string) => {
+    try {
+      // Load chat messages
+      const messagesResponse = await fetch(`/api/chat/messages/${sessionId}`);
+      if (messagesResponse.ok) {
+        const messages = await messagesResponse.json();
+        setChatHistory(prev => ({ ...prev, [sessionId]: messages }));
+      }
+
+      // Load participants
+      const participantsResponse = await fetch(`/api/chat/participants/${sessionId}`);
+      if (participantsResponse.ok) {
+        const participants = await participantsResponse.json();
+        setChatParticipants(prev => ({ ...prev, [sessionId]: participants }));
+      }
+    } catch (error) {
+      console.error('Failed to load chat data:', error);
+    }
   };
 
   const removeExpiredLinks = () => {
@@ -390,54 +418,177 @@ export default function Links() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {links.map((link: GeneratedLink) => (
               <div key={link.id} className="va-bg-dark-surface rounded-lg border va-border-dark hover:border-va-primary/50 transition-all duration-200 hover:shadow-lg overflow-hidden">
-                {/* Preview Window */}
-                <div className="relative bg-black aspect-video">
-                  {previewingLinks.has(link.id) ? (
-                    <video 
-                      ref={(el) => {
-                        if (el) {
-                          previewVideoRefs.current.set(link.id, el);
-                        }
-                      }}
-                      autoPlay 
-                      muted 
-                      controls 
-                      playsInline 
-                      className="w-full h-full object-cover"
-                      data-testid={`video-preview-${link.id}`}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
-                      <div className="text-center">
-                        <i className="fas fa-eye text-3xl text-gray-500 mb-2"></i>
-                        <p className="va-text-secondary text-sm">Preview Window</p>
-                        {link.type === 'guest' && link.streamName && (
-                          <Button 
-                            onClick={() => previewStream(link.streamName!, link.id)}
-                            variant="outline"
-                            size="sm"
-                            className="mt-2 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
-                            data-testid={`button-preview-${link.id}`}
-                          >
-                            <i className="fas fa-play mr-1"></i>
-                            Preview
-                          </Button>
+                {/* Chat Interface or Preview Window */}
+                {showChatForLink === link.id && link.type === 'guest' && link.chatEnabled ? (
+                  // Chat Interface - Full transformation
+                  <div className="va-bg-dark-surface-2 p-4 flex flex-col min-h-[500px]">
+                    {/* Chat Header */}
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b va-border-dark">
+                      <div className="flex items-center">
+                        <i className="fas fa-comments text-blue-400 mr-2"></i>
+                        <h3 className="font-semibold va-text-primary">Chat: {link.streamName}</h3>
+                      </div>
+                      <Button 
+                        onClick={() => setShowChatForLink(null)}
+                        variant="outline"
+                        size="sm"
+                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                      >
+                        <i className="fas fa-times"></i>
+                      </Button>
+                    </div>
+
+                    {/* Participants List */}
+                    {chatParticipants[link.id] && chatParticipants[link.id].length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium va-text-secondary mb-2">
+                          Participants ({chatParticipants[link.id].length})
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {chatParticipants[link.id].map((participant: any) => (
+                            <span 
+                              key={participant.userId}
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                participant.isOnline 
+                                  ? 'bg-green-500/20 text-green-400' 
+                                  : 'bg-gray-500/20 text-gray-400'
+                              }`}
+                            >
+                              <i className={`fas fa-circle mr-1 ${participant.isOnline ? 'text-green-400' : 'text-gray-400'}`} style={{fontSize: '6px'}}></i>
+                              {participant.username} ({participant.role})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Messages History */}
+                    <div className="flex-1 va-bg-dark-surface rounded-lg p-3 mb-4 overflow-y-auto max-h-64">
+                      {chatHistory[link.id] && chatHistory[link.id].length > 0 ? (
+                        <div className="space-y-3">
+                          {chatHistory[link.id].map((message: any, index: number) => (
+                            <div key={index} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-medium va-text-primary">{message.senderName}</span>
+                                <span className="va-text-secondary">{new Date(message.createdAt).toLocaleTimeString()}</span>
+                              </div>
+                              <div className={`p-2 rounded text-sm ${
+                                message.messageType === 'broadcast' 
+                                  ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' 
+                                  : 'va-bg-dark-surface-2 va-text-primary'
+                              }`}>
+                                {message.messageType === 'broadcast' && (
+                                  <i className="fas fa-broadcast-tower mr-1 text-yellow-400"></i>
+                                )}
+                                {message.content}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center va-text-secondary py-8">
+                          <i className="fas fa-comment-slash text-2xl mb-2"></i>
+                          <p>No messages yet</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Message Input */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm va-text-secondary">Send Message</span>
+                        {user && (user.role === 'admin' || user.role === 'engineer') && (
+                          <Select value={messageType} onValueChange={(value: 'individual' | 'broadcast') => setMessageType(value)}>
+                            <SelectTrigger className="w-32 h-7 text-xs va-bg-dark-surface va-border-dark">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="individual">Individual</SelectItem>
+                              <SelectItem value="broadcast">Broadcast</SelectItem>
+                            </SelectContent>
+                          </Select>
                         )}
                       </div>
+                      <div className="flex gap-2">
+                        <Input
+                          value={chatMessages[link.id] || ''}
+                          onChange={(e) => setChatMessages(prev => ({ ...prev, [link.id]: e.target.value }))}
+                          placeholder={messageType === 'broadcast' ? "Broadcast to all users..." : `Message ${link.streamName}...`}
+                          className="flex-1 text-sm va-bg-dark-surface va-border-dark va-text-primary"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              sendChatMessage(link.id, chatMessages[link.id] || '');
+                            }
+                          }}
+                        />
+                        <Button
+                          onClick={() => sendChatMessage(link.id, chatMessages[link.id] || '')}
+                          size="sm"
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-4"
+                          disabled={!chatMessages[link.id]?.trim()}
+                        >
+                          <i className="fas fa-paper-plane"></i>
+                        </Button>
+                      </div>
+                      {messageType === 'broadcast' && (
+                        <div className="text-xs text-yellow-400 flex items-center">
+                          <i className="fas fa-broadcast-tower mr-1"></i>
+                          This message will be sent to ALL users in ALL sessions
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {previewingLinks.has(link.id) && (
-                    <Button 
-                      onClick={() => stopPreview(link.id)}
-                      variant="outline"
-                      size="sm"
-                      className="absolute top-2 right-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-                      data-testid={`button-stop-preview-${link.id}`}
-                    >
-                      <i className="fas fa-stop"></i>
-                    </Button>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  // Preview Window (original functionality)
+                  <div className="relative bg-black aspect-video">
+                    {previewingLinks.has(link.id) ? (
+                      <video 
+                        ref={(el) => {
+                          if (el) {
+                            previewVideoRefs.current.set(link.id, el);
+                          }
+                        }}
+                        autoPlay 
+                        muted 
+                        controls 
+                        playsInline 
+                        className="w-full h-full object-cover"
+                        data-testid={`video-preview-${link.id}`}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
+                        <div className="text-center">
+                          <i className="fas fa-eye text-3xl text-gray-500 mb-2"></i>
+                          <p className="va-text-secondary text-sm">Preview Window</p>
+                          {link.type === 'guest' && link.streamName && (
+                            <Button 
+                              onClick={() => previewStream(link.streamName!, link.id)}
+                              variant="outline"
+                              size="sm"
+                              className="mt-2 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
+                              data-testid={`button-preview-${link.id}`}
+                            >
+                              <i className="fas fa-play mr-1"></i>
+                              Preview
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {previewingLinks.has(link.id) && (
+                      <Button 
+                        onClick={() => stopPreview(link.id)}
+                        variant="outline"
+                        size="sm"
+                        className="absolute top-2 right-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                        data-testid={`button-stop-preview-${link.id}`}
+                      >
+                        <i className="fas fa-stop"></i>
+                      </Button>
+                    )}
+                  </div>
+                )}
 
                 {/* Card Content */}
                 <div className="p-3">
@@ -579,61 +730,6 @@ export default function Links() {
                         Delete
                       </Button>
                     </div>
-
-                    {/* Chat Interface - Only show when expanded for this link */}
-                    {showChatForLink === link.id && link.type === 'guest' && link.chatEnabled && (
-                      <div className="mt-3 pt-3 border-t va-border-dark">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium va-text-primary flex items-center">
-                              <i className="fas fa-comments mr-2 text-blue-400"></i>
-                              Send Message to {link.streamName}
-                            </h4>
-                            {user && (user.role === 'admin' || user.role === 'engineer') && (
-                              <Select value={messageType} onValueChange={(value: 'individual' | 'broadcast') => setMessageType(value)}>
-                                <SelectTrigger className="w-24 h-6 text-xs va-bg-dark-surface-2 va-border-dark">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="individual">Individual</SelectItem>
-                                  <SelectItem value="broadcast">Broadcast</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          </div>
-                          
-                          <div className="flex gap-2">
-                            <Input
-                              value={chatMessages[link.id] || ''}
-                              onChange={(e) => setChatMessages(prev => ({ ...prev, [link.id]: e.target.value }))}
-                              placeholder={messageType === 'broadcast' ? "Broadcast message to all users..." : `Message ${link.streamName}...`}
-                              className="flex-1 text-xs va-bg-dark-surface-2 va-border-dark va-text-primary"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  sendChatMessage(link.id, chatMessages[link.id] || '');
-                                }
-                              }}
-                            />
-                            <Button
-                              onClick={() => sendChatMessage(link.id, chatMessages[link.id] || '')}
-                              size="sm"
-                              className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3"
-                              disabled={!chatMessages[link.id]?.trim()}
-                            >
-                              <i className="fas fa-paper-plane"></i>
-                            </Button>
-                          </div>
-                          
-                          {messageType === 'broadcast' && (
-                            <div className="text-xs text-yellow-400 flex items-center">
-                              <i className="fas fa-broadcast-tower mr-1"></i>
-                              This message will be sent to ALL users in ALL sessions
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
                 </div>

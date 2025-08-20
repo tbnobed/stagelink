@@ -620,6 +620,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get chat messages for a session
+  app.get('/api/chat/messages/:sessionId', requireAuth, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      const messages = await storage.getChatMessages(sessionId, limit);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching chat messages:', error);
+      res.status(500).json({ error: 'Failed to fetch messages' });
+    }
+  });
+
+  // Get chat participants for a session
+  app.get('/api/chat/participants/:sessionId', requireAuth, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      
+      const participants = await storage.getChatParticipants(sessionId);
+      res.json(participants);
+    } catch (error) {
+      console.error('Error fetching chat participants:', error);
+      res.status(500).json({ error: 'Failed to fetch participants' });
+    }
+  });
+
   app.post('/api/chat/send', requireAuth, async (req, res) => {
     try {
       const user = req.user as any;
