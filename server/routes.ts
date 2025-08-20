@@ -663,6 +663,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/chat/broadcast', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { message } = req.body;
+
+      if (!message?.trim()) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+
+      // Check if user has permission to send broadcast messages
+      if (!user || (user.role !== 'admin' && user.role !== 'engineer')) {
+        return res.status(403).json({ error: 'Insufficient permissions to send broadcast messages' });
+      }
+
+      // Get all active sessions
+      const allLinks = await storage.getAllLinks();
+      const allViewerLinks = await storage.getAllViewerLinks();
+      
+      // Extract unique session IDs
+      const sessionIds = new Set();
+      allLinks.forEach(link => sessionIds.add(link.id));
+      allViewerLinks.forEach(link => sessionIds.add(link.id));
+
+      // Store broadcast message for each session
+      const broadcastPromises = Array.from(sessionIds).map(async (sessionId: any) => {
+        return storage.createChatMessage({
+          sessionId,
+          senderId: user.id,
+          senderName: user.username,
+          content: message.trim(),
+          messageType: 'broadcast',
+        });
+      });
+
+      const chatMessages = await Promise.all(broadcastPromises);
+
+      // Broadcast via WebSocket to all sessions
+      const chatWS = (global as any).chatWebSocketServer;
+      if (chatWS) {
+        chatMessages.forEach((chatMessage, index) => {
+          const sessionId = Array.from(sessionIds)[index];
+          const messageToSend = {
+            type: 'new_message',
+            message: chatMessage,
+          };
+          chatWS.sendToSession(sessionId, messageToSend);
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Broadcast sent successfully',
+        sessionsCount: sessionIds.size 
+      });
+    } catch (error) {
+      console.error('Failed to send broadcast message:', error);
+      res.status(500).json({ error: 'Failed to send broadcast message' });
+    }
+  });
+
   app.delete('/api/chat/cleanup-duplicates/:sessionId', requireAuth, async (req, res) => {
     try {
       await storage.cleanupDuplicateParticipants(req.params.sessionId);

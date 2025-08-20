@@ -8,6 +8,8 @@ import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface GeneratedLink {
   id: string;
@@ -26,10 +28,12 @@ export default function Links() {
   const [previewingLinks, setPreviewingLinks] = useState<Set<string>>(new Set());
   const [showChatForLink, setShowChatForLink] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<{[sessionId: string]: string}>({});
-  const [messageType, setMessageType] = useState<'individual' | 'broadcast'>('individual');
+
   const [chatHistory, setChatHistory] = useState<{[sessionId: string]: any[]}>({});
   const [chatParticipants, setChatParticipants] = useState<{[sessionId: string]: any[]}>({});
   const [chatConnections, setChatConnections] = useState<{[sessionId: string]: WebSocket}>({});
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
   const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const chatScrollRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const { toast } = useToast();
@@ -318,7 +322,7 @@ export default function Links() {
         body: JSON.stringify({
           sessionId,
           message: message.trim(),
-          messageType,
+          messageType: 'individual', // Always individual for chat interface
         }),
       });
 
@@ -334,13 +338,50 @@ export default function Links() {
       
       toast({
         title: "Message Sent",
-        description: messageType === 'broadcast' ? "Broadcast message sent to all users" : "Message sent to guest",
+        description: "Message sent to guest",
       });
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
         title: "Send Failed",
         description: "Could not send message",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const sendBroadcastMessage = async () => {
+    if (!broadcastMessage.trim() || !user) return;
+
+    try {
+      // Send broadcast to all active sessions
+      const response = await fetch('/api/chat/broadcast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: broadcastMessage.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send broadcast message');
+      }
+
+      // Clear the message input and close modal
+      setBroadcastMessage('');
+      setShowBroadcastModal(false);
+      
+      toast({
+        title: "Broadcast Sent",
+        description: "Message sent to all active sessions",
+      });
+    } catch (error) {
+      console.error('Error sending broadcast:', error);
+      toast({
+        title: "Broadcast Failed",
+        description: "Could not send broadcast message",
         variant: "destructive",
       });
     }
@@ -511,28 +552,39 @@ export default function Links() {
             <h1 className="text-3xl font-bold va-text-primary mb-2">Generated Links</h1>
             <p className="va-text-secondary">View and preview all your generated streaming links</p>
           </div>
-          {links.length > 0 && (
-            <div className="flex gap-2">
-              <Button 
-                onClick={removeExpiredLinks}
-                variant="outline"
-                className="border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white"
-                data-testid="button-remove-expired"
-              >
-                <i className="fas fa-clock mr-2"></i>
-                Remove Expired
-              </Button>
-              <Button 
-                onClick={clearAllLinks}
-                variant="outline"
-                className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-                data-testid="button-clear-all"
-              >
-                <i className="fas fa-trash mr-2"></i>
-                Clear All
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => setShowBroadcastModal(true)}
+              variant="outline"
+              className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
+              data-testid="button-broadcast-message"
+            >
+              <i className="fas fa-broadcast-tower mr-2"></i>
+              Broadcast Message
+            </Button>
+            {links.length > 0 && (
+              <>
+                <Button 
+                  onClick={removeExpiredLinks}
+                  variant="outline"
+                  className="border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white"
+                  data-testid="button-remove-expired"
+                >
+                  <i className="fas fa-clock mr-2"></i>
+                  Remove Expired
+                </Button>
+                <Button 
+                  onClick={clearAllLinks}
+                  variant="outline"
+                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                  data-testid="button-clear-all"
+                >
+                  <i className="fas fa-trash mr-2"></i>
+                  Clear All
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Links Grid - 4 cards per row */}
@@ -655,17 +707,6 @@ export default function Links() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm va-text-secondary">Send Message</span>
-                        {user && (user.role === 'admin' || user.role === 'engineer') && (
-                          <Select value={messageType} onValueChange={(value: 'individual' | 'broadcast') => setMessageType(value)}>
-                            <SelectTrigger className="w-32 h-7 text-xs va-bg-dark-surface va-border-dark">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="individual">Individual</SelectItem>
-                              <SelectItem value="broadcast">Broadcast</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
                       </div>
                       <div className="flex gap-2">
                         <Input
@@ -689,12 +730,7 @@ export default function Links() {
                           <i className="fas fa-paper-plane"></i>
                         </Button>
                       </div>
-                      {messageType === 'broadcast' && (
-                        <div className="text-xs text-yellow-400 flex items-center">
-                          <i className="fas fa-broadcast-tower mr-1"></i>
-                          This message will be sent to ALL users in ALL sessions
-                        </div>
-                      )}
+
                     </div>
                   </div>
                 ) : (
@@ -895,6 +931,52 @@ export default function Links() {
           </div>
         )}
       </div>
+
+      {/* Broadcast Message Modal */}
+      <Dialog open={showBroadcastModal} onOpenChange={setShowBroadcastModal}>
+        <DialogContent className="va-bg-dark-surface va-border-dark">
+          <DialogHeader>
+            <DialogTitle className="va-text-primary flex items-center">
+              <i className="fas fa-broadcast-tower mr-2 text-blue-400"></i>
+              Send Broadcast Message
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm va-text-secondary">
+              This message will be sent to all users in all active sessions.
+            </div>
+            <Textarea
+              placeholder="Enter your broadcast message..."
+              value={broadcastMessage}
+              onChange={(e) => setBroadcastMessage(e.target.value)}
+              className="va-bg-dark-surface-2 va-border-dark va-text-primary"
+              rows={4}
+              data-testid="textarea-broadcast-message"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBroadcastMessage('');
+                  setShowBroadcastModal(false);
+                }}
+                data-testid="button-cancel-broadcast"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={sendBroadcastMessage}
+                disabled={!broadcastMessage.trim()}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+                data-testid="button-send-broadcast"
+              >
+                <i className="fas fa-broadcast-tower mr-2"></i>
+                Send Broadcast
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
