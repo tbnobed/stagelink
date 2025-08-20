@@ -31,8 +31,27 @@ export default function Links() {
   const [chatParticipants, setChatParticipants] = useState<{[sessionId: string]: any[]}>({});
   const [chatConnections, setChatConnections] = useState<{[sessionId: string]: WebSocket}>({});
   const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const chatScrollRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Function to scroll chat to bottom
+  const scrollChatToBottom = (sessionId: string) => {
+    const chatElement = chatScrollRefs.current.get(sessionId);
+    if (chatElement) {
+      chatElement.scrollTop = chatElement.scrollHeight;
+    }
+  };
+
+  // Auto-scroll when chat history changes
+  useEffect(() => {
+    if (showChatForLink && chatHistory[showChatForLink]) {
+      // Small delay to ensure DOM has updated
+      setTimeout(() => {
+        scrollChatToBottom(showChatForLink);
+      }, 100);
+    }
+  }, [chatHistory, showChatForLink]);
 
   // Cleanup WebSocket connections when component unmounts
   useEffect(() => {
@@ -310,6 +329,9 @@ export default function Links() {
       // Clear the message input
       setChatMessages(prev => ({ ...prev, [sessionId]: '' }));
       
+      // Auto-scroll after sending message
+      setTimeout(() => scrollChatToBottom(sessionId), 100);
+      
       toast({
         title: "Message Sent",
         description: messageType === 'broadcast' ? "Broadcast message sent to all users" : "Message sent to guest",
@@ -357,6 +379,8 @@ export default function Links() {
                   ...prev,
                   [linkId]: [...(prev[linkId] || []), data.message]
                 }));
+                // Auto-scroll after new message
+                setTimeout(() => scrollChatToBottom(linkId), 100);
               }
               break;
             case 'message_history':
@@ -365,6 +389,8 @@ export default function Links() {
                   ...prev,
                   [linkId]: data.messages
                 }));
+                // Auto-scroll after loading history
+                setTimeout(() => scrollChatToBottom(linkId), 100);
               }
               break;
             case 'participants_list':
@@ -573,7 +599,13 @@ export default function Links() {
                     )}
 
                     {/* Messages History */}
-                    <div className="flex-1 va-bg-dark-surface rounded-lg p-3 mb-4 overflow-y-auto max-h-64">
+                    <div 
+                      ref={(el) => {
+                        if (el) chatScrollRefs.current.set(link.id, el);
+                        else chatScrollRefs.current.delete(link.id);
+                      }}
+                      className="flex-1 va-bg-dark-surface rounded-lg p-3 mb-4 overflow-y-auto max-h-64"
+                    >
                       {chatHistory[link.id] && chatHistory[link.id].length > 0 ? (
                         <div className="space-y-3">
                           {chatHistory[link.id].map((message: any, index: number) => {
