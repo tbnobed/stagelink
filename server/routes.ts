@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, requireAuth, requireAdmin } from "./auth";
+import { setupAuth, requireAuth, requireAdmin, requireAdminOrEngineer } from "./auth";
+import { ChatWebSocketServer } from "./chat-websocket";
 import { insertUserSchema, insertShortLinkSchema } from "@shared/schema";
 import { generateUniqueShortCode } from "./utils/shortCode";
 
@@ -595,7 +596,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Chat API Routes
+  app.get('/api/chat/messages/:sessionId', requireAuth, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const messages = await storage.getChatMessages(sessionId, limit);
+      res.json(messages);
+    } catch (error) {
+      console.error('Failed to fetch chat messages:', error);
+      res.status(500).json({ error: 'Failed to fetch chat messages' });
+    }
+  });
+
+  app.get('/api/chat/participants/:sessionId', requireAuth, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const participants = await storage.getChatParticipants(sessionId);
+      res.json(participants);
+    } catch (error) {
+      console.error('Failed to fetch chat participants:', error);
+      res.status(500).json({ error: 'Failed to fetch chat participants' });
+    }
+  });
+
   const httpServer = createServer(app);
+  
+  // Initialize WebSocket server for chat
+  const chatWS = new ChatWebSocketServer(httpServer);
+  console.log('Chat WebSocket server initialized on /chat');
 
   return httpServer;
 }

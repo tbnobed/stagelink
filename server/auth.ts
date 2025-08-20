@@ -16,7 +16,7 @@ declare global {
       username: string;
       password: string;
       email: string | null;
-      role: "admin" | "user";
+      role: "admin" | "engineer" | "user";
       createdAt: Date;
       updatedAt: Date;
     }
@@ -167,6 +167,14 @@ export function requireAuth(req: any, res: any, next: any) {
 export function requireAdmin(req: any, res: any, next: any) {
   if (!req.isAuthenticated() || req.user.role !== 'admin') {
     return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+}
+
+// Middleware to require admin or engineer role
+export function requireAdminOrEngineer(req: any, res: any, next: any) {
+  if (!req.isAuthenticated() || (req.user.role !== 'admin' && req.user.role !== 'engineer')) {
+    return res.status(403).json({ error: "Admin or Engineer access required" });
   }
   next();
 }

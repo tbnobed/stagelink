@@ -1,0 +1,305 @@
+import { WebSocketServer, WebSocket } from 'ws';
+import { Server } from 'http';
+import { storage } from './storage';
+import { insertChatMessageSchema, insertChatParticipantSchema } from '@shared/schema';
+import { z } from 'zod';
+
+interface ChatClient {
+  ws: WebSocket;
+  userId: number;
+  username: string;
+  role: 'admin' | 'engineer' | 'user';
+  sessionId: string;
+}
+
+interface ChatMessage {
+  type: 'join' | 'leave' | 'message' | 'participant_update' | 'participants_list';
+  sessionId: string;
+  userId?: number;
+  username?: string;
+  role?: 'admin' | 'engineer' | 'user';
+  recipientId?: number; // For individual messages
+  messageType?: 'individual' | 'broadcast' | 'system';
+  content?: string;
+  participants?: Array<{
+    userId: number;
+    username: string;
+    role: 'admin' | 'engineer' | 'user';
+    isOnline: boolean;
+  }>;
+}
+
+const messageSchema = z.object({
+  type: z.enum(['join', 'leave', 'message']),
+  sessionId: z.string(),
+  userId: z.number().optional(),
+  username: z.string().optional(),
+  role: z.enum(['admin', 'engineer', 'user']).optional(),
+  recipientId: z.number().optional(),
+  messageType: z.enum(['individual', 'broadcast', 'system']).optional(),
+  content: z.string().optional(),
+});
+
+class ChatWebSocketServer {
+  private wss: WebSocketServer;
+  private clients: Map<string, ChatClient> = new Map(); // key: userId-sessionId
+  private sessionParticipants: Map<string, Set<string>> = new Map(); // sessionId -> Set of clientKeys
+
+  constructor(server: Server) {
+    this.wss = new WebSocketServer({ 
+      server,
+      path: '/chat'
+    });
+
+    this.wss.on('connection', this.handleConnection.bind(this));
+    console.log('Chat WebSocket server initialized');
+  }
+
+  private handleConnection(ws: WebSocket, request: any) {
+    console.log('New WebSocket connection');
+
+    ws.on('message', async (data: Buffer) => {
+      try {
+        const message = JSON.parse(data.toString());
+        const validatedMessage = messageSchema.parse(message);
+        await this.handleMessage(ws, validatedMessage);
+      } catch (error) {
+        console.error('Invalid message received:', error);
+        ws.send(JSON.stringify({ 
+          type: 'error', 
+          message: 'Invalid message format' 
+        }));
+      }
+    });
+
+    ws.on('close', () => {
+      this.handleDisconnection(ws);
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      this.handleDisconnection(ws);
+    });
+  }
+
+  private async handleMessage(ws: WebSocket, message: ChatMessage) {
+    switch (message.type) {
+      case 'join':
+        await this.handleJoin(ws, message);
+        break;
+      case 'leave':
+        await this.handleLeave(ws, message);
+        break;
+      case 'message':
+        await this.handleChatMessage(ws, message);
+        break;
+    }
+  }
+
+  private async handleJoin(ws: WebSocket, message: ChatMessage) {
+    if (!message.userId || !message.username || !message.role || !message.sessionId) {
+      ws.send(JSON.stringify({ 
+        type: 'error', 
+        message: 'Missing required fields for join' 
+      }));
+      return;
+    }
+
+    const clientKey = `${message.userId}-${message.sessionId}`;
+    
+    // Remove existing client if reconnecting
+    if (this.clients.has(clientKey)) {
+      const existingClient = this.clients.get(clientKey)!;
+      existingClient.ws.close();
+      this.clients.delete(clientKey);
+    }
+
+    const client: ChatClient = {
+      ws,
+      userId: message.userId,
+      username: message.username,
+      role: message.role,
+      sessionId: message.sessionId,
+    };
+
+    this.clients.set(clientKey, client);
+
+    // Add to session participants
+    if (!this.sessionParticipants.has(message.sessionId)) {
+      this.sessionParticipants.set(message.sessionId, new Set());
+    }
+    this.sessionParticipants.get(message.sessionId)!.add(clientKey);
+
+    // Add participant to database
+    try {
+      await storage.addChatParticipant({
+        sessionId: message.sessionId,
+        userId: message.userId,
+        username: message.username,
+        role: message.role,
+        isOnline: true,
+      });
+    } catch (error) {
+      // Participant might already exist, update status instead
+      await storage.updateParticipantStatus(message.sessionId, message.userId, true);
+    }
+
+    // Send participant list to the new client
+    await this.sendParticipantsList(message.sessionId);
+
+    // Send recent messages to the new client
+    const recentMessages = await storage.getChatMessages(message.sessionId, 20);
+    ws.send(JSON.stringify({
+      type: 'message_history',
+      messages: recentMessages.reverse(), // Reverse to show oldest first
+    }));
+
+    console.log(`User ${message.username} joined session ${message.sessionId}`);
+  }
+
+  private async handleLeave(ws: WebSocket, message: ChatMessage) {
+    if (!message.userId || !message.sessionId) return;
+
+    const clientKey = `${message.userId}-${message.sessionId}`;
+    this.clients.delete(clientKey);
+
+    // Remove from session participants
+    if (this.sessionParticipants.has(message.sessionId)) {
+      this.sessionParticipants.get(message.sessionId)!.delete(clientKey);
+      if (this.sessionParticipants.get(message.sessionId)!.size === 0) {
+        this.sessionParticipants.delete(message.sessionId);
+      }
+    }
+
+    // Update participant status in database
+    await storage.updateParticipantStatus(message.sessionId, message.userId, false);
+
+    // Send updated participant list
+    await this.sendParticipantsList(message.sessionId);
+
+    console.log(`User ${message.userId} left session ${message.sessionId}`);
+  }
+
+  private handleDisconnection(ws: WebSocket) {
+    // Find and remove the client
+    for (const [clientKey, client] of Array.from(this.clients.entries())) {
+      if (client.ws === ws) {
+        this.clients.delete(clientKey);
+        
+        // Remove from session participants
+        if (this.sessionParticipants.has(client.sessionId)) {
+          this.sessionParticipants.get(client.sessionId)!.delete(clientKey);
+          if (this.sessionParticipants.get(client.sessionId)!.size === 0) {
+            this.sessionParticipants.delete(client.sessionId);
+          }
+        }
+
+        // Update participant status in database
+        storage.updateParticipantStatus(client.sessionId, client.userId, false);
+
+        // Send updated participant list
+        this.sendParticipantsList(client.sessionId);
+
+        console.log(`Client disconnected: ${client.username}`);
+        break;
+      }
+    }
+  }
+
+  private async handleChatMessage(ws: WebSocket, message: ChatMessage) {
+    if (!message.content || !message.sessionId) {
+      ws.send(JSON.stringify({ 
+        type: 'error', 
+        message: 'Missing message content or session ID' 
+      }));
+      return;
+    }
+
+    // Find the sender client
+    const senderClient = Array.from(this.clients.values()).find(client => client.ws === ws);
+    if (!senderClient) {
+      ws.send(JSON.stringify({ 
+        type: 'error', 
+        message: 'Client not found' 
+      }));
+      return;
+    }
+
+    // Determine message type
+    let messageType: 'individual' | 'broadcast' | 'system' = 'individual';
+    
+    if (message.messageType === 'broadcast' && (senderClient.role === 'admin' || senderClient.role === 'engineer')) {
+      messageType = 'broadcast';
+    } else if (message.recipientId) {
+      messageType = 'individual';
+    } else {
+      // Default to broadcast for admin/engineer, individual for users
+      messageType = (senderClient.role === 'admin' || senderClient.role === 'engineer') ? 'broadcast' : 'individual';
+    }
+
+    // Save message to database
+    const chatMessage = await storage.createChatMessage({
+      sessionId: message.sessionId,
+      senderId: senderClient.userId,
+      senderName: senderClient.username,
+      recipientId: message.recipientId || null,
+      messageType,
+      content: message.content,
+    });
+
+    // Broadcast the message to appropriate recipients
+    const recipients = this.getMessageRecipients(message.sessionId, messageType, message.recipientId);
+    
+    const messageToSend = {
+      type: 'new_message',
+      message: chatMessage,
+    };
+
+    recipients.forEach(client => {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(messageToSend));
+      }
+    });
+
+    console.log(`Message sent from ${senderClient.username} in session ${message.sessionId}`);
+  }
+
+  private getMessageRecipients(sessionId: string, messageType: 'individual' | 'broadcast' | 'system', recipientId?: number): ChatClient[] {
+    const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
+
+    if (messageType === 'broadcast' || messageType === 'system') {
+      return sessionClients; // Send to everyone in the session
+    }
+
+    if (messageType === 'individual' && recipientId) {
+      return sessionClients.filter(client => client.userId === recipientId);
+    }
+
+    return sessionClients; // Default to everyone
+  }
+
+  private async sendParticipantsList(sessionId: string) {
+    const participants = await storage.getChatParticipants(sessionId);
+    const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
+
+    const participantsData = participants.map(p => ({
+      userId: p.userId,
+      username: p.username,
+      role: p.role,
+      isOnline: sessionClients.some(client => client.userId === p.userId),
+    }));
+
+    const message = {
+      type: 'participants_list',
+      participants: participantsData,
+    };
+
+    sessionClients.forEach(client => {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+}
+
+export { ChatWebSocketServer };

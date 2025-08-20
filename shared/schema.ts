@@ -3,7 +3,7 @@ import { pgTable, text, varchar, boolean, timestamp, pgEnum, integer } from "dri
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const userRoleEnum = pgEnum('user_role', ['admin', 'user']);
+export const userRoleEnum = pgEnum('user_role', ['admin', 'engineer', 'user']);
 
 export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
@@ -121,3 +121,44 @@ export const insertShortViewerLinkSchema = createInsertSchema(shortViewerLinks).
 });
 export type InsertShortViewerLink = z.infer<typeof insertShortViewerLinkSchema>;
 export type ShortViewerLink = typeof shortViewerLinks.$inferSelect;
+
+// Chat system tables
+export const messageTypeEnum = pgEnum('message_type', ['individual', 'broadcast', 'system']);
+
+export const chatMessages = pgTable("chat_messages", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  sessionId: text("session_id").notNull(), // Links to streaming session
+  senderId: integer("sender_id").references(() => users.id),
+  senderName: text("sender_name").notNull(), // Cached for performance
+  recipientId: integer("recipient_id").references(() => users.id), // NULL for broadcast messages
+  messageType: messageTypeEnum("message_type").notNull().default('individual'),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const chatParticipants = pgTable("chat_participants", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  sessionId: text("session_id").notNull(),
+  userId: integer("user_id").references(() => users.id),
+  username: text("username").notNull(), // Cached for performance
+  role: userRoleEnum("role").notNull(),
+  isOnline: boolean("is_online").notNull().default(true),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),
+});
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertChatParticipantSchema = createInsertSchema(chatParticipants).omit({
+  id: true,
+  joinedAt: true,
+  lastSeenAt: true,
+});
+
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatParticipant = z.infer<typeof insertChatParticipantSchema>;
+export type ChatParticipant = typeof chatParticipants.$inferSelect;

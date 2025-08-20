@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { initializeStreaming, startPublishing, stopPublishing, startPlayback } from "@/lib/streaming";
+import { Chat } from "@/components/chat";
 
 export default function Session() {
   const [isPublishing, setIsPublishing] = useState(false);
@@ -363,18 +364,11 @@ export default function Session() {
 
             {/* Chat Container */}
             {showChat && (
-              <div className="va-bg-dark-surface-2 rounded-lg overflow-hidden h-96" data-testid="container-chat">
-                <div className="va-bg-dark-border p-3 border-b va-border-dark">
-                  <h4 className="font-medium va-text-primary flex items-center">
-                    <i className="fas fa-comments mr-2 va-text-green"></i>
-                    Live Chat
-                  </h4>
-                </div>
-                <iframe 
-                  src="https://dev.blabb.me/room/pe9gg8" 
-                  className="w-full h-full border-none"
-                />
-              </div>
+              <Chat 
+                sessionId={sessionId}
+                enabled={showChat}
+                className="h-96"
+              />
             )}
 
             {/* Chat Toggle - only show if chat is enabled for this link */}

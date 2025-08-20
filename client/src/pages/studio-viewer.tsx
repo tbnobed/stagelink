@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { startPlayback, initializeStreaming } from "@/lib/streaming";
+import { Chat } from "@/components/chat";
 
 // Global variables for SRS SDK
 declare global {
@@ -379,31 +380,21 @@ export default function StudioViewer() {
                 )}
 
                 {chatEnabled && showChat && (
-                  <div className="va-bg-dark-surface-2 rounded-lg overflow-hidden">
-                    <div className="va-bg-dark-border p-3 border-b va-border-dark">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium va-text-primary flex items-center">
-                          <i className="fas fa-comments mr-2 va-text-green"></i>
-                          Live Chat
-                        </h4>
-                        <Button 
-                          onClick={() => setShowChat(false)}
-                          variant="ghost"
-                          size="sm"
-                          className="va-text-secondary hover:va-text-primary"
-                          data-testid="button-hide-chat"
-                        >
-                          <i className="fas fa-times"></i>
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="h-96">
-                      <iframe 
-                        src="https://dev.blabb.me/room/pe9gg8" 
-                        className="w-full h-full border-none"
-                        data-testid="iframe-chat"
-                      />
-                    </div>
+                  <div className="relative">
+                    <Button 
+                      onClick={() => setShowChat(false)}
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-2 right-2 z-10 va-text-secondary hover:va-text-primary"
+                      data-testid="button-hide-chat"
+                    >
+                      <i className="fas fa-times"></i>
+                    </Button>
+                    <Chat 
+                      sessionId={returnFeed}
+                      enabled={showChat}
+                      className="h-96"
+                    />
                   </div>
                 )}
 

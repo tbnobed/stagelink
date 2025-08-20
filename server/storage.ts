@@ -1,7 +1,7 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, chatMessages, chatParticipants, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, lt, and, isNotNull } from "drizzle-orm";
+import { eq, lt, and, isNotNull, desc } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -45,6 +45,14 @@ export interface IStorage {
   validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }>;
   createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken>;
   cleanupExpiredTokens(): Promise<number>;
+  
+  // Chat System
+  getChatMessages(sessionId: string, limit?: number): Promise<ChatMessage[]>;
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  getChatParticipants(sessionId: string): Promise<ChatParticipant[]>;
+  addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant>;
+  updateParticipantStatus(sessionId: string, userId: number, isOnline: boolean): Promise<void>;
+  removeParticipant(sessionId: string, userId: number): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -427,6 +435,133 @@ export class MemStorage implements IStorage {
   async cleanupExpiredTokens(): Promise<number> {
     console.warn('Token cleanup not needed in MemStorage');
     return 0;
+  }
+
+  // Chat System Methods
+  async getChatMessages(sessionId: string, limit: number = 50): Promise<ChatMessage[]> {
+    if (this.isDatabaseMode) {
+      const messages = await this.db!.select()
+        .from(chatMessages)
+        .where(eq(chatMessages.sessionId, sessionId))
+        .orderBy(desc(chatMessages.createdAt))
+        .limit(limit);
+      return messages.reverse(); // Return in chronological order
+    }
+    return [];
+  }
+
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    if (this.isDatabaseMode) {
+      const [newMessage] = await this.db!.insert(chatMessages)
+        .values(message)
+        .returning();
+      return newMessage;
+    }
+    
+    // Memory fallback
+    const chatMessage: ChatMessage = {
+      id: Math.floor(Math.random() * 1000000),
+      ...message,
+      senderId: message.senderId || null,
+      recipientId: message.recipientId || null,
+      createdAt: new Date(),
+    };
+    return chatMessage;
+  }
+
+  async getChatParticipants(sessionId: string): Promise<ChatParticipant[]> {
+    if (this.isDatabaseMode) {
+      const participants = await this.db!.select()
+        .from(chatParticipants)
+        .where(eq(chatParticipants.sessionId, sessionId));
+      return participants;
+    }
+    return [];
+  }
+
+  async addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant> {
+    if (this.isDatabaseMode) {
+      // Check if participant already exists
+      const existing = await this.db!.select()
+        .from(chatParticipants)
+        .where(
+          and(
+            eq(chatParticipants.sessionId, participant.sessionId),
+            eq(chatParticipants.username, participant.username)
+          )
+        );
+
+      if (existing.length > 0) {
+        // Update existing participant as online
+        const [updated] = await this.db!.update(chatParticipants)
+          .set({
+            isOnline: true,
+            lastSeenAt: new Date(),
+          })
+          .where(eq(chatParticipants.id, existing[0].id))
+          .returning();
+        return updated;
+      }
+
+      // Create new participant
+      const [newParticipant] = await this.db!.insert(chatParticipants)
+        .values(participant)
+        .returning();
+      return newParticipant;
+    }
+    
+    // Memory fallback
+    const chatParticipant: ChatParticipant = {
+      id: Math.floor(Math.random() * 1000000),
+      ...participant,
+      userId: participant.userId || null,
+      isOnline: participant.isOnline || true,
+      joinedAt: new Date(),
+      lastSeenAt: new Date(),
+    };
+    return chatParticipant;
+  }
+
+  async updateParticipantStatus(sessionId: string, userId: number, isOnline: boolean): Promise<void> {
+    if (this.isDatabaseMode) {
+      await this.db!.update(chatParticipants)
+        .set({
+          isOnline,
+          lastSeenAt: new Date(),
+        })
+        .where(
+          and(
+            eq(chatParticipants.sessionId, sessionId),
+            eq(chatParticipants.userId, userId)
+          )
+        );
+    }
+  }
+
+  async removeParticipant(sessionId: string, userId: number): Promise<void> {
+    if (this.isDatabaseMode) {
+      await this.db!.update(chatParticipants)
+        .set({
+          isOnline: false,
+          lastSeenAt: new Date(),
+        })
+        .where(
+          and(
+            eq(chatParticipants.sessionId, sessionId),
+            eq(chatParticipants.userId, userId)
+          )
+        );
+    }
+  }
+
+  async updateParticipantStatus(sessionId: string, userId: number, isOnline: boolean): Promise<void> {
+    // In memory implementation - would need to add chat storage maps
+    console.warn('updateParticipantStatus not implemented in MemStorage');
+  }
+
+  async removeParticipant(sessionId: string, userId: number): Promise<void> {
+    // In memory implementation - would need to add chat storage maps
+    console.warn('removeParticipant not implemented in MemStorage');
   }
 }
 
@@ -839,6 +974,73 @@ export class DatabaseStorage implements IStorage {
       .delete(sessionTokens)
       .where(lt(sessionTokens.expiresAt, now));
     return result.rowCount || 0;
+  }
+
+  // Chat System Methods
+  async getChatMessages(sessionId: string, limit: number = 50): Promise<ChatMessage[]> {
+    return await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.sessionId, sessionId))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(limit);
+  }
+
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    const [chatMessage] = await db
+      .insert(chatMessages)
+      .values({
+        ...message,
+        createdAt: new Date(),
+      })
+      .returning();
+    return chatMessage;
+  }
+
+  async getChatParticipants(sessionId: string): Promise<ChatParticipant[]> {
+    return await db
+      .select()
+      .from(chatParticipants)
+      .where(eq(chatParticipants.sessionId, sessionId))
+      .orderBy(chatParticipants.joinedAt);
+  }
+
+  async addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant> {
+    const [chatParticipant] = await db
+      .insert(chatParticipants)
+      .values({
+        ...participant,
+        joinedAt: new Date(),
+        lastSeenAt: new Date(),
+      })
+      .returning();
+    return chatParticipant;
+  }
+
+  async updateParticipantStatus(sessionId: string, userId: number, isOnline: boolean): Promise<void> {
+    await db
+      .update(chatParticipants)
+      .set({
+        isOnline,
+        lastSeenAt: new Date(),
+      })
+      .where(
+        and(
+          eq(chatParticipants.sessionId, sessionId),
+          eq(chatParticipants.userId, userId)
+        )
+      );
+  }
+
+  async removeParticipant(sessionId: string, userId: number): Promise<void> {
+    await db
+      .delete(chatParticipants)
+      .where(
+        and(
+          eq(chatParticipants.sessionId, sessionId),
+          eq(chatParticipants.userId, userId)
+        )
+      );
   }
 }
 
