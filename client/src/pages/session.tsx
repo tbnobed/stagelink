@@ -8,6 +8,7 @@ import { Chat } from "@/components/chat";
 export default function Session() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [sessionId, setSessionId] = useState("Not connected");
+  const [streamName, setStreamName] = useState<string | null>(null);
   const [audioCodec, setAudioCodec] = useState("-");
   const [videoCodec, setVideoCodec] = useState("-");
   const [showChat, setShowChat] = useState(false);
@@ -34,8 +35,10 @@ export default function Session() {
       const returnStream = urlParams.get('return');
       const chatEnabledParam = urlParams.get('chat') === 'true';
 
-      // Store chat enabled state
+      // Store stream name and chat enabled state
+      setStreamName(stream);
       setChatEnabled(chatEnabledParam);
+      console.log('Stream name from URL:', stream);
       console.log('Chat enabled from URL:', chatEnabledParam);
       
       // Show chat by default if enabled
@@ -375,9 +378,9 @@ export default function Session() {
               </div>
 
             {/* Chat Container */}
-            {showChat && (
+            {showChat && streamName && (
               <Chat 
-                sessionId={sessionId}
+                sessionId={streamName}
                 enabled={showChat}
                 className="h-96"
               />
