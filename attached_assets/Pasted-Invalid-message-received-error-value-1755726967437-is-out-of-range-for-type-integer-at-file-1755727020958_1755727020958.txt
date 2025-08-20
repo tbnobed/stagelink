@@ -1,0 +1,64 @@
+Invalid message received: error: value "1755726967437" is out of range for type integer
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.addChatParticipant (/home/runner/workspace/server/storage.ts:1043:31)
+    at async ChatWebSocketServer.handleJoin (/home/runner/workspace/server/chat-websocket.ts:176:7)
+    at async ChatWebSocketServer.handleMessage (/home/runner/workspace/server/chat-websocket.ts:122:9)
+    at async WebSocket.<anonymous> (/home/runner/workspace/server/chat-websocket.ts:98:9) {
+  length: 156,
+  severity: 'ERROR',
+  code: '22003',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $2 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'numutils.c',
+  line: '611',
+  routine: 'pg_strtoint32_safe'
+}
+New WebSocket connection
+9:56:38 PM [express] GET /api/chat/messages/livestream5 304 in 2605ms :: []
+9:56:38 PM [express] GET /api/chat/messages/1755726580017 304 in 1623ms :: [{"id":26,"sessionId":"17…
+9:56:38 PM [express] GET /api/chat/messages/1755718684619 304 in 75ms :: [{"id":19,"sessionId":"1755…
+9:56:39 PM [express] GET /api/user 401 in 1ms
+User Guest_testchat2 joined session 1755726580017
+User Guest_testchat joined session 1755718684619
+9:56:39 PM [express] GET /api/user 401 in 1ms
+WebSocket closed: 1001 
+Client disconnected: Viewer_livestream5_162143
+file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345
+o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
+                                                                         ^
+
+error: value "1755726967437" is out of range for type integer
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DatabaseStorage.updateParticipantStatus (/home/runner/workspace/server/storage.ts:1055:5) {
+  length: 156,
+  severity: 'ERROR',
+  code: '22003',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: "unnamed portal parameter $4 = '...'",
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'numutils.c',
+  line: '611',
+  routine: 'pg_strtoint32_safe'
+}
+
+Node.js v20.19.3
