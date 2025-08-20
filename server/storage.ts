@@ -974,29 +974,6 @@ export class DatabaseStorage implements IStorage {
           await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
           return { valid: false };
         }
-        
-        // For viewer links, find the corresponding streaming session for chat
-        // First try to find a streaming link with the same stream name as the viewer's return feed
-        const [correspondingLink] = await db.select().from(generatedLinks).where(eq(generatedLinks.streamName, viewerLink.returnFeed));
-        if (correspondingLink) {
-          // Return the streaming link ID for chat synchronization
-          return {
-            valid: true,
-            linkId: correspondingLink.id,
-            linkType: sessionToken.linkType,
-          };
-        }
-        
-        // If no exact match, find the first active streaming session with chat enabled
-        // This handles cases where viewer links were created with different return feed names
-        const [activeStreamingLink] = await db.select().from(generatedLinks).where(eq(generatedLinks.chatEnabled, true));
-        if (activeStreamingLink) {
-          return {
-            valid: true,
-            linkId: activeStreamingLink.id,
-            linkType: sessionToken.linkType,
-          };
-        }
       }
     }
 
