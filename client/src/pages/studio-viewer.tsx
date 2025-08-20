@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { startPlayback, initializeStreaming } from "@/lib/streaming";
-import { Chat } from "@/components/chat";
+import { GuestChat } from "@/components/guest-chat";
 
 // Global variables for SRS SDK
 declare global {
@@ -23,6 +23,7 @@ export default function StudioViewer() {
   const [returnFeed, setReturnFeed] = useState("");
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
+  const [guestUser, setGuestUser] = useState<any>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
   const { toast } = useToast();
@@ -94,6 +95,15 @@ export default function StudioViewer() {
       setReturnFeed(returnParam);
       setChatEnabled(chatParam === 'true');
       setShowChat(chatParam === 'true');
+      
+      // Create a guest user for chat
+      const guestUserId = Date.now(); // Use timestamp as unique ID
+      const guestUsername = `Viewer_${returnParam}_${Math.floor(Math.random() * 1000000)}`;
+      setGuestUser({
+        id: guestUserId,
+        username: guestUsername,
+        role: 'user'
+      });
       
       // Initialize streaming configuration
       initializeStreaming({
@@ -379,7 +389,7 @@ export default function StudioViewer() {
                   </div>
                 )}
 
-                {chatEnabled && showChat && (
+                {chatEnabled && showChat && guestUser && (
                   <div className="relative">
                     <Button 
                       onClick={() => setShowChat(false)}
@@ -390,9 +400,10 @@ export default function StudioViewer() {
                     >
                       <i className="fas fa-times"></i>
                     </Button>
-                    <Chat 
+                    <GuestChat 
                       sessionId={returnFeed}
                       enabled={showChat}
+                      guestUser={guestUser}
                       className="h-96"
                     />
                   </div>
