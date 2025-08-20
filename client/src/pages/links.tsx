@@ -490,6 +490,23 @@ export default function Links() {
     if (showChatForLink === linkId) {
       setShowChatForLink(null);
       disconnectFromChatWebSocket(linkId);
+      
+      // When switching back to preview, check if we need to reconnect the video
+      const link = [...(links || []), ...(viewerLinks || [])].find(l => l.id === linkId);
+      if (link && previewingLinks.has(linkId)) {
+        // Re-establish video connection after a small delay
+        setTimeout(async () => {
+          const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
+          if (streamName) {
+            console.log(`Reconnecting preview for stream: ${streamName}`);
+            toast({
+              title: "Reconnecting Preview",
+              description: `Restoring video connection for ${streamName}`,
+            });
+            await previewStream(streamName, linkId);
+          }
+        }, 500);
+      }
     } else {
       setShowChatForLink(linkId);
       // Load chat history and participants when opening chat
@@ -755,9 +772,12 @@ export default function Links() {
                         <div className="text-center">
                           <i className="fas fa-eye text-3xl text-gray-500 mb-2"></i>
                           <p className="va-text-secondary text-sm">Preview Window</p>
-                          {link.type === 'guest' && link.streamName && (
+                          {((link.type === 'guest' && link.streamName) || (link.type === 'viewer' && link.returnFeed)) && (
                             <Button 
-                              onClick={() => previewStream(link.streamName!, link.id)}
+                              onClick={() => {
+                                const streamName = link.type === 'guest' ? link.streamName! : link.returnFeed!;
+                                previewStream(streamName, link.id);
+                              }}
                               variant="outline"
                               size="sm"
                               className="mt-2 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
