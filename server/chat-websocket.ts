@@ -130,19 +130,14 @@ class ChatWebSocketServer {
     }
     this.sessionParticipants.get(message.sessionId)!.add(clientKey);
 
-    // Add participant to database
-    try {
-      await storage.addChatParticipant({
-        sessionId: message.sessionId,
-        userId: message.userId,
-        username: message.username,
-        role: message.role,
-        isOnline: true,
-      });
-    } catch (error) {
-      // Participant might already exist, update status instead
-      await storage.updateParticipantStatus(message.sessionId, message.userId, true);
-    }
+    // Add participant to database (this handles duplicates by checking userId + sessionId)
+    await storage.addChatParticipant({
+      sessionId: message.sessionId,
+      userId: message.userId,
+      username: message.username,
+      role: message.role,
+      isOnline: true,
+    });
 
     // Send participant list to the new client
     await this.sendParticipantsList(message.sessionId);

@@ -557,7 +557,7 @@ export default function Links() {
                         <div className="flex flex-wrap gap-2">
                           {chatParticipants[link.id].map((participant: any) => (
                             <span 
-                              key={participant.userId}
+                              key={`${participant.userId}-${participant.id || participant.sessionId}-${new Date(participant.joinedAt).getTime()}`}
                               className={`px-2 py-1 rounded-full text-xs ${
                                 participant.isOnline 
                                   ? 'bg-green-500/20 text-green-400' 
@@ -580,7 +580,7 @@ export default function Links() {
                             const isMyMessage = message.senderId === user?.id;
                             return (
                               <div 
-                                key={index} 
+                                key={`${message.id || index}-${new Date(message.createdAt).getTime()}-${index}`} 
                                 className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
                               >
                                 <div className={`max-w-[80%] ${isMyMessage ? 'ml-4' : 'mr-4'}`}>

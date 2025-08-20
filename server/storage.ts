@@ -481,13 +481,13 @@ export class MemStorage implements IStorage {
 
   async addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant> {
     if (this.isDatabaseMode) {
-      // Check if participant already exists
+      // Check if participant already exists by userId AND sessionId (not just username)
       const existing = await this.db!.select()
         .from(chatParticipants)
         .where(
           and(
             eq(chatParticipants.sessionId, participant.sessionId),
-            eq(chatParticipants.username, participant.username)
+            eq(chatParticipants.userId, participant.userId)
           )
         );
 
@@ -551,6 +551,39 @@ export class MemStorage implements IStorage {
             eq(chatParticipants.userId, userId)
           )
         );
+    }
+  }
+
+  async cleanupDuplicateParticipants(sessionId: string): Promise<void> {
+    if (this.isDatabaseMode) {
+      // Get all participants for this session
+      const participants = await this.db!.select()
+        .from(chatParticipants)
+        .where(eq(chatParticipants.sessionId, sessionId))
+        .orderBy(chatParticipants.joinedAt);
+
+      // Group by userId
+      const userGroups = new Map<number, any[]>();
+      for (const participant of participants) {
+        if (!userGroups.has(participant.userId)) {
+          userGroups.set(participant.userId, []);
+        }
+        userGroups.get(participant.userId)!.push(participant);
+      }
+
+      // Keep the latest entry for each user, delete the rest
+      for (const [userId, userParticipants] of userGroups) {
+        if (userParticipants.length > 1) {
+          // Sort by joinedAt descending to keep the latest
+          userParticipants.sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
+          const toDelete = userParticipants.slice(1); // Keep first (latest), delete rest
+          
+          for (const participant of toDelete) {
+            await this.db!.delete(chatParticipants)
+              .where(eq(chatParticipants.id, participant.id));
+          }
+        }
+      }
     }
   }
 
@@ -1006,6 +1039,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant> {
+    // Check if participant already exists by userId AND sessionId (not just username)
+    const existing = await db.select()
+      .from(chatParticipants)
+      .where(
+        and(
+          eq(chatParticipants.sessionId, participant.sessionId),
+          eq(chatParticipants.userId, participant.userId)
+        )
+      );
+
+    if (existing.length > 0) {
+      // Update existing participant as online
+      const [updated] = await db.update(chatParticipants)
+        .set({
+          isOnline: true,
+          lastSeenAt: new Date(),
+        })
+        .where(eq(chatParticipants.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+
+    // Create new participant
     const [chatParticipant] = await db
       .insert(chatParticipants)
       .values({
@@ -1041,6 +1097,38 @@ export class DatabaseStorage implements IStorage {
           eq(chatParticipants.userId, userId)
         )
       );
+  }
+
+  async cleanupDuplicateParticipants(sessionId: string): Promise<void> {
+    // Get all participants for this session
+    const participants = await db
+      .select()
+      .from(chatParticipants)
+      .where(eq(chatParticipants.sessionId, sessionId))
+      .orderBy(chatParticipants.joinedAt);
+
+    // Group by userId
+    const userGroups = new Map<number, any[]>();
+    for (const participant of participants) {
+      if (!userGroups.has(participant.userId)) {
+        userGroups.set(participant.userId, []);
+      }
+      userGroups.get(participant.userId)!.push(participant);
+    }
+
+    // Keep the latest entry for each user, delete the rest
+    for (const [userId, userParticipants] of userGroups) {
+      if (userParticipants.length > 1) {
+        // Sort by joinedAt descending to keep the latest
+        userParticipants.sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
+        const toDelete = userParticipants.slice(1); // Keep first (latest), delete rest
+        
+        for (const participant of toDelete) {
+          await db.delete(chatParticipants)
+            .where(eq(chatParticipants.id, participant.id));
+        }
+      }
+    }
   }
 }
 

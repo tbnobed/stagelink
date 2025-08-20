@@ -676,6 +676,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/chat/cleanup-duplicates/:sessionId', requireAuth, async (req, res) => {
+    try {
+      await storage.cleanupDuplicateParticipants(req.params.sessionId);
+      res.json({ success: true, message: 'Duplicate participants cleaned up' });
+    } catch (error) {
+      console.error('Error cleaning up duplicate participants:', error);
+      res.status(500).json({ error: 'Failed to clean up duplicates' });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Initialize WebSocket server for chat
