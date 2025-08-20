@@ -40,30 +40,33 @@ CREATE TABLE IF NOT EXISTS "users" (
         "password" varchar NOT NULL,
         "role" varchar DEFAULT 'user' NOT NULL,
         "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL,
         CONSTRAINT "users_username_unique" UNIQUE("username")
 );
 
--- Links table for streaming session management
-CREATE TABLE IF NOT EXISTS "links" (
-        "id" varchar PRIMARY KEY NOT NULL,
-        "stream_name" varchar NOT NULL,
-        "return_feed" varchar NOT NULL,
+-- Generated links table for streaming session management (main table)
+CREATE TABLE IF NOT EXISTS "generated_links" (
+        "id" text PRIMARY KEY NOT NULL,
+        "stream_name" text NOT NULL,
+        "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
         "url" text NOT NULL,
-        "expires_at" timestamp,
+        "session_token" text UNIQUE,
         "created_at" timestamp DEFAULT now() NOT NULL,
-        "created_by" integer NOT NULL,
-        "session_token" varchar,
-        CONSTRAINT "links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+        "expires_at" timestamp,
+        "created_by" integer REFERENCES "users"("id")
 );
 
 -- Short links table for URL shortening
 CREATE TABLE IF NOT EXISTS "short_links" (
-        "id" varchar(6) PRIMARY KEY NOT NULL,
-        "link_id" varchar NOT NULL,
+        "id" text PRIMARY KEY NOT NULL,
+        "stream_name" text NOT NULL,
+        "return_feed" text NOT NULL,
+        "chat_enabled" boolean DEFAULT false NOT NULL,
+        "session_token" text UNIQUE,
         "created_at" timestamp DEFAULT now() NOT NULL,
-        "session_token" varchar,
-        CONSTRAINT "short_links_link_id_links_id_fk" FOREIGN KEY ("link_id") REFERENCES "links"("id") ON DELETE cascade ON UPDATE no action
+        "expires_at" timestamp,
+        "created_by" integer REFERENCES "users"("id")
 );
 
 -- Viewer links table for studio monitoring

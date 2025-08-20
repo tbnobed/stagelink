@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS "users" (
         "updated_at" timestamp DEFAULT now() NOT NULL
 );
 
--- Create generated_links table
+-- Create generated_links table (main table expected by application)
 CREATE TABLE IF NOT EXISTS "generated_links" (
         "id" text PRIMARY KEY NOT NULL,
         "stream_name" text NOT NULL,
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS "viewer_links" (
         "created_by" integer REFERENCES "users"("id")
 );
 
--- Create short_links table
+-- Create short_links table with correct schema
 CREATE TABLE IF NOT EXISTS "short_links" (
         "id" text PRIMARY KEY NOT NULL,
         "stream_name" text NOT NULL,
