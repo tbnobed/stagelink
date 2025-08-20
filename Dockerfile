@@ -122,6 +122,14 @@ CREATE TABLE IF NOT EXISTS "generated_viewer_links" (
         CONSTRAINT "generated_viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
 );
 
+-- Add missing updated_at column to users table if it doesn't exist
+DO $$ BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='updated_at') THEN
+        ALTER TABLE "users" ADD COLUMN "updated_at" timestamp DEFAULT now() NOT NULL;
+        RAISE NOTICE 'Added updated_at column to users table';
+    END IF;
+END $$;
+
 -- Add session_token column to tables if missing - handle both old and new table names
 DO $$ BEGIN 
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='generated_links') THEN
@@ -227,8 +235,15 @@ CREATE TABLE IF NOT EXISTS "short_viewer_links" (
 );
 TABLES_EOF
     
-    # Ensure all session_token columns exist even if table exists - handle both old and new table names
+    # Ensure all missing columns exist - handle both old and new table names
     psql "$DATABASE_URL" << 'COLUMNS_EOF'
+-- Add missing updated_at column to users table if it doesn't exist
+DO $$ BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='updated_at') THEN
+        ALTER TABLE "users" ADD COLUMN "updated_at" timestamp DEFAULT now() NOT NULL;
+        RAISE NOTICE 'Added updated_at column to users table';
+    END IF;
+END $$;
 DO $$ BEGIN 
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='generated_links') THEN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='generated_links' AND column_name='session_token') THEN

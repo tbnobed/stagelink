@@ -50,6 +50,14 @@ CREATE TABLE IF NOT EXISTS "short_viewer_links" (
         CONSTRAINT "short_viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
 );
 
+-- Add missing updated_at column to users table if it doesn't exist
+DO $$ BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='updated_at') THEN
+        ALTER TABLE "users" ADD COLUMN "updated_at" timestamp DEFAULT now() NOT NULL;
+        RAISE NOTICE 'Added updated_at column to users table';
+    END IF;
+END $$;
+
 -- Add session_token column to links table if it doesn't exist - handle both old and new table names
 DO $$ 
 BEGIN 
