@@ -179,14 +179,21 @@ export default function Links() {
   const previewStream = async (streamName: string, linkId: string) => {
     if (!previewVideoRef.current) return;
 
+    console.log(`Starting preview for stream: ${streamName}`);
+    console.log('Video element:', previewVideoRef.current);
+    console.log('SRS SDK available:', !!window.SrsRtcWhipWhepAsync);
+
     try {
       setPreviewingLink(linkId);
+      console.log('Calling startPlayback...');
       await startPlayback(previewVideoRef.current, streamName);
+      console.log('Preview started successfully');
       toast({
         title: "Preview Started",
         description: `Now previewing stream: ${streamName}`,
       });
     } catch (error) {
+      console.error('Preview error:', error);
       toast({
         title: "Preview Error",
         description: `Failed to start preview: ${error instanceof Error ? error.message : 'Unknown error'}`,
