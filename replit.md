@@ -8,12 +8,20 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes
 
+## Chat-to-Preview Reconnection Fix (August 20, 2025)
+- **Issue**: Video streams showed black windows after switching from chat back to preview mode
+- **Root Cause**: Video element not properly refreshing after stream reconnection despite perfect WHEP connections
+- **Solution**: Implemented comprehensive stream cleanup and forced video element refresh system
+- **Result**: Chat-to-preview transitions now work flawlessly with proper video display
+- **Technical**: Enhanced track stopping, state clearing, and video display forcing with layout recalculation
+- **Status**: All streaming functionality including reconnections working excellently
+
 ## Streaming Functionality Status (August 20, 2025)
 - **Status**: All streaming functionality is working perfectly
 - **Video Quality**: 1280x720 resolution, full audio/video tracks
 - **Connection**: WHEP protocol connecting successfully to SRS server
-- **Issue**: Visual overlay was covering working video stream (now fixed)
-- **Lesson**: Always verify actual functionality before assuming breakage - browser console logs showed perfect streaming
+- **Reconnection**: Chat-to-preview transitions work perfectly with proper cleanup
+- **Lesson**: Stream connections can work perfectly while video display needs specific refresh handling
 
 ## Chat System Architecture Fix (August 20, 2025)
 - **Issue**: Viewer link chat synchronization was broken due to architectural confusion

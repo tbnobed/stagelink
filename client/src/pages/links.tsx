@@ -226,7 +226,7 @@ export default function Links() {
     console.log('SRS SDK available:', !!window.SrsRtcWhipWhepAsync);
 
     // Add the link to previewing set
-    setPreviewingLinks(prev => new Set([...Array.from(prev), linkId]));
+    setPreviewingLinks(prev => new Set(Array.from(prev).concat(linkId)));
 
     // Wait for the video element to be rendered
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -251,7 +251,9 @@ export default function Links() {
       
       // Add debugging for video element
       console.log('Video element srcObject:', videoElement.srcObject);
-      console.log('Video element video tracks:', videoElement.srcObject?.getVideoTracks?.()?.length || 0);
+      if (videoElement.srcObject instanceof MediaStream) {
+        console.log('Video element video tracks:', videoElement.srcObject.getVideoTracks().length);
+      }
       
       toast({
         title: "Preview Started",
@@ -508,7 +510,8 @@ export default function Links() {
       disconnectFromChatWebSocket(linkId);
       
       // When switching back from chat to preview, restart the connection
-      const link = [...(links || []), ...(viewerLinks || [])].find(l => l.id === linkId);
+      const allLinks = [...(links || []), ...(viewerLinksData || [])];
+      const link = allLinks.find(l => l.id === linkId);
       if (link && previewingLinks.has(linkId)) {
         const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
         if (streamName) {
@@ -810,9 +813,13 @@ export default function Links() {
                                 setTimeout(() => {
                                   if (el && (!el.paused || el.readyState >= 3)) {
                                     console.log(`Video already ready for link: ${link.id}, readyState: ${el.readyState}, paused: ${el.paused}`);
-                                    // Force video to refresh its display
-                                    el.style.transform = 'translateZ(0)'; // Force hardware acceleration
-                                    el.style.backfaceVisibility = 'hidden';
+                                    // Force video element to display properly
+                                    el.style.visibility = 'visible';
+                                    el.style.opacity = '1';
+                                    // Trigger a repaint by forcing layout recalculation
+                                    el.style.transform = 'translateZ(0)';
+                                    el.offsetHeight; // Force layout recalculation
+                                    el.style.transform = '';
                                     setVideosReady(prev => {
                                       if (!prev.has(link.id)) {
                                         return new Set([...prev, link.id]);
