@@ -23,8 +23,8 @@ export function ViewerChat({ sessionId, className = '' }: ViewerChatProps) {
 
   // Create viewer user object (same structure as guest chat)
   const viewerUser = {
-    id: Math.floor(Math.random() * 900000) + 100000, // Generate 6-digit positive viewer ID
-    username: `Viewer_${sessionId}_${Math.floor(Math.random() * 900000) + 100000}`,
+    id: 888888, // Fixed viewer user ID like guest chat uses 999999
+    username: `Viewer_${sessionId}`,
     role: 'user'
   };
 
