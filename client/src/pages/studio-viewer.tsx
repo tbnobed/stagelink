@@ -97,7 +97,8 @@ export default function StudioViewer() {
       setShowChat(chatParam === 'true');
       
       // Create a guest user for chat
-      const guestUserId = Date.now(); // Use timestamp as unique ID
+      // Use a random ID within PostgreSQL integer range (1 to 2147483647)
+      const guestUserId = Math.floor(Math.random() * 2000000000) + 1000000;
       const guestUsername = `Viewer_${returnParam}_${Math.floor(Math.random() * 1000000)}`;
       setGuestUser({
         id: guestUserId,
