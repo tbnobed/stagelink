@@ -145,9 +145,19 @@ export default function Session() {
   };
 
   const togglePublishing = async () => {
+    console.log('togglePublishing called, isPublishing:', isPublishing);
+    console.log('SRS SDK status:', {
+      SrsRtcWhipWhepAsync: !!window.SrsRtcWhipWhepAsync,
+      SrsRtcFormatStats: !!window.SrsRtcFormatStats,
+      jquery: !!window.$
+    });
+    
     if (!isPublishing) {
       try {
+        console.log('Starting publishing with video element:', publisherVideoRef.current);
         const result = await startPublishing(publisherVideoRef.current);
+        console.log('Publishing started successfully:', result);
+        
         setIsPublishing(true);
         setSessionId(result.sessionId || 'Connected');
         setAudioCodec('opus/48000/2');
@@ -158,6 +168,7 @@ export default function Session() {
           description: "Stream started successfully",
         });
       } catch (error) {
+        console.error('Publishing failed with error:', error);
         toast({
           title: "Error",
           description: `Publishing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
