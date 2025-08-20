@@ -12,6 +12,32 @@ CREATE TABLE IF NOT EXISTS "session_tokens" (
         CONSTRAINT "session_tokens_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
 );
 
+-- Create viewer_links table if it doesn't exist
+CREATE TABLE IF NOT EXISTS "viewer_links" (
+        "id" varchar PRIMARY KEY NOT NULL,
+        "return_feed" varchar NOT NULL,
+        "chat_enabled" boolean DEFAULT false NOT NULL,
+        "url" text NOT NULL,
+        "expires_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "created_by" integer NOT NULL,
+        "session_token" varchar,
+        CONSTRAINT "viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+);
+
+-- Create generated_viewer_links table if it doesn't exist (alternative naming)
+CREATE TABLE IF NOT EXISTS "generated_viewer_links" (
+        "id" varchar PRIMARY KEY NOT NULL,
+        "return_feed" varchar NOT NULL,
+        "chat_enabled" boolean DEFAULT false NOT NULL,
+        "url" text NOT NULL,
+        "expires_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "created_by" integer NOT NULL,
+        "session_token" varchar,
+        CONSTRAINT "generated_viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+);
+
 -- Add session_token column to links table if it doesn't exist - handle both old and new table names
 DO $$ 
 BEGIN 
