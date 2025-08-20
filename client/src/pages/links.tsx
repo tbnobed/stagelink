@@ -552,6 +552,22 @@ export default function Links() {
         setRestartNeeded(linkId);
       }
     } else {
+      // Check if we're switching from another chat
+      if (showChatForLink && showChatForLink !== linkId) {
+        const previousChatLinkId = showChatForLink;
+        console.log(`Switching from chat ${previousChatLinkId} to chat ${linkId}`);
+        
+        // Disconnect from previous chat
+        disconnectFromChatWebSocket(previousChatLinkId);
+        
+        // Check if the previous link was being previewed and needs restart
+        const wasPreviouslyPreviewing = previewingLinks.has(previousChatLinkId);
+        if (wasPreviouslyPreviewing) {
+          console.log(`Previous chat link ${previousChatLinkId} needs preview restart`);
+          setRestartNeeded(previousChatLinkId);
+        }
+      }
+      
       console.log(`Opening chat for ${linkId}`);
       setShowChatForLink(linkId);
       // Load chat history and participants when opening chat
