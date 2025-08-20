@@ -217,30 +217,35 @@ export default function StudioViewer() {
   }
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold va-text-primary mb-2">Studio Viewer</h1>
-            <p className="va-text-secondary">Watch the studio return feed: <span className="va-text-primary font-mono">{returnFeed}</span></p>
-          </div>
-          <Button 
-            onClick={() => setLocation('/')}
-            variant="outline"
-            className="va-border-dark va-text-secondary hover:va-text-primary"
-            data-testid="button-back-home"
-          >
-            <i className="fas fa-arrow-left mr-2"></i>
-            Back to Home
-          </Button>
+    <div className="h-screen va-bg-dark flex flex-col">
+      {/* Compact Header */}
+      <div className="px-4 py-3 border-b va-border-dark flex items-center justify-between bg-va-dark-bg/50 backdrop-blur shrink-0">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold va-text-primary">Studio Viewer</h1>
+          <span className="va-text-secondary text-sm">
+            Return feed: <span className="va-text-green font-mono">{returnFeed}</span>
+          </span>
         </div>
+        <Button 
+          onClick={() => setLocation('/')}
+          variant="outline"
+          size="sm"
+          className="va-border-dark va-text-secondary hover:va-text-primary"
+          data-testid="button-back-home"
+        >
+          <i className="fas fa-arrow-left mr-2"></i>
+          Back to Home
+        </Button>
+      </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Video Player */}
-          <div className="lg:col-span-2">
-            <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold va-text-primary">Return Feed</h2>
+      {/* Main Content - Full Height */}
+      <div className="flex-1 p-4">
+        <div className="grid lg:grid-cols-4 gap-4 h-full">
+          {/* Video Player - Takes 3/4 of width */}
+          <div className="lg:col-span-3">
+            <div className="va-bg-dark-surface rounded-xl border va-border-dark h-full flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b va-border-dark">
+                <h2 className="text-lg font-semibold va-text-primary">Return Feed</h2>
                 <div className="flex gap-2">
                   {!isPlaying && !hasError && (
                     <Button 
@@ -276,7 +281,8 @@ export default function StudioViewer() {
                 </div>
               </div>
               
-              <div className="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
+              {/* Video takes remaining height */}
+              <div className="relative bg-black rounded-lg overflow-hidden flex-1 min-h-0">
                 <video 
                   ref={videoRef}
                   autoPlay 
@@ -306,7 +312,7 @@ export default function StudioViewer() {
                 )}
               </div>
 
-              <div className="text-sm va-text-secondary">
+              <div className="text-sm va-text-secondary p-4 border-t va-border-dark">
                 <strong>Return Feed:</strong> {returnFeed}
               </div>
             </div>
@@ -314,10 +320,12 @@ export default function StudioViewer() {
 
           {/* Control Panel */}
           <div className="lg:col-span-1">
-            <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark sticky top-8">
-              <h3 className="text-xl font-semibold va-text-primary mb-4">Stream Info</h3>
+            <div className="va-bg-dark-surface rounded-xl border va-border-dark h-full flex flex-col">
+              <div className="p-4 border-b va-border-dark">
+                <h3 className="text-lg font-semibold va-text-primary">Stream Info</h3>
+              </div>
               
-              <div className="space-y-4">
+              <div className="flex-1 p-4 space-y-4 overflow-y-auto">
                 <div className="va-bg-dark-surface-2 rounded-lg p-4">
                   <h4 className="font-medium va-text-primary flex items-center mb-2">
                     <i className="fas fa-satellite-dish mr-2 va-text-green"></i>
@@ -413,7 +421,6 @@ export default function StudioViewer() {
                   </div>
                 )}
 
-                
               </div>
             </div>
           </div>

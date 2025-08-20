@@ -213,18 +213,22 @@ export default function Session() {
   }
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold va-text-primary mb-2">Live Session</h1>
-          <p className="va-text-secondary">Publish your stream and view the studio return feed</p>
+    <div className="h-screen va-bg-dark flex flex-col">
+      {/* Compact Header */}
+      <div className="px-4 py-3 border-b va-border-dark flex items-center justify-center bg-va-dark-bg/50 backdrop-blur shrink-0">
+        <div className="text-center">
+          <h1 className="text-xl font-bold va-text-primary">Live Session</h1>
+          <p className="va-text-secondary text-sm">Publish your stream and view the studio return feed</p>
         </div>
+      </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+      {/* Main Content - Full Height */}
+      <div className="flex-1 p-4">
+        <div className="grid lg:grid-cols-2 gap-4 h-full">
           {/* Publisher Section */}
-          <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold va-text-primary">Publisher</h3>
+          <div className="va-bg-dark-surface rounded-xl border va-border-dark h-full flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b va-border-dark">
+              <h3 className="text-lg font-semibold va-text-primary">Publisher</h3>
               <span className={`px-3 py-1 rounded-full text-sm ${
                 isPublishing 
                   ? 'bg-green-500/20 text-green-400' 
@@ -233,6 +237,8 @@ export default function Session() {
                 {isPublishing ? 'Live' : 'Offline'}
               </span>
             </div>
+            
+            <div className="flex-1 p-4 flex flex-col">
             
             {/* Welcome Alert */}
             <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 mb-4">
@@ -301,12 +307,13 @@ export default function Session() {
                 </div>
               </div>
             </div>
+            </div>
           </div>
 
           {/* Player Section */}
-          <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold va-text-primary">Studio Return Feed</h3>
+          <div className="va-bg-dark-surface rounded-xl border va-border-dark h-full flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b va-border-dark">
+              <h3 className="text-lg font-semibold va-text-primary">Studio Return Feed</h3>
               <span 
                 className={`px-3 py-1 rounded-full text-sm ${
                   returnFeedStatus === 'connected' 
@@ -324,34 +331,35 @@ export default function Session() {
                 {returnFeedStatus === 'disconnected' && 'Disconnected'}
               </span>
             </div>
+            
+            <div className="flex-1 p-4 flex flex-col">
+              {/* Return Feed Control Button */}
+              <Button 
+                onClick={isReturnFeedStarted ? stopReturnFeed : startReturnFeed}
+                className={`w-full font-semibold mb-4 ${
+                  isReturnFeedStarted
+                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                    : 'va-bg-primary hover:va-bg-primary-dark text-va-dark-bg'
+                }`}
+                data-testid="button-toggle-return-feed"
+                disabled={returnFeedStatus === 'connecting'}
+              >
+                <i className={`fas ${isReturnFeedStarted ? 'fa-stop' : 'fa-play'} mr-2`}></i>
+                {isReturnFeedStarted ? 'Stop Return Feed' : 'Start Return Feed'}
+              </Button>
 
-            {/* Return Feed Control Button */}
-            <Button 
-              onClick={isReturnFeedStarted ? stopReturnFeed : startReturnFeed}
-              className={`w-full font-semibold mb-4 ${
-                isReturnFeedStarted
-                  ? 'bg-red-500 hover:bg-red-600 text-white'
-                  : 'va-bg-primary hover:va-bg-primary-dark text-va-dark-bg'
-              }`}
-              data-testid="button-toggle-return-feed"
-              disabled={returnFeedStatus === 'connecting'}
-            >
-              <i className={`fas ${isReturnFeedStarted ? 'fa-stop' : 'fa-play'} mr-2`}></i>
-              {isReturnFeedStarted ? 'Stop Return Feed' : 'Start Return Feed'}
-            </Button>
-
-            {/* Return Video Element */}
-            <div className="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
-              <video 
-                ref={playerVideoRef}
-                autoPlay 
-                muted 
-                controls 
-                playsInline 
-                className="w-full h-full object-cover"
-                data-testid="video-player"
-              />
-            </div>
+              {/* Return Video Element - Takes remaining height */}
+              <div className="relative bg-black rounded-lg overflow-hidden flex-1 min-h-0 mb-4">
+                <video 
+                  ref={playerVideoRef}
+                  autoPlay 
+                  muted 
+                  controls 
+                  playsInline 
+                  className="w-full h-full object-cover"
+                  data-testid="video-player"
+                />
+              </div>
 
             {/* Chat Container */}
             {showChat && (
@@ -383,6 +391,7 @@ export default function Session() {
                 </Button>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
