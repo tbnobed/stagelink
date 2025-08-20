@@ -509,47 +509,23 @@ export default function Links() {
       setShowChatForLink(null);
       disconnectFromChatWebSocket(linkId);
       
-      // When switching back from chat to preview, restart the connection
+      // When switching back from chat to preview, completely stop and restart
       const allLinks = [...(links || []), ...(viewerLinksData || [])];
       const link = allLinks.find(l => l.id === linkId);
       if (link && previewingLinks.has(linkId)) {
         const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
         if (streamName) {
-          console.log(`Restarting connection for stream: ${streamName} after closing chat`);
+          console.log(`Completely restarting preview for ${streamName} after closing chat`);
           
-          // Get the video element first
-          const videoElement = previewVideoRefs.current.get(linkId);
-          if (videoElement) {
-            console.log(`Stopping existing stream for video element: ${linkId}`);
-            // Stop all tracks if there's a stream
-            if (videoElement.srcObject && videoElement.srcObject instanceof MediaStream) {
-              videoElement.srcObject.getTracks().forEach(track => {
-                console.log(`Stopping track: ${track.kind}`);
-                track.stop();
-              });
-            }
-            videoElement.srcObject = null;
-            videoElement.load();
-          }
+          // COMPLETE STOP - use existing stopPreview function
+          stopPreview(linkId);
           
-          // Clear states
-          setPreviewingLinks(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(linkId);
-            return newSet;
-          });
-          
-          setVideosReady(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(linkId);
-            return newSet;
-          });
-          
-          // Start fresh connection immediately
+          // Wait a moment for cleanup
           setTimeout(() => {
-            console.log(`Starting fresh preview for stream: ${streamName}, linkId: ${linkId}`);
+            console.log(`Starting fresh preview for ${streamName}`);
+            // FRESH START - use existing previewStream function
             previewStream(streamName, linkId);
-          }, 50);
+          }, 200);
         }
       }
     } else {
