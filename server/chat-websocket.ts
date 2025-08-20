@@ -141,8 +141,9 @@ class ChatWebSocketServer {
 
     const clientKey = `${message.userId}-${message.sessionId}`;
     
-    // Remove existing client if reconnecting
-    if (this.clients.has(clientKey)) {
+    // For viewer users (negative IDs or IDs > 100000), allow multiple connections to the same session
+    // For regular users, enforce single connection per session
+    if (message.userId < 100000 && this.clients.has(clientKey)) {
       const existingClient = this.clients.get(clientKey)!;
       existingClient.ws.close();
       this.clients.delete(clientKey);

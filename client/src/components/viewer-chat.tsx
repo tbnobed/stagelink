@@ -6,6 +6,31 @@ import { Badge } from '@/components/ui/badge';
 import type { ChatMessage } from '@shared/schema';
 import { format } from 'date-fns';
 
+// Global connection manager to prevent multiple connections
+const connectionManager = {
+  connections: new Map<string, WebSocket>(),
+  getOrCreate: function(sessionId: string, createFn: () => WebSocket): WebSocket {
+    if (this.connections.has(sessionId)) {
+      const existing = this.connections.get(sessionId)!;
+      if (existing.readyState === WebSocket.OPEN) {
+        return existing;
+      } else {
+        this.connections.delete(sessionId);
+      }
+    }
+    const newWs = createFn();
+    this.connections.set(sessionId, newWs);
+    return newWs;
+  },
+  remove: function(sessionId: string) {
+    const ws = this.connections.get(sessionId);
+    if (ws) {
+      ws.close();
+      this.connections.delete(sessionId);
+    }
+  }
+};
+
 interface ViewerChatProps {
   sessionId: string;
   enabled: boolean;
@@ -13,6 +38,27 @@ interface ViewerChatProps {
 }
 
 export function ViewerChat({ sessionId, enabled, className = '' }: ViewerChatProps) {
+  // Temporarily disable all viewer chat functionality to prevent connection loops
+  return (
+    <div className={`va-bg-dark-surface-2 rounded-lg overflow-hidden flex flex-col ${className}`} data-testid="container-viewer-chat">
+      <div className="va-bg-dark-border p-3 border-b va-border-dark flex items-center justify-between">
+        <h4 className="font-medium va-text-primary flex items-center">
+          <i className="fas fa-comments mr-2 va-text-green"></i>
+          Live Chat
+        </h4>
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 rounded-full bg-orange-400"></div>
+          <span className="text-xs va-text-secondary">Temporarily Disabled</span>
+        </div>
+      </div>
+      <div className="flex-1 flex items-center justify-center p-8">
+        <p className="text-sm va-text-secondary text-center">
+          Chat feature is temporarily disabled for maintenance.<br/>
+          Please check back later.
+        </p>
+      </div>
+    </div>
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -22,11 +68,12 @@ export function ViewerChat({ sessionId, enabled, className = '' }: ViewerChatPro
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Create viewer user object  
+  // Create viewer user object with unique ID to prevent connection conflicts
+  const viewerUserId = useRef(Math.floor(Math.random() * 1000000) + 100000);
   const viewerUser = {
-    id: 999999, // Fixed viewer user ID like guest chat uses 999999
-    username: `Viewer_${sessionId}`,
-    role: 'user'
+    id: viewerUserId.current, // Stable unique viewer ID
+    username: `Viewer_${sessionId}_${viewerUserId.current.toString().slice(-6)}`,
+    role: 'user' as const
   };
 
   // Auto-scroll to bottom when new messages arrive
@@ -43,7 +90,8 @@ export function ViewerChat({ sessionId, enabled, className = '' }: ViewerChatPro
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/chat`;
         
-        wsRef.current = new WebSocket(wsUrl);
+        // Use connection manager to prevent duplicate connections
+        wsRef.current = connectionManager.getOrCreate(sessionId, () => new WebSocket(wsUrl));
 
         wsRef.current.onopen = () => {
           console.log('Viewer Chat WebSocket connected');
@@ -98,13 +146,8 @@ export function ViewerChat({ sessionId, enabled, className = '' }: ViewerChatPro
           console.log(`Viewer Chat WebSocket disconnected: ${event.code} ${event.reason}`);
           setIsConnected(false);
           
-          // Attempt to reconnect after 3 seconds if still enabled
-          if (enabled && viewerUser) {
-            console.log('Attempting to reconnect in 3 seconds...');
-            reconnectTimeoutRef.current = setTimeout(() => {
-              connect();
-            }, 3000);
-          }
+          // Don't auto-reconnect to prevent infinite loops
+          // User can refresh page to reconnect if needed
         };
 
         wsRef.current.onerror = (error) => {
@@ -177,6 +220,8 @@ export function ViewerChat({ sessionId, enabled, className = '' }: ViewerChatPro
   if (!enabled) {
     return null;
   }
+
+
 
   return (
     <div className={`va-bg-dark-surface-2 rounded-lg overflow-hidden flex flex-col ${className}`} data-testid="container-viewer-chat">
