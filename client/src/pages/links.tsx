@@ -848,82 +848,70 @@ export default function Links() {
                     )}
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="space-y-2">
-                    {/* Primary Actions Row */}
-                    <div className="flex gap-1">
-                      <Button 
-                        onClick={() => copyToClipboard(
-                          link.shortLink 
-                            ? `${window.location.origin}${link.shortLink}` 
-                            : link.url
-                        )}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg text-xs"
-                        data-testid={`button-copy-${link.id}`}
-                      >
-                        <i className="fas fa-copy mr-1"></i>
-                        Copy
-                      </Button>
-                      <Button 
-                        onClick={() => {
-                          if (link.type === 'guest') {
-                            window.open(`/viewer?stream=${encodeURIComponent(link.streamName || '')}`, '_blank');
-                          } else {
-                            window.open(link.url, '_blank');
-                          }
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs"
-                        data-testid={`button-open-${link.id}`}
-                      >
-                        <i className="fas fa-external-link-alt mr-1"></i>
-                        Open
-                      </Button>
-                    </div>
-                    
-                    {/* Secondary Actions Row */}
-                    <div className="flex gap-1">
-                      {link.type === 'guest' && link.streamName && (
-                        <Button 
-                          onClick={() => copyIngestLink(link.streamName!)}
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white text-xs"
-                          data-testid={`button-copy-ingest-${link.id}`}
-                        >
-                          <i className="fas fa-broadcast-tower mr-1"></i>
-                          Ingest
-                        </Button>
+                  {/* Action Buttons - Single Row */}
+                  <div className="flex gap-1 text-xs">
+                    <Button 
+                      onClick={() => copyToClipboard(
+                        link.shortLink 
+                          ? `${window.location.origin}${link.shortLink}` 
+                          : link.url
                       )}
-                      {/* Chat Button - Only show for chat-enabled links and if user is admin/engineer */}
-                      {link.chatEnabled && user && (user.role === 'admin' || user.role === 'engineer') && (
-                        <Button 
-                          onClick={() => toggleChatForLink(link.id)}
-                          variant="outline"
-                          size="sm"
-                          className={`border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs ${
-                            showChatForLink === link.id ? 'bg-blue-500 text-white' : ''
-                          }`}
-                          data-testid={`button-chat-${link.id}`}
-                        >
-                          <i className="fas fa-comments mr-1"></i>
-                          Chat
-                        </Button>
-                      )}
+                      variant="outline"
+                      size="sm"
+                      className="px-2 py-1 h-7 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg text-xs"
+                      data-testid={`button-copy-${link.id}`}
+                    >
+                      <i className="fas fa-copy"></i>
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        if (link.type === 'guest') {
+                          window.open(`/viewer?stream=${encodeURIComponent(link.streamName || '')}`, '_blank');
+                        } else {
+                          window.open(link.url, '_blank');
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="px-2 py-1 h-7 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs"
+                      data-testid={`button-open-${link.id}`}
+                    >
+                      <i className="fas fa-external-link-alt"></i>
+                    </Button>
+                    {link.type === 'guest' && link.streamName && (
                       <Button 
-                        onClick={() => deleteLink(link.id, link.type)}
+                        onClick={() => copyIngestLink(link.streamName!)}
                         variant="outline"
                         size="sm"
-                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs"
-                        data-testid={`button-delete-${link.id}`}
+                        className="px-2 py-1 h-7 border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white text-xs"
+                        data-testid={`button-copy-ingest-${link.id}`}
                       >
-                        <i className="fas fa-trash mr-1"></i>
-                        Delete
+                        <i className="fas fa-broadcast-tower"></i>
                       </Button>
-                    </div>
+                    )}
+                    {/* Chat Button - Only show for chat-enabled links and if user is admin/engineer */}
+                    {link.chatEnabled && user && (user.role === 'admin' || user.role === 'engineer') && (
+                      <Button 
+                        onClick={() => toggleChatForLink(link.id)}
+                        variant="outline"
+                        size="sm"
+                        className={`px-2 py-1 h-7 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs ${
+                          showChatForLink === link.id ? 'bg-blue-500 text-white' : ''
+                        }`}
+                        data-testid={`button-chat-${link.id}`}
+                      >
+                        <i className="fas fa-comments"></i>
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={() => deleteLink(link.id, link.type)}
+                      variant="outline"
+                      size="sm"
+                      className="px-2 py-1 h-7 border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs"
+                      data-testid={`button-delete-${link.id}`}
+                    >
+                      <i className="fas fa-trash"></i>
+                    </Button>
                   </div>
                 </div>
                 </div>
