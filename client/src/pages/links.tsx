@@ -507,33 +507,21 @@ export default function Links() {
       setShowChatForLink(null);
       disconnectFromChatWebSocket(linkId);
       
-      // When switching back to preview, check if we need to reconnect the video
+      // When switching back from chat to preview, restart the connection
       const link = [...(links || []), ...(viewerLinks || [])].find(l => l.id === linkId);
       if (link && previewingLinks.has(linkId)) {
-        // Re-establish video connection after a small delay
-        setTimeout(async () => {
-          const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
-          if (streamName) {
-            console.log(`Reconnecting preview for stream: ${streamName} after chat close`);
-            toast({
-              title: "Reconnecting Preview",
-              description: `Restoring video connection for ${streamName}`,
-            });
-            
-            // Clear any existing preview state first
-            setPreviewingLinks(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(linkId);
-              return newSet;
-            });
-            
-            // Wait for UI to update and reconnect
-            setTimeout(async () => {
-              console.log(`Actually reconnecting stream: ${streamName} for link: ${linkId}`);
-              await previewStream(streamName, linkId);
-            }, 300);
-          }
-        }, 300);
+        const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
+        if (streamName) {
+          console.log(`Restarting connection for stream: ${streamName} after closing chat`);
+          
+          // Stop the current preview completely
+          stopPreview(linkId);
+          
+          // Start fresh connection after a brief delay
+          setTimeout(() => {
+            previewStream(streamName, linkId);
+          }, 100);
+        }
       }
     } else {
       setShowChatForLink(linkId);
