@@ -514,13 +514,39 @@ export default function Links() {
         if (streamName) {
           console.log(`Restarting connection for stream: ${streamName} after closing chat`);
           
-          // Stop the current preview completely
-          stopPreview(linkId);
+          // Get the video element first
+          const videoElement = previewVideoRefs.current.get(linkId);
+          if (videoElement) {
+            console.log(`Stopping existing stream for video element: ${linkId}`);
+            // Stop all tracks if there's a stream
+            if (videoElement.srcObject && videoElement.srcObject instanceof MediaStream) {
+              videoElement.srcObject.getTracks().forEach(track => {
+                console.log(`Stopping track: ${track.kind}`);
+                track.stop();
+              });
+            }
+            videoElement.srcObject = null;
+            videoElement.load();
+          }
           
-          // Start fresh connection after a brief delay
+          // Clear states
+          setPreviewingLinks(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(linkId);
+            return newSet;
+          });
+          
+          setVideosReady(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(linkId);
+            return newSet;
+          });
+          
+          // Start fresh connection immediately
           setTimeout(() => {
+            console.log(`Starting fresh preview for stream: ${streamName}, linkId: ${linkId}`);
             previewStream(streamName, linkId);
-          }, 100);
+          }, 50);
         }
       }
     } else {
@@ -780,10 +806,13 @@ export default function Links() {
                               if (el.srcObject) {
                                 console.log(`Video element already has srcObject, attempting play...`);
                                 el.play().catch(e => console.error('Failed to play video:', e));
-                                // Check if video is ready after a small delay to avoid infinite loops
+                                // Check if video is ready and force refresh display
                                 setTimeout(() => {
                                   if (el && (!el.paused || el.readyState >= 3)) {
                                     console.log(`Video already ready for link: ${link.id}, readyState: ${el.readyState}, paused: ${el.paused}`);
+                                    // Force video to refresh its display
+                                    el.style.transform = 'translateZ(0)'; // Force hardware acceleration
+                                    el.style.backfaceVisibility = 'hidden';
                                     setVideosReady(prev => {
                                       if (!prev.has(link.id)) {
                                         return new Set([...prev, link.id]);
@@ -856,9 +885,6 @@ export default function Links() {
                               </div>
                               <div className="text-xs mt-1 opacity-75">
                                 WHEP connection active
-                              </div>
-                              <div className="text-xs mt-1 opacity-50">
-                                Ready: {videosReady.has(link.id) ? 'YES' : 'NO'}
                               </div>
                             </div>
                           </div>
