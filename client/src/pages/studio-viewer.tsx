@@ -413,31 +413,7 @@ export default function StudioViewer() {
                   </div>
                 )}
 
-                <div className="pt-4 border-t va-border-dark">
-                  <h4 className="font-medium va-text-primary mb-2">Quick Actions</h4>
-                  <div className="space-y-2">
-                    <Button 
-                      onClick={() => setLocation('/generator')}
-                      variant="outline"
-                      size="sm"
-                      className="w-full va-border-dark va-text-secondary hover:va-text-primary"
-                      data-testid="button-generate-links"
-                    >
-                      <i className="fas fa-link mr-2"></i>
-                      Generate New Links
-                    </Button>
-                    <Button 
-                      onClick={() => setLocation('/links')}
-                      variant="outline"
-                      size="sm"
-                      className="w-full va-border-dark va-text-secondary hover:va-text-primary"
-                      data-testid="button-view-links"
-                    >
-                      <i className="fas fa-list mr-2"></i>
-                      View All Links
-                    </Button>
-                  </div>
-                </div>
+                
               </div>
             </div>
           </div>
