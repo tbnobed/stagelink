@@ -576,24 +576,40 @@ export default function Links() {
                     <div className="flex-1 va-bg-dark-surface rounded-lg p-3 mb-4 overflow-y-auto max-h-64">
                       {chatHistory[link.id] && chatHistory[link.id].length > 0 ? (
                         <div className="space-y-3">
-                          {chatHistory[link.id].map((message: any, index: number) => (
-                            <div key={index} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-medium va-text-primary">{message.senderName}</span>
-                                <span className="va-text-secondary">{new Date(message.createdAt).toLocaleTimeString()}</span>
+                          {chatHistory[link.id].map((message: any, index: number) => {
+                            const isMyMessage = message.senderId === user?.id;
+                            return (
+                              <div 
+                                key={index} 
+                                className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
+                              >
+                                <div className={`max-w-[80%] ${isMyMessage ? 'ml-4' : 'mr-4'}`}>
+                                  <div className={`p-3 rounded-lg ${
+                                    message.messageType === 'broadcast' 
+                                      ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' 
+                                      : isMyMessage 
+                                        ? 'va-bg-primary/20 va-text-primary'
+                                        : 'va-bg-dark-surface-2 va-text-primary'
+                                  }`}>
+                                    <div className="flex items-start justify-between mb-1">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="font-medium text-sm">
+                                          {message.senderName}
+                                        </span>
+                                        {message.messageType === 'broadcast' && (
+                                          <i className="fas fa-broadcast-tower text-yellow-400"></i>
+                                        )}
+                                      </div>
+                                      <span className="text-xs va-text-secondary ml-2">
+                                        {new Date(message.createdAt).toLocaleTimeString()}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm leading-relaxed">{message.content}</p>
+                                  </div>
+                                </div>
                               </div>
-                              <div className={`p-2 rounded text-sm ${
-                                message.messageType === 'broadcast' 
-                                  ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' 
-                                  : 'va-bg-dark-surface-2 va-text-primary'
-                              }`}>
-                                {message.messageType === 'broadcast' && (
-                                  <i className="fas fa-broadcast-tower mr-1 text-yellow-400"></i>
-                                )}
-                                {message.content}
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="text-center va-text-secondary py-8">

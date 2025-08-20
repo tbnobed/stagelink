@@ -188,38 +188,47 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
       {/* Messages */}
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-3 space-y-3">
-          {messages.filter(shouldShowMessage).map((message) => (
-            <div
-              key={message.id}
-              className={`p-3 rounded-lg ${
-                message.senderId === guestUser.id
-                  ? 'va-bg-primary/20 ml-4'
-                  : 'va-bg-dark-surface mr-4'
-              }`}
-            >
-              <div className="flex items-start justify-between mb-1">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium va-text-primary text-sm">
-                    {message.senderName}
-                  </span>
-                  {message.messageType === 'broadcast' && (
-                    <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/50">
-                      Broadcast
-                    </Badge>
-                  )}
-                  {message.messageType === 'individual' && message.recipientId && (
-                    <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/50">
-                      Private
-                    </Badge>
-                  )}
+          {messages.filter(shouldShowMessage).map((message) => {
+            const isMyMessage = message.senderId === guestUser.id;
+            return (
+              <div 
+                key={message.id}
+                className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`max-w-[80%] ${isMyMessage ? 'ml-4' : 'mr-4'}`}>
+                  <div className={`p-3 rounded-lg ${
+                    message.messageType === 'broadcast'
+                      ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                      : isMyMessage 
+                        ? 'va-bg-primary/20 va-text-primary'
+                        : 'va-bg-dark-surface va-text-primary'
+                  }`}>
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium text-sm">
+                          {message.senderName}
+                        </span>
+                        {message.messageType === 'broadcast' && (
+                          <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/50">
+                            Broadcast
+                          </Badge>
+                        )}
+                        {message.messageType === 'individual' && message.recipientId && (
+                          <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/50">
+                            Private
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs va-text-secondary ml-2">
+                        {format(new Date(message.createdAt), 'HH:mm')}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  </div>
                 </div>
-                <span className="text-xs va-text-secondary">
-                  {format(new Date(message.createdAt), 'HH:mm')}
-                </span>
               </div>
-              <p className="va-text-primary text-sm leading-relaxed">{message.content}</p>
-            </div>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
