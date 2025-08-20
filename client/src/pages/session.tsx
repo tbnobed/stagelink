@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { initializeStreaming, startPublishing, stopPublishing, startPlayback } from "@/lib/streaming";
 import { Chat } from "@/components/chat";
+import { GuestChat } from "@/components/guest-chat";
 
 export default function Session() {
   const [isPublishing, setIsPublishing] = useState(false);
@@ -17,6 +18,7 @@ export default function Session() {
   const [tokenValid, setTokenValid] = useState(false);
   const [returnFeedStatus, setReturnFeedStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed' | 'retrying'>('disconnected');
   const [isReturnFeedStarted, setIsReturnFeedStarted] = useState(false);
+  const [guestUser, setGuestUser] = useState<any>(null);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
   const initializationRef = useRef(false);
@@ -70,6 +72,13 @@ export default function Session() {
           }
           
           setTokenValid(true);
+          
+          // Create a guest user context for chat
+          setGuestUser({
+            id: 999999, // Special guest user ID
+            username: `Guest_${stream || 'User'}`,
+            role: 'user'
+          });
         } catch (error) {
           console.error('Token validation failed:', error);
           toast({
@@ -378,10 +387,11 @@ export default function Session() {
               </div>
 
             {/* Chat Container */}
-            {showChat && streamName && (
-              <Chat 
+            {showChat && streamName && guestUser && (
+              <GuestChat 
                 sessionId={streamName}
                 enabled={showChat}
+                guestUser={guestUser}
                 className="h-96"
               />
             )}
