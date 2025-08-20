@@ -71,24 +71,25 @@ CREATE TABLE IF NOT EXISTS "short_links" (
 
 -- Viewer links table for studio monitoring
 CREATE TABLE IF NOT EXISTS "viewer_links" (
-        "id" varchar PRIMARY KEY NOT NULL,
-        "return_feed" varchar NOT NULL,
+        "id" text PRIMARY KEY NOT NULL,
+        "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
         "url" text NOT NULL,
-        "expires_at" timestamp,
+        "session_token" text UNIQUE,
         "created_at" timestamp DEFAULT now() NOT NULL,
-        "created_by" integer NOT NULL,
-        "session_token" varchar,
-        CONSTRAINT "viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+        "expires_at" timestamp,
+        "created_by" integer REFERENCES "users"("id")
 );
 
 -- Short viewer links table for URL shortening
 CREATE TABLE IF NOT EXISTS "short_viewer_links" (
-        "id" varchar(6) PRIMARY KEY NOT NULL,
-        "viewer_link_id" varchar NOT NULL,
+        "id" text PRIMARY KEY NOT NULL,
+        "return_feed" text NOT NULL,
+        "chat_enabled" boolean DEFAULT false NOT NULL,
+        "session_token" text UNIQUE,
         "created_at" timestamp DEFAULT now() NOT NULL,
-        "session_token" varchar,
-        CONSTRAINT "short_viewer_links_viewer_link_id_viewer_links_id_fk" FOREIGN KEY ("viewer_link_id") REFERENCES "viewer_links"("id") ON DELETE cascade ON UPDATE no action
+        "expires_at" timestamp,
+        "created_by" integer REFERENCES "users"("id")
 );
 
 -- Session tokens table for reusable link security

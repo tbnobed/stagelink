@@ -1,0 +1,27 @@
+irtual-audience-db-v2   | 2025-08-20 01:28:38.289 UTC [151] ERROR:  value too long for type character varying(6)
+virtual-audience-db-v2   | 2025-08-20 01:28:38.289 UTC [151] STATEMENT:  insert into "short_viewer_links" ("id", "return_feed", "chat_enabled", "session_token", "created_at", "expires_at", "created_by") values ($1, $2, $3, default, $4, $5, $6) returning "id", "return_feed", "chat_enabled", "session_token", "created_at", "expires_at", "created_by"
+virtual-audience-app-v2  | Failed to create short viewer link: error: value too long for type character varying(6)
+virtual-audience-app-v2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2  |     at async DatabaseStorage.createShortViewerLink (file:///app/dist/production.js:378:35)
+virtual-audience-app-v2  |     at async file:///app/dist/production.js:917:31 {
+virtual-audience-app-v2  |   length: 97,
+virtual-audience-app-v2  |   severity: 'ERROR',
+virtual-audience-app-v2  |   code: '22001',
+virtual-audience-app-v2  |   detail: undefined,
+virtual-audience-app-v2  |   hint: undefined,
+virtual-audience-app-v2  |   position: undefined,
+virtual-audience-app-v2  |   internalPosition: undefined,
+virtual-audience-app-v2  |   internalQuery: undefined,
+virtual-audience-app-v2  |   where: undefined,
+virtual-audience-app-v2  |   schema: undefined,
+virtual-audience-app-v2  |   table: undefined,
+virtual-audience-app-v2  |   column: undefined,
+virtual-audience-app-v2  |   dataType: undefined,
+virtual-audience-app-v2  |   constraint: undefined,
+virtual-audience-app-v2  |   file: 'varchar.c',
+virtual-audience-app-v2  |   line: '632',
+virtual-audience-app-v2  |   routine: 'varchar'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | 1:28:38 AM [express] POST /api/short-viewer-links 500 in 34ms :: {"error":"Failed to create short vi…

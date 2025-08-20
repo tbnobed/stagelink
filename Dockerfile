@@ -124,16 +124,15 @@ CREATE TABLE IF NOT EXISTS "short_links" (
         "created_by" integer REFERENCES "users"("id")
 );
 
--- Create short_viewer_links table
+-- Create short_viewer_links table with correct schema
 CREATE TABLE IF NOT EXISTS "short_viewer_links" (
-        "id" varchar(6) PRIMARY KEY NOT NULL,
-        "return_feed" varchar NOT NULL,
+        "id" text PRIMARY KEY NOT NULL,
+        "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
-        "session_token" varchar,
+        "session_token" text UNIQUE,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "expires_at" timestamp,
-        "created_by" integer NOT NULL,
-        CONSTRAINT "short_viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+        "created_by" integer REFERENCES "users"("id")
 );
 
 -- Create session_tokens table
@@ -303,10 +302,10 @@ CREATE TABLE IF NOT EXISTS "generated_viewer_links" (
 -- Fix short_viewer_links table structure - drop and recreate with correct schema
 DROP TABLE IF EXISTS "short_viewer_links";
 CREATE TABLE IF NOT EXISTS "short_viewer_links" (
-        "id" varchar(6) PRIMARY KEY NOT NULL,
-        "return_feed" varchar NOT NULL,
+        "id" text PRIMARY KEY NOT NULL,
+        "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
-        "session_token" varchar,
+        "session_token" text UNIQUE,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "expires_at" timestamp,
         "created_by" integer NOT NULL,
