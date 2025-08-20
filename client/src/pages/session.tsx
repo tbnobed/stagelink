@@ -36,6 +36,12 @@ export default function Session() {
 
       // Store chat enabled state
       setChatEnabled(chatEnabledParam);
+      console.log('Chat enabled from URL:', chatEnabledParam);
+      
+      // Show chat by default if enabled
+      if (chatEnabledParam) {
+        setShowChat(true);
+      }
 
       // Validate session token if provided
       if (token) {
@@ -184,8 +190,14 @@ export default function Session() {
   };
 
   const toggleChat = () => {
+    console.log('Toggling chat, current showChat:', showChat);
     setShowChat(!showChat);
   };
+  
+  // Debug effect to log chat states
+  useEffect(() => {
+    console.log('Chat states - enabled:', chatEnabled, 'showChat:', showChat);
+  }, [chatEnabled, showChat]);
 
   // Show loading state while validating token
   if (isValidatingToken) {
@@ -373,7 +385,8 @@ export default function Session() {
 
             {/* Chat Toggle - only show if chat is enabled for this link */}
             {chatEnabled && !showChat && (
-              <div className="text-center">
+              <div className="text-center p-4 border-2 border-green-500">
+                <p className="text-green-400 mb-2">Chat Available</p>
                 <Button 
                   onClick={toggleChat}
                   variant="outline"
@@ -382,6 +395,22 @@ export default function Session() {
                 >
                   <i className="fas fa-comments mr-2"></i>
                   Show Chat
+                </Button>
+              </div>
+            )}
+            
+            {/* Chat hide button when showing */}
+            {chatEnabled && showChat && (
+              <div className="text-center mb-4">
+                <Button 
+                  onClick={toggleChat}
+                  variant="outline"
+                  size="sm"
+                  className="va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
+                  data-testid="button-hide-chat"
+                >
+                  <i className="fas fa-times mr-2"></i>
+                  Hide Chat
                 </Button>
               </div>
             )}
