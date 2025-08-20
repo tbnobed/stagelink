@@ -64,7 +64,7 @@ class ChatWebSocketServer {
     
     // Set up periodic ping to keep connections alive and cleanup stale connections
     setInterval(() => {
-      this.wss.clients.forEach((ws) => {
+      this.wss.clients.forEach((ws: WebSocket & { isAlive?: boolean }) => {
         if (ws.isAlive === false) {
           console.log('Terminating stale WebSocket connection');
           ws.terminate();
@@ -85,10 +85,10 @@ class ChatWebSocketServer {
     console.log('New WebSocket connection');
 
     // Set up connection keepalive
-    ws.isAlive = true;
+    (ws as any).isAlive = true;
     
     ws.on('pong', () => {
-      ws.isAlive = true;
+      (ws as any).isAlive = true;
     });
 
     ws.on('message', async (data: Buffer) => {

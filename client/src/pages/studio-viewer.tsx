@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { startPlayback, initializeStreaming } from "@/lib/streaming";
-import { Chat } from "@/components/chat";
+import { ViewerChat } from "@/components/viewer-chat";
 
 // Global variables for SRS SDK
 declare global {
@@ -23,6 +23,7 @@ export default function StudioViewer() {
   const [returnFeed, setReturnFeed] = useState("");
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
+  const [viewerUsername, setViewerUsername] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
   const { toast } = useToast();
@@ -94,6 +95,10 @@ export default function StudioViewer() {
       setReturnFeed(returnParam);
       setChatEnabled(chatParam === 'true');
       setShowChat(chatParam === 'true');
+      
+      // Generate viewer username
+      const timestamp = Date.now().toString().slice(-6);
+      setViewerUsername(`Viewer_${returnParam.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}`);
       
       // Initialize streaming configuration
       initializeStreaming({
@@ -390,9 +395,10 @@ export default function StudioViewer() {
                     >
                       <i className="fas fa-times"></i>
                     </Button>
-                    <Chat 
+                    <ViewerChat 
                       sessionId={returnFeed}
                       enabled={showChat}
+                      viewerUsername={viewerUsername}
                       className="h-96"
                     />
                   </div>
