@@ -130,14 +130,23 @@ class ChatWebSocketServer {
     }
     this.sessionParticipants.get(message.sessionId)!.add(clientKey);
 
-    // Add participant to database (this handles duplicates by checking userId + sessionId)
-    await storage.addChatParticipant({
-      sessionId: message.sessionId,
-      userId: message.userId,
-      username: message.username,
-      role: message.role,
-      isOnline: true,
-    });
+    // Update participant status instead of adding new participant
+    const existingParticipants = await storage.getChatParticipants(message.sessionId);
+    const existingParticipant = existingParticipants.find(p => p.userId === message.userId);
+    
+    if (existingParticipant) {
+      // Update existing participant to online
+      await storage.updateParticipantStatus(message.sessionId, message.userId, true);
+    } else {
+      // Add new participant only if they don't exist
+      await storage.addChatParticipant({
+        sessionId: message.sessionId,
+        userId: message.userId,
+        username: message.username,
+        role: message.role,
+        isOnline: true,
+      });
+    }
 
     // Send participant list to the new client
     await this.sendParticipantsList(message.sessionId);

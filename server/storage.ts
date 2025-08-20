@@ -1039,29 +1039,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant> {
-    // Check if participant already exists by userId AND sessionId (not just username)
-    const existing = await db.select()
-      .from(chatParticipants)
-      .where(
-        and(
-          eq(chatParticipants.sessionId, participant.sessionId),
-          eq(chatParticipants.userId, participant.userId)
-        )
-      );
-
-    if (existing.length > 0) {
-      // Update existing participant as online
-      const [updated] = await db.update(chatParticipants)
-        .set({
-          isOnline: true,
-          lastSeenAt: new Date(),
-        })
-        .where(eq(chatParticipants.id, existing[0].id))
-        .returning();
-      return updated;
-    }
-
-    // Create new participant
+    // Simple create - duplicates are now handled in WebSocket join logic
     const [chatParticipant] = await db
       .insert(chatParticipants)
       .values({
