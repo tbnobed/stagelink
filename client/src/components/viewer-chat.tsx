@@ -91,7 +91,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
         <div className="flex items-center gap-2">
           <h3 className="font-medium va-text-primary">Chat</h3>
           <Badge variant="outline" className="text-xs">
-            {participants.filter(p => p.isOnline).length} online
+            Viewer
           </Badge>
         </div>
         <div className="flex items-center gap-2">
