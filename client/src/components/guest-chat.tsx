@@ -83,8 +83,15 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
                   setMessages(data.messages);
                 }
                 break;
+              case 'participants_list':
+                // Handle participant updates - for viewer chat we just log it
+                console.log('Participants updated:', data.participants);
+                break;
               case 'error':
                 setError(data.error || 'Unknown error');
+                break;
+              default:
+                console.log('Unknown message type:', data.type);
                 break;
             }
           } catch (err) {
