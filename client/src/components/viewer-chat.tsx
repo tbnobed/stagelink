@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { useViewerChat } from '@/hooks/use-viewer-chat';
 import type { ChatMessage } from '@shared/schema';
 import { format } from 'date-fns';
 
@@ -24,9 +23,9 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Create viewer user object like session page
+  // Create viewer user object EXACTLY like session page guest user
   const viewerUser = {
-    id: 999999, // Same ID as session page guest
+    id: 999999, // EXACT same ID as session page guest
     username: viewerUsername || `Viewer_${sessionId}`,
     role: 'user'
   };
@@ -36,7 +35,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Connect to WebSocket when enabled - EXACT copy from GuestChat
+  // Connect to WebSocket when enabled - EXACT COPY from guest chat
   useEffect(() => {
     if (!enabled || !viewerUser || !sessionId) return;
 
@@ -52,7 +51,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
           setIsConnected(true);
           setError(null);
 
-          // Send join message - EXACT copy from GuestChat
+          // Send join message - EXACT COPY from guest chat
           wsRef.current?.send(JSON.stringify({
             type: 'join',
             sessionId,
@@ -61,7 +60,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
             role: viewerUser.role,
           }));
           
-          // Fetch existing messages - EXACT copy from GuestChat
+          // Fetch existing messages - EXACT COPY from guest chat
           fetch(`/api/chat/messages/${sessionId}`)
             .then(res => res.json())
             .then(data => {
@@ -146,7 +145,7 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
   const handleSendMessage = () => {
     if (!newMessage.trim() || !isConnected || !wsRef.current) return;
 
-    // Send message - EXACT copy from GuestChat
+    // Send message - EXACT COPY from guest chat
     wsRef.current.send(JSON.stringify({
       type: 'chat_message',
       sessionId,
@@ -163,8 +162,6 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
       handleSendMessage();
     }
   };
-
-
 
   if (!enabled) {
     return null;
@@ -201,62 +198,47 @@ export function ViewerChat({ sessionId, enabled, viewerUsername, className = '' 
       <ScrollArea className="flex-1 p-3">
         <div className="space-y-3">
           {messages.map((message) => (
-            <div key={message.id} className="va-bg-dark-surface-2 rounded-lg p-3">
-              <div className="flex items-start justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium va-text-primary text-sm">
-                    {message.senderName}
-                  </span>
-                  {message.messageType === 'broadcast' && (
-                    <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/50">
-                      Broadcast
-                    </Badge>
-                  )}
-                  {message.messageType === 'individual' && message.recipientId && (
-                    <Badge variant="outline" className="text-xs bg-blue-500/20 text-blue-400 border-blue-500/50">
-                      Private
-                    </Badge>
-                  )}
-                </div>
+            <div
+              key={message.id}
+              className="flex flex-col space-y-1"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium va-text-primary">
+                  {message.senderName}
+                </span>
                 <span className="text-xs va-text-secondary">
-                  {format(new Date(message.createdAt), 'HH:mm')}
+                  {format(new Date(message.createdAt), 'h:mm a')}
                 </span>
               </div>
-              <p className="va-text-secondary text-sm whitespace-pre-wrap">
-                {message.content}
-              </p>
+              <p className="text-sm va-text-secondary">{message.content}</p>
             </div>
           ))}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
-      {/* Input */}
+      {/* Message Input */}
       <div className="p-3 border-t va-border-dark">
         <div className="flex gap-2">
           <Input
             ref={inputRef}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleKeyPress}
-            placeholder={isConnected ? `Message as ${viewerUsername}...` : "Connecting..."}
+            onKeyPress={handleKeyPress}
+            placeholder={isConnected ? "Type a message..." : "Connecting..."}
             disabled={!isConnected}
-            className="flex-1 text-sm va-bg-dark-surface va-border-dark va-text-primary"
-            data-testid="input-viewer-message"
+            className="flex-1"
+            data-testid="input-chat-message"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || !isConnected}
             size="sm"
-            className="va-bg-primary hover:bg-green-600 text-va-dark-bg"
-            data-testid="button-send-viewer-message"
+            data-testid="button-send-message"
           >
-            <i className="fas fa-paper-plane"></i>
+            Send
           </Button>
         </div>
-        <p className="text-xs va-text-secondary mt-2">
-          Note: As a viewer, you can only see public and broadcast messages.
-        </p>
       </div>
     </div>
   );
