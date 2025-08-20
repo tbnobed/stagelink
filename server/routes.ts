@@ -646,27 +646,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Broadcast the message via WebSocket
       const chatWS = (global as any).chatWebSocketServer;
       if (chatWS) {
-        if (messageType === 'broadcast') {
-          // Send to all connected users across all sessions
-          chatWS.broadcastToAll({
-            type: 'message',
-            data: {
-              ...chatMessage,
-              isFromAdmin: true,
-              isBroadcast: true,
-            }
-          });
-        } else {
-          // Send to specific session
-          chatWS.sendToSession(sessionId, {
-            type: 'message',
-            data: {
-              ...chatMessage,
-              isFromAdmin: true,
-              isBroadcast: false,
-            }
-          });
-        }
+        // Send the message to all clients in the session
+        const messageToSend = {
+          type: 'new_message',
+          message: chatMessage,
+        };
+        
+        // Get all clients for this session and send the message
+        chatWS.sendToSession(sessionId, messageToSend);
       }
 
       res.json({ success: true, message: 'Message sent successfully' });
