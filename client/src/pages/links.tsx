@@ -419,14 +419,14 @@ export default function Links() {
             {links.map((link: GeneratedLink) => (
               <div key={link.id} className="va-bg-dark-surface rounded-lg border va-border-dark hover:border-va-primary/50 transition-all duration-200 hover:shadow-lg overflow-hidden">
                 {/* Chat Interface or Preview Window */}
-                {showChatForLink === link.id && link.type === 'guest' && link.chatEnabled ? (
+                {showChatForLink === link.id && link.chatEnabled ? (
                   // Chat Interface - Full transformation
                   <div className="va-bg-dark-surface-2 p-4 flex flex-col min-h-[500px]">
                     {/* Chat Header */}
                     <div className="flex items-center justify-between mb-4 pb-2 border-b va-border-dark">
                       <div className="flex items-center">
                         <i className="fas fa-comments text-blue-400 mr-2"></i>
-                        <h3 className="font-semibold va-text-primary">Chat: {link.streamName}</h3>
+                        <h3 className="font-semibold va-text-primary">Chat: {link.streamName || link.returnFeed}</h3>
                       </div>
                       <Button 
                         onClick={() => setShowChatForLink(null)}
@@ -513,7 +513,7 @@ export default function Links() {
                         <Input
                           value={chatMessages[link.id] || ''}
                           onChange={(e) => setChatMessages(prev => ({ ...prev, [link.id]: e.target.value }))}
-                          placeholder={messageType === 'broadcast' ? "Broadcast to all users..." : `Message ${link.streamName}...`}
+                          placeholder={messageType === 'broadcast' ? "Broadcast to all users..." : `Message ${link.streamName || link.returnFeed}...`}
                           className="flex-1 text-sm va-bg-dark-surface va-border-dark va-text-primary"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
@@ -704,8 +704,8 @@ export default function Links() {
                           Ingest
                         </Button>
                       )}
-                      {/* Chat Button - Only show for chat-enabled guest links and if user is admin/engineer */}
-                      {link.type === 'guest' && link.chatEnabled && user && (user.role === 'admin' || user.role === 'engineer') && (
+                      {/* Chat Button - Only show for chat-enabled links and if user is admin/engineer */}
+                      {link.chatEnabled && user && (user.role === 'admin' || user.role === 'engineer') && (
                         <Button 
                           onClick={() => toggleChatForLink(link.id)}
                           variant="outline"
