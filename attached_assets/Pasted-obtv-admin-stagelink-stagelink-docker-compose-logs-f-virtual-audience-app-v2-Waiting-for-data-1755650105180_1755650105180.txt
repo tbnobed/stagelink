@@ -1,0 +1,96 @@
+obtv-admin@stagelink:~/stagelink$ docker-compose logs -f
+virtual-audience-app-v2  | Waiting for database...
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | PostgreSQL Database directory appears to contain a database; Skipping initialization
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | 2025-08-20 00:33:59.722 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2   | 2025-08-20 00:33:59.722 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+virtual-audience-db-v2   | 2025-08-20 00:33:59.722 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+virtual-audience-db-v2   | 2025-08-20 00:33:59.725 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2   | 2025-08-20 00:33:59.731 UTC [29] LOG:  database system was shut down at 2025-08-20 00:33:12 UTC
+virtual-audience-db-v2   | 2025-08-20 00:33:59.742 UTC [1] LOG:  database system is ready to accept connections
+virtual-audience-app-v2  | Setting up Virtual Audience Platform with authentication and URL shortening...
+virtual-audience-app-v2  | Existing data detected (2 users) - preserving data and updating schema...
+virtual-audience-app-v2  | No config path provided, using default 'drizzle.config.ts'
+virtual-audience-app-v2  | Reading config file '/app/drizzle.config.ts'
+virtual-audience-app-v2  | Using 'pg' driver for database querying
+virtual-audience-app-v2  | [⣷] Pulling schema from database...
+[⣯] Pulling schema from database...
+[✓] Pulling schema from database...
+virtual-audience-app-v2  |
+virtual-audience-app-v2  | Is session_tokens table created or renamed from another table?
+virtual-audience-app-v2  | ❯ + session_tokens           create table
+virtual-audience-app-v2  |   ~ session › session_tokens rename tablenpm notice
+virtual-audience-app-v2  | npm notice New major version of npm available! 10.8.2 -> 11.5.2
+virtual-audience-app-v2  | npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+virtual-audience-app-v2  | npm notice To update run: npm install -g npm@11.5.2
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | Starting Virtual Audience Platform...
+virtual-audience-app-v2  | Using PostgreSQL driver for database connection
+virtual-audience-app-v2  | Default admin user already exists
+virtual-audience-app-v2  | 12:34:32 AM [express] serving on port 5000
+virtual-audience-app-v2  | 12:34:36 AM [express] GET /api/user 304 in 13ms :: {"id":1,"username":"admin","email":"admin@stagelin…
+virtual-audience-app-v2  | Creating link with data: {
+virtual-audience-app-v2  |   id: '1755650086168',
+virtual-audience-app-v2  |   streamName: 'onberds',
+virtual-audience-app-v2  |   returnFeed: 'livestream5',
+virtual-audience-app-v2  |   chatEnabled: true,
+virtual-audience-app-v2  |   url: 'https://dev.stagelinq.com/session?stream=onberds&return=livestream5&chat=true',
+virtual-audience-app-v2  |   expiresAt: null
+virtual-audience-app-v2  | }
+virtual-audience-db-v2   | 2025-08-20 00:34:47.922 UTC [66] ERROR:  relation "session_tokens" does not exist at character 13
+virtual-audience-db-v2   | 2025-08-20 00:34:47.922 UTC [66] STATEMENT:  insert into "session_tokens" ("id", "link_id", "link_type", "created_at", "expires_at", "created_by") values ($1, $2, $3, $4, $5, $6) returning "id", "link_id", "link_type", "created_at", "expires_at", "created_by"
+virtual-audience-app-v2  | Failed to create link: error: relation "session_tokens" does not exist
+virtual-audience-app-v2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2  |     at async DatabaseStorage.createSessionToken (file:///app/dist/production.js:435:25)
+virtual-audience-app-v2  |     at async file:///app/dist/production.js:793:28 {
+virtual-audience-app-v2  |   length: 113,
+virtual-audience-app-v2  |   severity: 'ERROR',
+virtual-audience-app-v2  |   code: '42P01',
+virtual-audience-app-v2  |   detail: undefined,
+virtual-audience-app-v2  |   hint: undefined,
+virtual-audience-app-v2  |   position: '13',
+virtual-audience-app-v2  |   internalPosition: undefined,
+virtual-audience-app-v2  |   internalQuery: undefined,
+virtual-audience-app-v2  |   where: undefined,
+virtual-audience-app-v2  |   schema: undefined,
+virtual-audience-app-v2  |   table: undefined,
+virtual-audience-app-v2  |   column: undefined,
+virtual-audience-app-v2  |   dataType: undefined,
+virtual-audience-app-v2  |   constraint: undefined,
+virtual-audience-app-v2  |   file: 'parse_relation.c',
+virtual-audience-app-v2  |   line: '1392',
+virtual-audience-app-v2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | 12:34:47 AM [express] POST /api/links 500 in 80ms :: {"error":"Failed to create link"}
+virtual-audience-db-v2   | 2025-08-20 00:34:48.149 UTC [67] ERROR:  column "session_token" does not exist at character 60
+virtual-audience-db-v2   | 2025-08-20 00:34:48.149 UTC [67] STATEMENT:  select "id", "stream_name", "return_feed", "chat_enabled", "session_token", "created_at", "expires_at", "created_by" from "short_links" where "short_links"."id" = $1
+virtual-audience-app-v2  | Failed to create short link: error: column "session_token" does not exist
+virtual-audience-app-v2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2  |     at async DatabaseStorage.getShortLink (file:///app/dist/production.js:259:24)
+virtual-audience-app-v2  |     at async file:///app/dist/production.js:1027:26
+virtual-audience-app-v2  |     at async generateUniqueShortCode (file:///app/dist/production.js:667:10)
+virtual-audience-app-v2  |     at async file:///app/dist/production.js:1026:25 {
+virtual-audience-app-v2  |   length: 113,
+virtual-audience-app-v2  |   severity: 'ERROR',
+virtual-audience-app-v2  |   code: '42703',
+virtual-audience-app-v2  |   detail: undefined,
+virtual-audience-app-v2  |   hint: undefined,
+virtual-audience-app-v2  |   position: '60',
+virtual-audience-app-v2  |   internalPosition: undefined,
+virtual-audience-app-v2  |   internalQuery: undefined,
+virtual-audience-app-v2  |   where: undefined,
+virtual-audience-app-v2  |   schema: undefined,
+virtual-audience-app-v2  |   table: undefined,
+virtual-audience-app-v2  |   column: undefined,
+virtual-audience-app-v2  |   dataType: undefined,
+virtual-audience-app-v2  |   constraint: undefined,
+virtual-audience-app-v2  |   file: 'parse_relation.c',
+virtual-audience-app-v2  |   line: '3665',
+virtual-audience-app-v2  |   routine: 'errorMissingColumn'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | 12:34:48 AM [express] POST /api/short-links 500 in 45ms :: {"error":"Failed to create short link"}
