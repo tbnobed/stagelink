@@ -518,10 +518,12 @@ export default function Links() {
       const wasPreviewingBeforeChat = previewingLinks.has(linkId);
       
       console.log(`Link found: ${!!link}, was previewing before chat: ${wasPreviewingBeforeChat}`);
+      console.log(`Link details:`, link);
+      console.log(`Current previewingLinks:`, Array.from(previewingLinks));
       
       if (link && wasPreviewingBeforeChat) {
         const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
-        console.log(`Stream name: ${streamName}`);
+        console.log(`Stream name: ${streamName}, link type: ${link.type}`);
         
         if (streamName) {
           console.log(`Completely restarting preview for ${streamName} after closing chat`);
@@ -535,7 +537,11 @@ export default function Links() {
             // FRESH START - use existing previewStream function
             previewStream(streamName, linkId);
           }, 200);
+        } else {
+          console.log(`No stream name found for restart`);
         }
+      } else {
+        console.log(`Restart conditions not met - Link: ${!!link}, Was previewing: ${wasPreviewingBeforeChat}`);
       }
     } else {
       console.log(`Opening chat for ${linkId}`);
@@ -665,7 +671,7 @@ export default function Links() {
                         <h3 className="font-semibold va-text-primary">Chat: {link.streamName || link.returnFeed}</h3>
                       </div>
                       <Button 
-                        onClick={() => setShowChatForLink(null)}
+                        onClick={() => toggleChatForLink(link.id)}
                         variant="outline"
                         size="sm"
                         className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
