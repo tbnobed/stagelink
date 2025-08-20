@@ -38,6 +38,15 @@ CREATE TABLE IF NOT EXISTS "generated_viewer_links" (
         CONSTRAINT "generated_viewer_links_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
 );
 
+-- Create short_viewer_links table if it doesn't exist
+CREATE TABLE IF NOT EXISTS "short_viewer_links" (
+        "id" varchar(6) PRIMARY KEY NOT NULL,
+        "viewer_link_id" varchar NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "session_token" varchar,
+        CONSTRAINT "short_viewer_links_viewer_link_id_viewer_links_id_fk" FOREIGN KEY ("viewer_link_id") REFERENCES "viewer_links"("id") ON DELETE cascade ON UPDATE no action
+);
+
 -- Add session_token column to links table if it doesn't exist - handle both old and new table names
 DO $$ 
 BEGIN 
