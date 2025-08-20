@@ -52,6 +52,11 @@ COPY --from=builder --chown=nodejs:nodejs /app/drizzle.config.ts ./drizzle.confi
 COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 COPY --from=builder --chown=nodejs:nodejs /app/server ./server
 
+# Copy migration files for manual emergency use if needed
+COPY --chown=nodejs:nodejs migrate-session-tokens.sql ./migrate-session-tokens.sql
+COPY --chown=nodejs:nodejs apply-session-token-migration.sh ./apply-session-token-migration.sh
+COPY --chown=nodejs:nodejs DOCKER-SESSION-TOKEN-FIX.md ./DOCKER-SESSION-TOKEN-FIX.md
+
 # Create startup script before switching to nodejs user
 RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
@@ -71,7 +76,93 @@ if [ "$EXISTING_USERS" = "0" ] || [ -z "$EXISTING_USERS" ]; then
   echo "yes" | npx drizzle-kit push --force 2>&1 || echo "Schema push completed"
 else
   echo "Existing data detected ($EXISTING_USERS users) - preserving data and updating schema..."
-  # For existing deployments, only update schema without destroying data
+  
+  # Check if session_tokens table exists - if not, we need to run migration
+  SESSION_TOKENS_EXISTS=$(psql "$DATABASE_URL" -t -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name='session_tokens');" 2>/dev/null | tr -d ' ' || echo "f")
+  
+  if [ "$SESSION_TOKENS_EXISTS" = "f" ]; then
+    echo "Session tokens table missing - applying migration for existing deployment..."
+    
+    # Apply session token migration directly via SQL
+    psql "$DATABASE_URL" << 'MIGRATE_EOF'
+-- Create session_tokens table
+CREATE TABLE IF NOT EXISTS "session_tokens" (
+        "id" varchar PRIMARY KEY NOT NULL,
+        "link_id" varchar NOT NULL,
+        "link_type" varchar NOT NULL,
+        "expires_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "created_by" integer NOT NULL,
+        CONSTRAINT "session_tokens_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE no action ON UPDATE no action
+);
+
+-- Add session_token column to tables if missing
+DO $$ BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='links' AND column_name='session_token') THEN
+        ALTER TABLE "links" ADD COLUMN "session_token" varchar;
+    END IF;
+END $$;
+
+DO $$ BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='viewer_links' AND column_name='session_token') THEN
+        ALTER TABLE "viewer_links" ADD COLUMN "session_token" varchar;
+    END IF;
+END $$;
+
+DO $$ BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='short_links' AND column_name='session_token') THEN
+        ALTER TABLE "short_links" ADD COLUMN "session_token" varchar;
+    END IF;
+END $$;
+
+-- Fix short_viewer_links table structure
+DROP TABLE IF EXISTS "short_viewer_links";
+CREATE TABLE IF NOT EXISTS "short_viewer_links" (
+        "id" varchar(6) PRIMARY KEY NOT NULL,
+        "viewer_link_id" varchar NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "session_token" varchar,
+        CONSTRAINT "short_viewer_links_viewer_link_id_viewer_links_id_fk" FOREIGN KEY ("viewer_link_id") REFERENCES "viewer_links"("id") ON DELETE cascade ON UPDATE no action
+);
+
+-- Create performance indexes
+CREATE INDEX IF NOT EXISTS "session_tokens_link_id_idx" ON "session_tokens" ("link_id");
+CREATE INDEX IF NOT EXISTS "session_tokens_link_type_idx" ON "session_tokens" ("link_type");
+CREATE INDEX IF NOT EXISTS "session_tokens_expires_at_idx" ON "session_tokens" ("expires_at");
+MIGRATE_EOF
+    
+    echo "Session token migration completed"
+  else
+    echo "Session tokens table exists - checking for any missing columns..."
+    
+    # Ensure all session_token columns exist even if table exists
+    psql "$DATABASE_URL" << 'COLUMNS_EOF'
+DO $$ BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='links' AND column_name='session_token') THEN
+        ALTER TABLE "links" ADD COLUMN "session_token" varchar;
+        RAISE NOTICE 'Added session_token column to links table';
+    END IF;
+END $$;
+
+DO $$ BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='viewer_links' AND column_name='session_token') THEN
+        ALTER TABLE "viewer_links" ADD COLUMN "session_token" varchar;
+        RAISE NOTICE 'Added session_token column to viewer_links table';
+    END IF;
+END $$;
+
+DO $$ BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='short_links' AND column_name='session_token') THEN
+        ALTER TABLE "short_links" ADD COLUMN "session_token" varchar;
+        RAISE NOTICE 'Added session_token column to short_links table';
+    END IF;
+END $$;
+COLUMNS_EOF
+    
+    echo "Column checks completed"
+  fi
+  
+  # For existing deployments, update schema with Drizzle
   npx drizzle-kit push 2>&1 || echo "Schema update completed"
 fi
 
