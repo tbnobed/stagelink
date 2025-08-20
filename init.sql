@@ -26,7 +26,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres;
 -- Create full database schema for Virtual Audience Platform v2.0
 
 -- Session storage table for authentication sessions
-CREATE TABLE IF NOT EXISTS "sessions" (
+CREATE TABLE IF NOT EXISTS "session" (
         "sid" varchar PRIMARY KEY NOT NULL,
         "sess" jsonb NOT NULL,
         "expire" timestamp NOT NULL
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS "session_tokens" (
 );
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "sessions" ("expire");
+CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
 CREATE INDEX IF NOT EXISTS "session_tokens_link_id_idx" ON "session_tokens" ("link_id");
 CREATE INDEX IF NOT EXISTS "session_tokens_link_type_idx" ON "session_tokens" ("link_type");
 CREATE INDEX IF NOT EXISTS "session_tokens_expires_at_idx" ON "session_tokens" ("expires_at");
