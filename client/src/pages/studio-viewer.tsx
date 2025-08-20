@@ -37,13 +37,15 @@ export default function StudioViewer() {
       const token = urlParams.get('token');
 
       if (!returnParam) {
+        console.log('No return param provided');
         toast({
-          title: "Error",
+          title: "Error", 
           description: "No return feed specified",
           variant: "destructive",
         });
-        setLocation('/');
-        return;
+        // Don't redirect for now to debug
+        // setLocation('/');
+        // return;
       }
 
       // For now, skip token validation to get chat working
@@ -61,6 +63,13 @@ export default function StudioViewer() {
       setReturnFeed(returnParam);
       setChatEnabled(chatParam === 'true');
       setShowChat(chatParam === 'true');
+      
+      // Debug logging
+      console.log('Chat parameters:', { 
+        chatParam, 
+        chatEnabled: chatParam === 'true', 
+        showChat: chatParam === 'true' 
+      });
       
       // Generate viewer username
       const timestamp = Date.now().toString().slice(-6);
@@ -350,6 +359,11 @@ export default function StudioViewer() {
                   </div>
                 )}
 
+                {/* Debug info */}
+                <div className="text-xs va-text-secondary mb-2">
+                  Chat Debug: enabled={chatEnabled ? 'true' : 'false'}, show={showChat ? 'true' : 'false'}
+                </div>
+
                 {chatEnabled && showChat && (
                   <div className="relative">
                     <Button 
@@ -385,6 +399,23 @@ export default function StudioViewer() {
                       <i className="fas fa-comments mr-2"></i>
                       Show Chat
                     </Button>
+                  </div>
+                )}
+
+                {/* Force show chat if still not working */}
+                {!chatEnabled && (
+                  <div className="text-center">
+                    <div className="text-red-500 mb-2">Chat not enabled - forcing display</div>
+                    <GuestChat 
+                      sessionId={returnFeed}
+                      enabled={true}
+                      guestUser={{
+                        id: 999999,
+                        username: viewerUsername || `Viewer_${returnFeed}`,
+                        role: 'user'
+                      }}
+                      className="h-96"
+                    />
                   </div>
                 )}
 

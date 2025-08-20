@@ -71,11 +71,16 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
         wsRef.current.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
+            console.log('WebSocket message received:', data);
             
             switch (data.type) {
               case 'new_message':
+                console.log('New message received:', data.message);
                 if (data.message) {
+                  console.log('Adding message to chat');
                   setMessages(prev => [...prev, data.message]);
+                } else {
+                  console.log('Message data missing');
                 }
                 break;
               case 'message_history':
@@ -84,8 +89,11 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
                 }
                 break;
               case 'error':
+                console.error('WebSocket error message:', data.error || 'Unknown error');
                 setError(data.error || 'Unknown error');
                 break;
+              default:
+                console.log('Unknown message type:', data.type);
             }
           } catch (err) {
             console.error('Failed to parse WebSocket message:', err);
@@ -142,6 +150,7 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
   const handleSendMessage = () => {
     if (!newMessage.trim() || !isConnected || !wsRef.current) return;
 
+    console.log('Sending message:', { sessionId, content: newMessage.trim() });
     wsRef.current.send(JSON.stringify({
       type: 'message',
       sessionId,
