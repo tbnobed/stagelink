@@ -259,8 +259,8 @@ export default function Links() {
   };
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen py-6 px-6">
+      <div className="w-full max-w-none">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold va-text-primary mb-2">Generated Links</h1>
@@ -306,7 +306,7 @@ export default function Links() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {links.map((link: GeneratedLink) => (
               <div key={link.id} className="va-bg-dark-surface rounded-lg border va-border-dark hover:border-va-primary/50 transition-all duration-200 hover:shadow-lg overflow-hidden">
                 {/* Preview Window */}
