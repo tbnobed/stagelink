@@ -791,20 +791,20 @@ export default function Links() {
                           data-testid={`video-preview-${link.id}`}
                           onLoadStart={() => console.log(`Video loadstart for link: ${link.id}`)}
                           onLoadedMetadata={() => console.log(`Video metadata loaded for link: ${link.id}`)}
-                          onCanPlay={() => console.log(`Video can play for link: ${link.id}`)}
+                          onCanPlay={() => {
+                            console.log(`Video can play for link: ${link.id}`);
+                            // Mark video as ready when it can play
+                            setVideosReady(prev => new Set([...prev, link.id]));
+                          }}
                           onPlaying={() => {
                             console.log(`Video started playing for link: ${link.id}`);
-                            // Mark video as ready when it starts playing
-                            setTimeout(() => {
-                              setVideosReady(prev => new Set([...prev, link.id]));
-                            }, 500); // Give time for video to stabilize
+                            // Mark video as ready immediately when it starts playing
+                            setVideosReady(prev => new Set([...prev, link.id]));
                           }}
                           onLoadedData={() => {
                             console.log(`Video data loaded for link: ${link.id}`);
-                            const video = previewVideoRefs.current.get(link.id);
-                            if (video && video.videoWidth > 0 && video.videoHeight > 0) {
-                              setVideosReady(prev => new Set([...prev, link.id]));
-                            }
+                            // Mark video as ready when data loads
+                            setVideosReady(prev => new Set([...prev, link.id]));
                           }}
                           onPause={() => {
                             console.log(`Video paused unexpectedly for link: ${link.id}, attempting to resume...`);
