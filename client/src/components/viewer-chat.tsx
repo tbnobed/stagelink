@@ -12,6 +12,33 @@ interface ViewerChatProps {
 }
 
 export function ViewerChat({ sessionId, className = '' }: ViewerChatProps) {
+  // Temporarily disabled to fix infinite loop
+  return (
+    <div className={`va-bg-dark-surface-2 rounded-lg overflow-hidden flex flex-col ${className}`} data-testid="container-viewer-chat">
+      {/* Header */}
+      <div className="va-bg-dark-border p-3 border-b va-border-dark flex items-center justify-between">
+        <h4 className="font-medium va-text-primary flex items-center">
+          <i className="fas fa-comments mr-2 va-text-green"></i>
+          Live Chat
+        </h4>
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+          <span className="text-xs va-text-secondary">
+            Temporarily Disabled
+          </span>
+        </div>
+      </div>
+      
+      <div className="flex-1 flex items-center justify-center p-8">
+        <p className="va-text-secondary text-center">
+          Viewer chat is temporarily disabled.<br/>
+          Please refresh the page to try again.
+        </p>
+      </div>
+    </div>
+  );
+
+  /* ORIGINAL CODE COMMENTED OUT TO STOP INFINITE LOOP
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -21,12 +48,13 @@ export function ViewerChat({ sessionId, className = '' }: ViewerChatProps) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Create viewer user object (same structure as guest chat)
-  const viewerUser = {
-    id: 888888, // Fixed viewer user ID like guest chat uses 999999
-    username: `Viewer_${sessionId}`,
+  // Create stable viewer user object with unique ID to avoid conflicts
+  const [viewerUser] = useState(() => ({
+    id: Math.floor(Math.random() * 100000) + 800000, // Unique ID in 800000-899999 range  
+    username: `Viewer_${sessionId}_${Math.floor(Math.random() * 1000)}`,
     role: 'user'
-  };
+  }));
+  */
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -97,11 +125,8 @@ export function ViewerChat({ sessionId, className = '' }: ViewerChatProps) {
           console.log(`Viewer Chat WebSocket disconnected: ${event.code} ${event.reason}`);
           setIsConnected(false);
           
-          // Attempt to reconnect after 3 seconds
-          console.log('Attempting to reconnect in 3 seconds...');
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, 3000);
+          // Don't auto-reconnect to prevent infinite loops
+          // User can refresh page to reconnect if needed
         };
 
         wsRef.current.onerror = (error) => {
