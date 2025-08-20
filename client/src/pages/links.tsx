@@ -26,6 +26,7 @@ interface GeneratedLink {
 
 export default function Links() {
   const [previewingLinks, setPreviewingLinks] = useState<Set<string>>(new Set());
+  const [videosReady, setVideosReady] = useState<Set<string>>(new Set());
   const [showChatForLink, setShowChatForLink] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<{[sessionId: string]: string}>({});
 
@@ -283,6 +284,11 @@ export default function Links() {
     }
     previewVideoRefs.current.delete(linkId);
     setPreviewingLinks(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(linkId);
+      return newSet;
+    });
+    setVideosReady(prev => {
       const newSet = new Set(prev);
       newSet.delete(linkId);
       return newSet;
@@ -800,15 +806,17 @@ export default function Links() {
                           onCanPlay={() => console.log(`Video can play for link: ${link.id}`)}
                           onPlaying={() => {
                             console.log(`Video started playing for link: ${link.id}`);
-                            // Force re-render to hide overlay when video has dimensions
+                            // Mark video as ready when it starts playing
                             setTimeout(() => {
-                              setPreviewingLinks(prev => new Set(prev));
-                            }, 100);
+                              setVideosReady(prev => new Set([...prev, link.id]));
+                            }, 500); // Give time for video to stabilize
                           }}
                           onLoadedData={() => {
                             console.log(`Video data loaded for link: ${link.id}`);
-                            // Force re-render when video data is loaded
-                            setPreviewingLinks(prev => new Set(prev));
+                            const video = previewVideoRefs.current.get(link.id);
+                            if (video && video.videoWidth > 0 && video.videoHeight > 0) {
+                              setVideosReady(prev => new Set([...prev, link.id]));
+                            }
                           }}
                           onPause={() => {
                             console.log(`Video paused unexpectedly for link: ${link.id}, attempting to resume...`);
@@ -821,29 +829,22 @@ export default function Links() {
                           }}
                           onError={(e) => console.error(`Video error for link: ${link.id}`, e)}
                         />
-                        {/* Show loading overlay only if video isn't playing */}
-                        <div 
-                          className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/50 transition-opacity duration-500"
-                          style={{
-                            opacity: (() => {
-                              const video = previewVideoRefs.current.get(link.id);
-                              // Hide overlay if video is ready and has dimensions (means it's actually playing video content)
-                              return video && video.readyState >= 3 && video.videoWidth > 0 && video.videoHeight > 0 ? 0 : 1;
-                            })()
-                          }}
-                        >
-                          <div className="text-center va-text-secondary text-sm bg-black/70 px-3 py-2 rounded-md">
-                            <div className="animate-pulse">
-                              {link.type === 'guest' ? 
-                                `Connecting to ${link.streamName} stream...` : 
-                                `Loading ${link.returnFeed} feed...`
-                              }
-                            </div>
-                            <div className="text-xs mt-1 opacity-75">
-                              WHEP connection active
+                        {/* Show loading overlay only if video isn't ready */}
+                        {!videosReady.has(link.id) && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/50 transition-opacity duration-500">
+                            <div className="text-center va-text-secondary text-sm bg-black/70 px-3 py-2 rounded-md">
+                              <div className="animate-pulse">
+                                {link.type === 'guest' ? 
+                                  `Connecting to ${link.streamName} stream...` : 
+                                  `Loading ${link.returnFeed} feed...`
+                                }
+                              </div>
+                              <div className="text-xs mt-1 opacity-75">
+                                WHEP connection active
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
