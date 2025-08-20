@@ -620,11 +620,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/chat/send', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { sessionId, message, messageType } = req.body;
+
+      if (!sessionId || !message?.trim()) {
+        return res.status(400).json({ error: 'Session ID and message are required' });
+      }
+
+      // Check if user has permission to send messages
+      if (!user || (user.role !== 'admin' && user.role !== 'engineer')) {
+        return res.status(403).json({ error: 'Insufficient permissions to send messages' });
+      }
+
+      // Store the message in database
+      const chatMessage = await storage.createChatMessage({
+        sessionId,
+        senderId: user.id,
+        senderName: user.username,
+        content: message.trim(),
+        messageType: messageType || 'individual',
+      });
+
+      // Broadcast the message via WebSocket
+      const chatWS = (global as any).chatWebSocketServer;
+      if (chatWS) {
+        if (messageType === 'broadcast') {
+          // Send to all connected users across all sessions
+          chatWS.broadcastToAll({
+            type: 'message',
+            data: {
+              ...chatMessage,
+              isFromAdmin: true,
+              isBroadcast: true,
+            }
+          });
+        } else {
+          // Send to specific session
+          chatWS.sendToSession(sessionId, {
+            type: 'message',
+            data: {
+              ...chatMessage,
+              isFromAdmin: true,
+              isBroadcast: false,
+            }
+          });
+        }
+      }
+
+      res.json({ success: true, message: 'Message sent successfully' });
+    } catch (error) {
+      console.error('Failed to send chat message:', error);
+      res.status(500).json({ error: 'Failed to send message' });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Initialize WebSocket server for chat
   const chatWS = new ChatWebSocketServer(httpServer);
   console.log('Chat WebSocket server initialized on /chat');
+  
+  // Set global reference for API access
+  (global as any).chatWebSocketServer = chatWS;
 
   return httpServer;
 }

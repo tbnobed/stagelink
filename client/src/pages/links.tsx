@@ -5,6 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { startPlayback } from "@/lib/streaming";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface GeneratedLink {
   id: string;
@@ -21,8 +24,12 @@ interface GeneratedLink {
 
 export default function Links() {
   const [previewingLinks, setPreviewingLinks] = useState<Set<string>>(new Set());
+  const [showChatForLink, setShowChatForLink] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<{[sessionId: string]: string}>({});
+  const [messageType, setMessageType] = useState<'individual' | 'broadcast'>('individual');
   const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Fetch both guest session links and viewer links with automatic refresh
   const { data: links = [], isLoading, error, refetch } = useQuery({
@@ -181,7 +188,7 @@ export default function Links() {
     console.log('SRS SDK available:', !!window.SrsRtcWhipWhepAsync);
 
     // Add the link to previewing set
-    setPreviewingLinks(prev => new Set([...prev, linkId]));
+    setPreviewingLinks(prev => new Set([...Array.from(prev), linkId]));
 
     // Wait for the video element to be rendered
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -261,9 +268,50 @@ export default function Links() {
 
   const clearAllLinks = () => {
     // Stop all previews first
-    previewingLinks.forEach(linkId => stopPreview(linkId));
+    Array.from(previewingLinks).forEach(linkId => stopPreview(linkId));
     // Delete all links one by one
     links.forEach((link: GeneratedLink) => deleteLink(link.id, link.type));
+  };
+
+  const sendChatMessage = async (sessionId: string, message: string) => {
+    if (!message.trim() || !user) return;
+
+    try {
+      const response = await fetch('/api/chat/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId,
+          message: message.trim(),
+          messageType,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      // Clear the message input
+      setChatMessages(prev => ({ ...prev, [sessionId]: '' }));
+      
+      toast({
+        title: "Message Sent",
+        description: messageType === 'broadcast' ? "Broadcast message sent to all users" : "Message sent to guest",
+      });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Send Failed",
+        description: "Could not send message",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleChatForLink = (linkId: string) => {
+    setShowChatForLink(showChatForLink === linkId ? null : linkId);
   };
 
   const removeExpiredLinks = () => {
@@ -505,6 +553,21 @@ export default function Links() {
                           Ingest
                         </Button>
                       )}
+                      {/* Chat Button - Only show for chat-enabled guest links and if user is admin/engineer */}
+                      {link.type === 'guest' && link.chatEnabled && user && (user.role === 'admin' || user.role === 'engineer') && (
+                        <Button 
+                          onClick={() => toggleChatForLink(link.id)}
+                          variant="outline"
+                          size="sm"
+                          className={`border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs ${
+                            showChatForLink === link.id ? 'bg-blue-500 text-white' : ''
+                          }`}
+                          data-testid={`button-chat-${link.id}`}
+                        >
+                          <i className="fas fa-comments mr-1"></i>
+                          Chat
+                        </Button>
+                      )}
                       <Button 
                         onClick={() => deleteLink(link.id, link.type)}
                         variant="outline"
@@ -516,9 +579,64 @@ export default function Links() {
                         Delete
                       </Button>
                     </div>
+
+                    {/* Chat Interface - Only show when expanded for this link */}
+                    {showChatForLink === link.id && link.type === 'guest' && link.chatEnabled && (
+                      <div className="mt-3 pt-3 border-t va-border-dark">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium va-text-primary flex items-center">
+                              <i className="fas fa-comments mr-2 text-blue-400"></i>
+                              Send Message to {link.streamName}
+                            </h4>
+                            {user && (user.role === 'admin' || user.role === 'engineer') && (
+                              <Select value={messageType} onValueChange={(value: 'individual' | 'broadcast') => setMessageType(value)}>
+                                <SelectTrigger className="w-24 h-6 text-xs va-bg-dark-surface-2 va-border-dark">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="individual">Individual</SelectItem>
+                                  <SelectItem value="broadcast">Broadcast</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <Input
+                              value={chatMessages[link.id] || ''}
+                              onChange={(e) => setChatMessages(prev => ({ ...prev, [link.id]: e.target.value }))}
+                              placeholder={messageType === 'broadcast' ? "Broadcast message to all users..." : `Message ${link.streamName}...`}
+                              className="flex-1 text-xs va-bg-dark-surface-2 va-border-dark va-text-primary"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  sendChatMessage(link.id, chatMessages[link.id] || '');
+                                }
+                              }}
+                            />
+                            <Button
+                              onClick={() => sendChatMessage(link.id, chatMessages[link.id] || '')}
+                              size="sm"
+                              className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3"
+                              disabled={!chatMessages[link.id]?.trim()}
+                            >
+                              <i className="fas fa-paper-plane"></i>
+                            </Button>
+                          </div>
+                          
+                          {messageType === 'broadcast' && (
+                            <div className="text-xs text-yellow-400 flex items-center">
+                              <i className="fas fa-broadcast-tower mr-1"></i>
+                              This message will be sent to ALL users in ALL sessions
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+                </div>
             ))}
           </div>
         )}

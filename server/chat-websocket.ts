@@ -300,6 +300,24 @@ class ChatWebSocketServer {
       }
     });
   }
+
+  // Public methods for sending messages from API
+  public sendToSession(sessionId: string, message: any) {
+    const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
+    sessionClients.forEach(client => {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+
+  public broadcastToAll(message: any) {
+    Array.from(this.clients.values()).forEach(client => {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(message));
+      }
+    });
+  }
 }
 
 export { ChatWebSocketServer };
