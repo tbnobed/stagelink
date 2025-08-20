@@ -1,0 +1,60 @@
+obtv-admin@stagelink:~/stagelink$ docker-compose build --no-cache
+[+] Building 19.4s (17/18)
+ => [internal] load local bake definitions                                                                         0.0s
+ => => reading from stdin 521B                                                                                     0.0s
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 1.36kB                                                                             0.0s
+ => [internal] load metadata for docker.io/library/node:18-alpine                                                  0.2s
+ => [internal] load .dockerignore                                                                                  0.0s
+ => => transferring context: 257B                                                                                  0.0s
+ => [internal] load build context                                                                                  0.0s
+ => => transferring context: 16.19kB                                                                               0.0s
+ => CACHED [builder 1/6] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d11894558  0.0s
+ => CACHED [builder 2/6] WORKDIR /app                                                                              0.0s
+ => [production 2/8] RUN apk add --no-cache dumb-init                                                              0.8s
+ => [builder 3/6] COPY package*.json ./                                                                            0.0s
+ => [builder 4/6] RUN npm ci                                                                                      12.0s
+ => [production 3/8] WORKDIR /app                                                                                  0.0s
+ => [production 4/8] RUN addgroup -g 1001 -S nodejs                                                                0.3s
+ => [production 5/8] RUN adduser -S nodejs -u 1001                                                                 0.3s
+ => [production 6/8] COPY package*.json ./                                                                         0.0s
+ => [production 7/8] RUN npm ci --only=production && npm cache clean --force                                       9.8s
+ => [builder 5/6] COPY . .                                                                                         0.0s
+ => ERROR [builder 6/6] RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=externa  7.0s
+------
+ > [builder 6/6] RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js:
+1.029 vite v5.4.19 building for production...
+1.099 transforming...
+1.494 Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+1.494   npx update-browserslist-db@latest
+1.494   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+5.911 ✓ 1719 modules transformed.
+6.230 rendering chunks...
+6.241 computing gzip size...
+6.273 ../dist/public/index.html                   1.60 kB │ gzip:   0.67 kB
+6.273 ../dist/public/assets/index-CoH509Hy.css   62.85 kB │ gzip:  11.28 kB
+6.273 ../dist/public/assets/index-CDo16OTu.js   335.39 kB │ gzip: 106.09 kB
+6.274 ✓ built in 5.21s
+6.854 ✘ [ERROR] Cannot use both "outfile" and "outdir"
+6.854
+6.854 1 error
+------
+Dockerfile:17
+
+--------------------
+
+  15 |
+
+  16 |     # Build the application
+
+  17 | >>> RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js
+
+  18 |
+
+  19 |     # Production stage
+
+--------------------
+
+failed to solve: process "/bin/sh -c npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/index.js" did not complete successfully: exit code: 1
+
+obtv-admin@stagelink:~/stagelink$ docker-compose logs -f

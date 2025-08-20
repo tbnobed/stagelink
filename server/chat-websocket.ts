@@ -64,7 +64,7 @@ class ChatWebSocketServer {
     
     // Set up periodic ping to keep connections alive and cleanup stale connections
     setInterval(() => {
-      this.wss.clients.forEach((ws: WebSocket & { isAlive?: boolean }) => {
+      this.wss.clients.forEach((ws) => {
         if (ws.isAlive === false) {
           console.log('Terminating stale WebSocket connection');
           ws.terminate();
@@ -85,10 +85,10 @@ class ChatWebSocketServer {
     console.log('New WebSocket connection');
 
     // Set up connection keepalive
-    (ws as any).isAlive = true;
+    ws.isAlive = true;
     
     ws.on('pong', () => {
-      (ws as any).isAlive = true;
+      ws.isAlive = true;
     });
 
     ws.on('message', async (data: Buffer) => {
@@ -141,9 +141,8 @@ class ChatWebSocketServer {
 
     const clientKey = `${message.userId}-${message.sessionId}`;
     
-    // For viewer users (negative IDs or IDs > 100000), allow multiple connections to the same session
-    // For regular users, enforce single connection per session
-    if (message.userId < 100000 && this.clients.has(clientKey)) {
+    // Remove existing client if reconnecting
+    if (this.clients.has(clientKey)) {
       const existingClient = this.clients.get(clientKey)!;
       existingClient.ws.close();
       this.clients.delete(clientKey);
@@ -165,25 +164,22 @@ class ChatWebSocketServer {
     }
     this.sessionParticipants.get(message.sessionId)!.add(clientKey);
 
-    // Only store participants in database if they have valid user IDs (positive numbers)
-    // Guest/viewer users (negative IDs) are handled in-memory only
-    if (message.userId > 0) {
-      const existingParticipants = await storage.getChatParticipants(message.sessionId);
-      const existingParticipant = existingParticipants.find(p => p.userId === message.userId);
-      
-      if (existingParticipant) {
-        // Update existing participant to online
-        await storage.updateParticipantStatus(message.sessionId, message.userId, true);
-      } else {
-        // Add new participant only if they don't exist
-        await storage.addChatParticipant({
-          sessionId: message.sessionId,
-          userId: message.userId,
-          username: message.username,
-          role: message.role,
-          isOnline: true,
-        });
-      }
+    // Update participant status instead of adding new participant
+    const existingParticipants = await storage.getChatParticipants(message.sessionId);
+    const existingParticipant = existingParticipants.find(p => p.userId === message.userId);
+    
+    if (existingParticipant) {
+      // Update existing participant to online
+      await storage.updateParticipantStatus(message.sessionId, message.userId, true);
+    } else {
+      // Add new participant only if they don't exist
+      await storage.addChatParticipant({
+        sessionId: message.sessionId,
+        userId: message.userId,
+        username: message.username,
+        role: message.role,
+        isOnline: true,
+      });
     }
 
     // Send participant list to the new client
@@ -213,10 +209,8 @@ class ChatWebSocketServer {
       }
     }
 
-    // Update participant status in database only for real users
-    if (message.userId > 0) {
-      await storage.updateParticipantStatus(message.sessionId, message.userId, false);
-    }
+    // Update participant status in database
+    await storage.updateParticipantStatus(message.sessionId, message.userId, false);
 
     // Send updated participant list
     await this.sendParticipantsList(message.sessionId);
@@ -277,16 +271,11 @@ class ChatWebSocketServer {
     } else if (message.recipientId) {
       messageType = 'individual';
     } else {
-      // For guest/viewer users (negative IDs), make their messages public (broadcast-like)
-      // For authenticated users: admin/engineer -> broadcast, regular users -> individual
-      if (senderClient.userId < 0) {
-        messageType = 'broadcast'; // Viewer messages are treated as public
-      } else {
-        messageType = (senderClient.role === 'admin' || senderClient.role === 'engineer') ? 'broadcast' : 'individual';
-      }
+      // Default to broadcast for admin/engineer, individual for users
+      messageType = (senderClient.role === 'admin' || senderClient.role === 'engineer') ? 'broadcast' : 'individual';
     }
 
-    // Save all messages to database, including guest/viewer messages
+    // Save message to database
     const chatMessage = await storage.createChatMessage({
       sessionId: message.sessionId,
       senderId: senderClient.userId,
@@ -304,15 +293,9 @@ class ChatWebSocketServer {
       message: chatMessage,
     };
 
-    console.log(`Broadcasting message to ${recipients.length} recipients in session ${message.sessionId}`);
-    console.log(`Message type: ${messageType}, Content: "${message.content}"`);
-    
     recipients.forEach(client => {
       if (client.ws.readyState === WebSocket.OPEN) {
-        console.log(`Sending message to ${client.username} (${client.userId})`);
         client.ws.send(JSON.stringify(messageToSend));
-      } else {
-        console.log(`Skipping ${client.username} - WebSocket not open`);
       }
     });
 
@@ -321,48 +304,28 @@ class ChatWebSocketServer {
 
   private getMessageRecipients(sessionId: string, messageType: 'individual' | 'broadcast' | 'system', recipientId?: number): ChatClient[] {
     const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
-    console.log(`Getting recipients for session ${sessionId}: ${sessionClients.length} clients`);
-    console.log(`Message type: ${messageType}, Recipient ID: ${recipientId}`);
 
     if (messageType === 'broadcast' || messageType === 'system') {
-      console.log(`Broadcast message - sending to all ${sessionClients.length} clients`);
       return sessionClients; // Send to everyone in the session
     }
 
     if (messageType === 'individual' && recipientId) {
-      const filteredClients = sessionClients.filter(client => client.userId === recipientId);
-      console.log(`Individual message - sending to ${filteredClients.length} specific clients`);
-      return filteredClients;
+      return sessionClients.filter(client => client.userId === recipientId);
     }
 
-    console.log(`Default case - sending to all ${sessionClients.length} clients`);
     return sessionClients; // Default to everyone
   }
 
   private async sendParticipantsList(sessionId: string) {
-    // Get database participants (real users)
-    const dbParticipants = await storage.getChatParticipants(sessionId);
+    const participants = await storage.getChatParticipants(sessionId);
     const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
 
-    // Include database participants with online status
-    const participantsData = dbParticipants.map(p => ({
+    const participantsData = participants.map(p => ({
       userId: p.userId,
       username: p.username,
       role: p.role,
       isOnline: sessionClients.some(client => client.userId === p.userId),
     }));
-
-    // Add guest/viewer participants (negative user IDs)
-    sessionClients.forEach(client => {
-      if (client.userId < 0) {
-        participantsData.push({
-          userId: client.userId,
-          username: client.username,
-          role: client.role,
-          isOnline: true,
-        });
-      }
-    });
 
     const message = {
       type: 'participants_list',

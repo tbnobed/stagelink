@@ -30,8 +30,8 @@ export default function Navigation() {
     logoutMutation.mutate();
   };
 
-  // Don't show navigation on auth page or viewer pages
-  if (location === '/auth' || location.startsWith('/viewer') || location.startsWith('/studio-viewer') || location.startsWith('/session')) {
+  // Don't show navigation on auth page
+  if (location === '/auth') {
     return null;
   }
 

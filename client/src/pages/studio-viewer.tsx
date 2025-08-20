@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { startPlayback, initializeStreaming } from "@/lib/streaming";
-import { GuestChat } from "@/components/guest-chat";
+import { Chat } from "@/components/chat";
 
 // Global variables for SRS SDK
 declare global {
@@ -23,7 +23,6 @@ export default function StudioViewer() {
   const [returnFeed, setReturnFeed] = useState("");
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
-  const [viewerUsername, setViewerUsername] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
   const { toast } = useToast();
@@ -37,43 +36,64 @@ export default function StudioViewer() {
       const token = urlParams.get('token');
 
       if (!returnParam) {
-        console.log('No return param provided');
         toast({
-          title: "Error", 
+          title: "Error",
           description: "No return feed specified",
           variant: "destructive",
         });
-        // Don't redirect for now to debug
-        // setLocation('/');
-        // return;
+        setLocation('/');
+        return;
       }
 
-      // For now, skip token validation to get chat working
-      // TODO: Re-enable proper token validation later
+      // Validate session token if provided
       if (token) {
-        console.log('Token provided:', token);
-        setTokenValid(true);
+        try {
+          const response = await fetch('/api/validate-token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token }),
+          });
+
+          const result = await response.json();
+          
+          if (!result.valid) {
+            toast({
+              title: "Access Denied",
+              description: "This viewer link has expired or been used already. Please request a new link.",
+              variant: "destructive",
+            });
+            setLocation('/');
+            return;
+          }
+          
+          setTokenValid(true);
+        } catch (error) {
+          console.error('Token validation failed:', error);
+          toast({
+            title: "Access Denied",
+            description: "Unable to validate session token. Please try again.",
+            variant: "destructive",
+          });
+          setLocation('/');
+          return;
+        }
       } else {
-        // Allow access without token for development/testing
-        console.log('No token provided, allowing access for development');
-        setTokenValid(true);
+        // No token provided - deny access
+        toast({
+          title: "Access Denied",
+          description: "This viewer session requires a valid token. Please use the link provided to you.",
+          variant: "destructive",
+        });
+        setLocation('/');
+        return;
       }
 
       setIsValidatingToken(false);
       setReturnFeed(returnParam);
       setChatEnabled(chatParam === 'true');
       setShowChat(chatParam === 'true');
-      
-      // Debug logging
-      console.log('Chat parameters:', { 
-        chatParam, 
-        chatEnabled: chatParam === 'true', 
-        showChat: chatParam === 'true' 
-      });
-      
-      // Generate viewer username
-      const timestamp = Date.now().toString().slice(-6);
-      setViewerUsername(`Viewer_${returnParam.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}`);
       
       // Initialize streaming configuration
       initializeStreaming({
@@ -359,11 +379,6 @@ export default function StudioViewer() {
                   </div>
                 )}
 
-                {/* Debug info */}
-                <div className="text-xs va-text-secondary mb-2">
-                  Chat Debug: enabled={chatEnabled ? 'true' : 'false'}, show={showChat ? 'true' : 'false'}
-                </div>
-
                 {chatEnabled && showChat && (
                   <div className="relative">
                     <Button 
@@ -375,14 +390,9 @@ export default function StudioViewer() {
                     >
                       <i className="fas fa-times"></i>
                     </Button>
-                    <GuestChat 
+                    <Chat 
                       sessionId={returnFeed}
                       enabled={showChat}
-                      guestUser={{
-                        id: 999999, // Fixed viewer ID like in the original working system
-                        username: viewerUsername || `Viewer_${returnFeed}`,
-                        role: 'user'
-                      }}
                       className="h-96"
                     />
                   </div>
@@ -399,23 +409,6 @@ export default function StudioViewer() {
                       <i className="fas fa-comments mr-2"></i>
                       Show Chat
                     </Button>
-                  </div>
-                )}
-
-                {/* Force show chat if still not working */}
-                {!chatEnabled && (
-                  <div className="text-center">
-                    <div className="text-red-500 mb-2">Chat not enabled - forcing display</div>
-                    <GuestChat 
-                      sessionId={returnFeed}
-                      enabled={true}
-                      guestUser={{
-                        id: 999999,
-                        username: viewerUsername || `Viewer_${returnFeed}`,
-                        role: 'user'
-                      }}
-                      className="h-96"
-                    />
                   </div>
                 )}
 

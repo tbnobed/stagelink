@@ -1,0 +1,164 @@
+virtual-audience-app-v2  | Waiting for database...
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | PostgreSQL Database directory appears to contain a database; Skipping initialization
+virtual-audience-db-v2   |
+virtual-audience-db-v2   | 2025-08-20 00:45:41.783 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2   | 2025-08-20 00:45:41.783 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+virtual-audience-db-v2   | 2025-08-20 00:45:41.783 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+virtual-audience-db-v2   | 2025-08-20 00:45:41.785 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2   | 2025-08-20 00:45:41.791 UTC [29] LOG:  database system was shut down at 2025-08-20 00:44:44 UTC
+virtual-audience-db-v2   | 2025-08-20 00:45:41.803 UTC [1] LOG:  database system is ready to accept connections
+virtual-audience-app-v2  | Setting up Virtual Audience Platform with authentication and URL shortening...
+virtual-audience-app-v2  | Existing data detected (2 users) - preserving data and updating schema...
+virtual-audience-app-v2  | Session tokens table exists - checking for any missing columns...
+virtual-audience-app-v2  | DO
+virtual-audience-app-v2  | DO
+virtual-audience-app-v2  | DO
+virtual-audience-app-v2  | Column checks completed
+virtual-audience-app-v2  | No config path provided, using default 'drizzle.config.ts'
+virtual-audience-app-v2  | Reading config file '/app/drizzle.config.ts'
+virtual-audience-app-v2  | Using 'pg' driver for database querying
+virtual-audience-app-v2  | [⣷] Pulling schema from database...
+[⣯] Pulling schema from database...
+[⣟] Pulling schema from database...
+[✓] Pulling schema from database...
+virtual-audience-app-v2  |
+virtual-audience-app-v2  | Is short_viewer_links table created or renamed from another table?
+virtual-audience-app-v2  | ❯ + short_viewer_links           create table
+virtual-audience-app-v2  |   ~ session › short_viewer_links rename tablenpm notice
+virtual-audience-app-v2  | npm notice New major version of npm available! 10.8.2 -> 11.5.2
+virtual-audience-app-v2  | npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+virtual-audience-app-v2  | npm notice To update run: npm install -g npm@11.5.2
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | Starting Virtual Audience Platform...
+virtual-audience-app-v2  | Using PostgreSQL driver for database connection
+virtual-audience-app-v2  | Default admin user already exists
+virtual-audience-app-v2  | 12:46:14 AM [express] serving on port 5000
+virtual-audience-app-v2  | 12:46:16 AM [express] GET /api/user 304 in 14ms :: {"id":1,"username":"admin","email":"admin@stagelin…
+virtual-audience-app-v2  | Fetching all links...
+virtual-audience-app-v2  | Links fetched successfully: 1 links
+virtual-audience-app-v2  | 12:46:17 AM [express] GET /api/links 200 in 23ms :: [{"id":"1755650558850","streamName":"testest","re…
+virtual-audience-app-v2  | Fetching all viewer links...
+virtual-audience-db-v2   | 2025-08-20 00:46:17.333 UTC [59] ERROR:  relation "viewer_links" does not exist at character 115
+virtual-audience-db-v2   | 2025-08-20 00:46:17.333 UTC [59] STATEMENT:  select "id", "return_feed", "chat_enabled", "url", "session_token", "created_at", "expires_at", "created_by" from "viewer_links"
+virtual-audience-app-v2  | Failed to fetch viewer links: error: relation "viewer_links" does not exist
+virtual-audience-app-v2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2  |     at async DatabaseStorage.getAllViewerLinks (file:///app/dist/production.js:313:26)
+virtual-audience-app-v2  |     at async file:///app/dist/production.js:843:21 {
+virtual-audience-app-v2  |   length: 112,
+virtual-audience-app-v2  |   severity: 'ERROR',
+virtual-audience-app-v2  |   code: '42P01',
+virtual-audience-app-v2  |   detail: undefined,
+virtual-audience-app-v2  |   hint: undefined,
+virtual-audience-app-v2  |   position: '115',
+virtual-audience-app-v2  |   internalPosition: undefined,
+virtual-audience-app-v2  |   internalQuery: undefined,
+virtual-audience-app-v2  |   where: undefined,
+virtual-audience-app-v2  |   schema: undefined,
+virtual-audience-app-v2  |   table: undefined,
+virtual-audience-app-v2  |   column: undefined,
+virtual-audience-app-v2  |   dataType: undefined,
+virtual-audience-app-v2  |   constraint: undefined,
+virtual-audience-app-v2  |   file: 'parse_relation.c',
+virtual-audience-app-v2  |   line: '1392',
+virtual-audience-app-v2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | 12:46:17 AM [express] GET /api/viewer-links 500 in 48ms :: {"error":"Failed to fetch viewer links"}
+virtual-audience-app-v2  | Fetching all links...
+virtual-audience-app-v2  | Links fetched successfully: 1 links
+virtual-audience-app-v2  | 12:46:22 AM [express] GET /api/links 304 in 22ms :: [{"id":"1755650558850","streamName":"testest","re…
+virtual-audience-app-v2  | Fetching all viewer links...
+virtual-audience-db-v2   | 2025-08-20 00:46:22.479 UTC [60] ERROR:  relation "viewer_links" does not exist at character 115
+virtual-audience-db-v2   | 2025-08-20 00:46:22.479 UTC [60] STATEMENT:  select "id", "return_feed", "chat_enabled", "url", "session_token", "created_at", "expires_at", "created_by" from "viewer_links"
+virtual-audience-app-v2  | Failed to fetch viewer links: error: relation "viewer_links" does not exist
+virtual-audience-app-v2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2  |     at async DatabaseStorage.getAllViewerLinks (file:///app/dist/production.js:313:26)
+virtual-audience-app-v2  |     at async file:///app/dist/production.js:843:21 {
+virtual-audience-app-v2  |   length: 112,
+virtual-audience-app-v2  |   severity: 'ERROR',
+virtual-audience-app-v2  |   code: '42P01',
+virtual-audience-app-v2  |   detail: undefined,
+virtual-audience-app-v2  |   hint: undefined,
+virtual-audience-app-v2  |   position: '115',
+virtual-audience-app-v2  |   internalPosition: undefined,
+virtual-audience-app-v2  |   internalQuery: undefined,
+virtual-audience-app-v2  |   where: undefined,
+virtual-audience-app-v2  |   schema: undefined,
+virtual-audience-app-v2  |   table: undefined,
+virtual-audience-app-v2  |   column: undefined,
+virtual-audience-app-v2  |   dataType: undefined,
+virtual-audience-app-v2  |   constraint: undefined,
+virtual-audience-app-v2  |   file: 'parse_relation.c',
+virtual-audience-app-v2  |   line: '1392',
+virtual-audience-app-v2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | 12:46:22 AM [express] GET /api/viewer-links 500 in 52ms :: {"error":"Failed to fetch viewer links"}
+virtual-audience-app-v2  | 12:46:23 AM [express] GET /api/user 304 in 23ms :: {"id":2,"username":"obed","email":"obedtest@tbn.tv…
+virtual-audience-app-v2  | 12:46:23 AM [express] POST /api/validate-token 200 in 13ms :: {"valid":true,"linkId":"1755650558850",…
+virtual-audience-app-v2  | Fetching all links...
+virtual-audience-app-v2  | Links fetched successfully: 1 links
+virtual-audience-app-v2  | 12:46:27 AM [express] GET /api/links 304 in 18ms :: [{"id":"1755650558850","streamName":"testest","re…
+virtual-audience-app-v2  | Fetching all viewer links...
+virtual-audience-db-v2   | 2025-08-20 00:46:27.689 UTC [69] ERROR:  relation "viewer_links" does not exist at character 115
+virtual-audience-db-v2   | 2025-08-20 00:46:27.689 UTC [69] STATEMENT:  select "id", "return_feed", "chat_enabled", "url", "session_token", "created_at", "expires_at", "created_by" from "viewer_links"
+virtual-audience-app-v2  | Failed to fetch viewer links: error: relation "viewer_links" does not exist
+virtual-audience-app-v2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2  |     at async DatabaseStorage.getAllViewerLinks (file:///app/dist/production.js:313:26)
+virtual-audience-app-v2  |     at async file:///app/dist/production.js:843:21 {
+virtual-audience-app-v2  |   length: 112,
+virtual-audience-app-v2  |   severity: 'ERROR',
+virtual-audience-app-v2  |   code: '42P01',
+virtual-audience-app-v2  |   detail: undefined,
+virtual-audience-app-v2  |   hint: undefined,
+virtual-audience-app-v2  |   position: '115',
+virtual-audience-app-v2  |   internalPosition: undefined,
+virtual-audience-app-v2  |   internalQuery: undefined,
+virtual-audience-app-v2  |   where: undefined,
+virtual-audience-app-v2  |   schema: undefined,
+virtual-audience-app-v2  |   table: undefined,
+virtual-audience-app-v2  |   column: undefined,
+virtual-audience-app-v2  |   dataType: undefined,
+virtual-audience-app-v2  |   constraint: undefined,
+virtual-audience-app-v2  |   file: 'parse_relation.c',
+virtual-audience-app-v2  |   line: '1392',
+virtual-audience-app-v2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | 12:46:27 AM [express] GET /api/viewer-links 500 in 12ms :: {"error":"Failed to fetch viewer links"}
+virtual-audience-app-v2  | 12:46:28 AM [express] GET /api/user 304 in 9ms :: {"id":1,"username":"admin","email":"admin@stagelinq…
+virtual-audience-app-v2  | Fetching all links...
+virtual-audience-app-v2  | Links fetched successfully: 1 links
+virtual-audience-app-v2  | 12:46:28 AM [express] GET /api/links 304 in 17ms :: [{"id":"1755650558850","streamName":"testest","re…
+virtual-audience-app-v2  | Fetching all viewer links...
+virtual-audience-db-v2   | 2025-08-20 00:46:28.313 UTC [70] ERROR:  relation "viewer_links" does not exist at character 115
+virtual-audience-db-v2   | 2025-08-20 00:46:28.313 UTC [70] STATEMENT:  select "id", "return_feed", "chat_enabled", "url", "session_token", "created_at", "expires_at", "created_by" from "viewer_links"
+virtual-audience-app-v2  | Failed to fetch viewer links: error: relation "viewer_links" does not exist
+virtual-audience-app-v2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2  |     at async DatabaseStorage.getAllViewerLinks (file:///app/dist/production.js:313:26)
+virtual-audience-app-v2  |     at async file:///app/dist/production.js:843:21 {
+virtual-audience-app-v2  |   length: 112,
+virtual-audience-app-v2  |   severity: 'ERROR',
+virtual-audience-app-v2  |   code: '42P01',
+virtual-audience-app-v2  |   detail: undefined,
+virtual-audience-app-v2  |   hint: undefined,
+virtual-audience-app-v2  |   position: '115',
+virtual-audience-app-v2  |   internalPosition: undefined,
+virtual-audience-app-v2  |   internalQuery: undefined,
+virtual-audience-app-v2  |   where: undefined,
+virtual-audience-app-v2  |   schema: undefined,
+virtual-audience-app-v2  |   table: undefined,
+virtual-audience-app-v2  |   column: undefined,
+virtual-audience-app-v2  |   dataType: undefined,
+virtual-audience-app-v2  |   constraint: undefined,
+virtual-audience-app-v2  |   file: 'parse_relation.c',
+virtual-audience-app-v2  |   line: '1392',
+virtual-audience-app-v2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | 12:46:28 AM [express] GET /api/viewer-links 500 in 46ms :: {"error":"Failed to fetch viewer links"}

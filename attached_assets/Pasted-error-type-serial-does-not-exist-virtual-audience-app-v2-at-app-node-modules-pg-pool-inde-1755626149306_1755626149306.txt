@@ -1,0 +1,33 @@
+error: type "serial" does not exist
+virtual-audience-app-v2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2  |     at async Object.query (/app/node_modules/drizzle-kit/bin.cjs:78355:26)
+virtual-audience-app-v2  |     at async pgPush (/app/node_modules/drizzle-kit/bin.cjs:81944:13)
+virtual-audience-app-v2  |     at async Object.handler (/app/node_modules/drizzle-kit/bin.cjs:92168:9)
+virtual-audience-app-v2  |     at async run (/app/node_modules/drizzle-kit/bin.cjs:91408:7) {
+virtual-audience-app-v2  |   length: 89,
+virtual-audience-app-v2  |   severity: 'ERROR',
+virtual-audience-app-v2  |   code: '42704',
+virtual-audience-app-v2  |   detail: undefined,
+virtual-audience-app-v2  |   hint: undefined,
+virtual-audience-app-v2  |   position: undefined,
+virtual-audience-app-v2  |   internalPosition: undefined,
+virtual-audience-app-v2  |   internalQuery: undefined,
+virtual-audience-app-v2  |   where: undefined,
+virtual-audience-app-v2  |   schema: undefined,
+virtual-audience-app-v2  |   table: undefined,
+virtual-audience-app-v2  |   column: undefined,
+virtual-audience-app-v2  |   dataType: undefined,
+virtual-audience-app-v2  |   constraint: undefined,
+virtual-audience-app-v2  |   file: 'parse_type.c',
+virtual-audience-app-v2  |   line: '270',
+virtual-audience-app-v2  |   routine: 'typenameType'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | npm notice New major version of npm available! 10.8.2 -> 11.5.2
+virtual-audience-app-v2  | npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.5.2
+virtual-audience-app-v2  | npm notice To update run: npm install -g npm@11.5.2
+virtual-audience-app-v2  | npm notice
+virtual-audience-app-v2  | Starting Virtual Audience Platform with authentication...
+virtual-audience-app-v2  | Using PostgreSQL driver for database connection
+virtual-audience-app-v2  | 5:55:39 PM [express] serving on port 5000
