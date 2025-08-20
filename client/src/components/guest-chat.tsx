@@ -193,9 +193,9 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
             return (
               <div 
                 key={message.id}
-                className={`flex ${isMyMessage ? 'justify-start' : 'justify-end'}`}
+                className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[80%] ${isMyMessage ? 'mr-4' : 'ml-4'}`}>
+                <div className={`max-w-[80%] ${isMyMessage ? 'ml-4' : 'mr-4'}`}>
                   <div className={`p-3 rounded-lg ${
                     message.messageType === 'broadcast'
                       ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
