@@ -800,17 +800,36 @@ export default function Links() {
                           onCanPlay={() => console.log(`Video can play for link: ${link.id}`)}
                           onPlaying={() => {
                             console.log(`Video started playing for link: ${link.id}`);
-                            // Force re-render to hide overlay
+                            // Force re-render to hide overlay when video has dimensions
+                            setTimeout(() => {
+                              setPreviewingLinks(prev => new Set(prev));
+                            }, 100);
+                          }}
+                          onLoadedData={() => {
+                            console.log(`Video data loaded for link: ${link.id}`);
+                            // Force re-render when video data is loaded
                             setPreviewingLinks(prev => new Set(prev));
+                          }}
+                          onPause={() => {
+                            console.log(`Video paused unexpectedly for link: ${link.id}, attempting to resume...`);
+                            const video = previewVideoRefs.current.get(link.id);
+                            if (video && video.srcObject) {
+                              setTimeout(() => {
+                                video.play().catch(e => console.warn('Failed to resume paused video:', e));
+                              }, 100);
+                            }
                           }}
                           onError={(e) => console.error(`Video error for link: ${link.id}`, e)}
                         />
                         {/* Show loading overlay only if video isn't playing */}
                         <div 
-                          className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/50 transition-opacity"
+                          className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/50 transition-opacity duration-500"
                           style={{
-                            opacity: previewVideoRefs.current.get(link.id)?.readyState === 4 && 
-                                    !previewVideoRefs.current.get(link.id)?.paused ? 0 : 1
+                            opacity: (() => {
+                              const video = previewVideoRefs.current.get(link.id);
+                              // Hide overlay if video is ready and has dimensions (means it's actually playing video content)
+                              return video && video.readyState >= 3 && video.videoWidth > 0 && video.videoHeight > 0 ? 0 : 1;
+                            })()
                           }}
                         >
                           <div className="text-center va-text-secondary text-sm bg-black/70 px-3 py-2 rounded-md">

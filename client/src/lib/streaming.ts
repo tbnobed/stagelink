@@ -186,7 +186,14 @@ export async function startPlayback(videoElement: HTMLVideoElement, streamName: 
           // Force video element to play if it's not playing
           if (videoElement.paused) {
             console.log('Video is paused, attempting to play...');
-            videoElement.play().catch(e => console.warn('Auto-play failed:', e));
+            videoElement.play().then(() => {
+              console.log('Successfully resumed video playback');
+            }).catch(e => {
+              console.warn('Auto-play failed:', e);
+              // Try to enable user interaction to allow playback
+              videoElement.muted = true;
+              videoElement.play().catch(e2 => console.warn('Muted auto-play also failed:', e2));
+            });
           }
         }
       }, 2000);
