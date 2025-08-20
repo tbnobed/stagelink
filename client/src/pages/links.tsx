@@ -856,22 +856,6 @@ export default function Links() {
                           }}
                           onError={(e) => console.error(`Video error for link: ${link.id}`, e)}
                         />
-                        {/* Show loading overlay only if video isn't ready */}
-                        {!videosReady.has(link.id) && (
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/50 transition-opacity duration-500">
-                            <div className="text-center va-text-secondary text-sm bg-black/70 px-3 py-2 rounded-md">
-                              <div className="animate-pulse">
-                                {link.type === 'guest' ? 
-                                  `Connecting to ${link.streamName} stream...` : 
-                                  `Loading ${link.returnFeed} feed...`
-                                }
-                              </div>
-                              <div className="text-xs mt-1 opacity-75">
-                                WHEP connection active
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
