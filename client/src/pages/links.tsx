@@ -512,7 +512,9 @@ export default function Links() {
       // When switching back from chat to preview, completely stop and restart
       const allLinks = [...(links || []), ...(viewerLinksData || [])];
       const link = allLinks.find(l => l.id === linkId);
-      if (link && previewingLinks.has(linkId)) {
+      const wasPreviewingBeforeChat = previewingLinks.has(linkId);
+      
+      if (link && wasPreviewingBeforeChat) {
         const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
         if (streamName) {
           console.log(`Completely restarting preview for ${streamName} after closing chat`);
