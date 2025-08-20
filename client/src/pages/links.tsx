@@ -290,99 +290,138 @@ export default function Links() {
           )}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Links List */}
-          <div className="lg:col-span-2">
-            {links.length === 0 ? (
-              <div className="va-bg-dark-surface rounded-2xl p-12 border va-border-dark text-center">
-                <i className="fas fa-link text-4xl text-gray-500 mb-4"></i>
-                <h3 className="text-xl font-semibold va-text-primary mb-2">No Links Generated</h3>
-                <p className="va-text-secondary mb-6">Start by creating links in the Link Generator</p>
-                <Button 
-                  onClick={() => window.location.href = '/generator'}
-                  className="va-bg-primary hover:va-bg-primary-dark text-va-dark-bg"
-                  data-testid="button-go-to-generator"
-                >
-                  <i className="fas fa-plus mr-2"></i>
-                  Generate Links
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {links.map((link: GeneratedLink) => (
-                  <div key={link.id} className="va-bg-dark-surface rounded-lg p-6 border va-border-dark hover:border-va-primary/50 transition-colors">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold va-text-primary" data-testid={`text-stream-${link.id}`}>
-                            {link.type === 'guest' ? link.streamName : link.returnFeed || 'Viewer Link'}
-                          </h3>
-                          <Badge variant="outline" className={
-                            link.type === 'guest' 
-                              ? "va-text-green border-va-primary" 
-                              : "bg-purple-500/20 text-purple-400 border-purple-500/50"
-                          }>
-                            {link.type === 'guest' ? 'Guest Session' : 'Return Feed Viewer'}
-                          </Badge>
-                          {link.type === 'guest' && link.returnFeed && (
-                            <Badge variant="outline" className="va-text-green border-va-primary">
-                              Return: {link.returnFeed}
-                            </Badge>
-                          )}
-                          {link.chatEnabled && (
-                            <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 border-blue-500/50">
-                              Chat
-                            </Badge>
-                          )}
-                          {link.expiresAt && (
-                            <Badge 
-                              variant="outline" 
-                              className={`${
-                                isLinkExpired(link) 
-                                  ? 'bg-red-500/20 text-red-400 border-red-500/50' 
-                                  : 'bg-orange-500/20 text-orange-400 border-orange-500/50'
-                              }`}
-                            >
-                              <i className="fas fa-clock mr-1"></i>
-                              {getTimeUntilExpiry(link)}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-sm va-text-secondary mb-3 space-y-1">
-                          <div>Created: {new Date(link.createdAt).toLocaleString()}</div>
-                          {link.expiresAt && (
-                            <div>Expires: {new Date(link.expiresAt).toLocaleString()}</div>
-                          )}
-                        </div>
-                        <div className="space-y-3 mb-4">
-                          {/* Short Link - Primary Display */}
-                          {link.shortLink && (
-                            <div className="va-bg-dark-surface-2 rounded p-3 border-l-4 border-va-primary">
-                              <div className="flex items-center gap-2 mb-1">
-                                <i className="fas fa-star text-va-primary text-xs"></i>
-                                <span className="text-xs va-text-primary font-medium">Recommended Share Link</span>
-                              </div>
-                              <code className="text-sm va-text-green font-mono break-all" data-testid={`text-short-url-${link.id}`}>
-                                {`${window.location.origin}${link.shortLink}`}
-                              </code>
-                            </div>
-                          )}
-                          {/* Full Link - Hidden unless needed for debugging
-                          <div className="va-bg-dark-surface-2 rounded p-3">
-                            <div className="flex items-center gap-2 mb-1">
-                              <i className="fas fa-link text-gray-400 text-xs"></i>
-                              <span className="text-xs va-text-secondary font-medium">Full Link</span>
-                            </div>
-                            <code className="text-xs va-text-secondary font-mono break-all" data-testid={`text-url-${link.id}`}>
-                              {link.url}
-                            </code>
-                          </div>
-                          */}
-                        </div>
+        {/* Links Grid - 4 cards per row */}
+        {links.length === 0 ? (
+          <div className="va-bg-dark-surface rounded-2xl p-12 border va-border-dark text-center">
+            <i className="fas fa-link text-4xl text-gray-500 mb-4"></i>
+            <h3 className="text-xl font-semibold va-text-primary mb-2">No Links Generated</h3>
+            <p className="va-text-secondary mb-6">Start by creating links in the Link Generator</p>
+            <Button 
+              onClick={() => window.location.href = '/generator'}
+              className="va-bg-primary hover:va-bg-primary-dark text-va-dark-bg"
+              data-testid="button-go-to-generator"
+            >
+              <i className="fas fa-plus mr-2"></i>
+              Generate Links
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+            {links.map((link: GeneratedLink) => (
+              <div key={link.id} className="va-bg-dark-surface rounded-lg border va-border-dark hover:border-va-primary/50 transition-all duration-200 hover:shadow-lg overflow-hidden">
+                {/* Preview Window */}
+                <div className="relative bg-black aspect-video">
+                  {previewingLink === link.id ? (
+                    <video 
+                      ref={previewingLink === link.id ? previewVideoRef : undefined}
+                      autoPlay 
+                      muted 
+                      controls 
+                      playsInline 
+                      className="w-full h-full object-cover"
+                      data-testid={`video-preview-${link.id}`}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
+                      <div className="text-center">
+                        <i className="fas fa-eye text-3xl text-gray-500 mb-2"></i>
+                        <p className="va-text-secondary text-sm">Preview Window</p>
+                        {link.type === 'guest' && link.streamName && (
+                          <Button 
+                            onClick={() => previewStream(link.streamName!, link.id)}
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
+                            data-testid={`button-preview-${link.id}`}
+                          >
+                            <i className="fas fa-play mr-1"></i>
+                            Preview
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    
-                    <div className="flex gap-2 flex-wrap">
+                  )}
+                  {previewingLink === link.id && (
+                    <Button 
+                      onClick={stopPreview}
+                      variant="outline"
+                      size="sm"
+                      className="absolute top-2 right-2 border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                      data-testid={`button-stop-preview-${link.id}`}
+                    >
+                      <i className="fas fa-stop"></i>
+                    </Button>
+                  )}
+                </div>
+
+                {/* Card Content */}
+                <div className="p-4">
+                  {/* Header */}
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold va-text-primary truncate" data-testid={`text-stream-${link.id}`}>
+                        {link.type === 'guest' ? link.streamName : link.returnFeed || 'Viewer Link'}
+                      </h3>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      <Badge variant="outline" className={
+                        link.type === 'guest' 
+                          ? "va-text-green border-va-primary text-xs" 
+                          : "bg-purple-500/20 text-purple-400 border-purple-500/50 text-xs"
+                      }>
+                        {link.type === 'guest' ? 'Guest' : 'Viewer'}
+                      </Badge>
+                      {link.type === 'guest' && link.returnFeed && (
+                        <Badge variant="outline" className="va-text-green border-va-primary text-xs">
+                          Return: {link.returnFeed}
+                        </Badge>
+                      )}
+                      {link.chatEnabled && (
+                        <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 border-blue-500/50 text-xs">
+                          Chat
+                        </Badge>
+                      )}
+                      {link.expiresAt && (
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${
+                            isLinkExpired(link) 
+                              ? 'bg-red-500/20 text-red-400 border-red-500/50' 
+                              : 'bg-orange-500/20 text-orange-400 border-orange-500/50'
+                          }`}
+                        >
+                          <i className="fas fa-clock mr-1"></i>
+                          {getTimeUntilExpiry(link)}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Link Display */}
+                  {link.shortLink && (
+                    <div className="va-bg-dark-surface-2 rounded p-2 mb-3">
+                      <div className="flex items-center gap-1 mb-1">
+                        <i className="fas fa-star text-va-primary text-xs"></i>
+                        <span className="text-xs va-text-primary font-medium">Share Link</span>
+                      </div>
+                      <code className="text-xs va-text-green font-mono break-all" data-testid={`text-short-url-${link.id}`}>
+                        {`${window.location.origin}${link.shortLink}`}
+                      </code>
+                    </div>
+                  )}
+
+                  {/* Timestamps */}
+                  <div className="text-xs va-text-secondary mb-3 space-y-1">
+                    <div>Created: {new Date(link.createdAt).toLocaleString()}</div>
+                    {link.expiresAt && (
+                      <div>Expires: {new Date(link.expiresAt).toLocaleString()}</div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="space-y-2">
+                    {/* Primary Actions Row */}
+                    <div className="flex gap-1">
                       <Button 
                         onClick={() => copyToClipboard(
                           link.shortLink 
@@ -391,139 +430,61 @@ export default function Links() {
                         )}
                         variant="outline"
                         size="sm"
-                        className="border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
+                        className="flex-1 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg text-xs"
                         data-testid={`button-copy-${link.id}`}
                       >
-                        <i className="fas fa-copy mr-2"></i>
-                        {link.shortLink ? 'Copy Short Link' : 'Copy'}
+                        <i className="fas fa-copy mr-1"></i>
+                        Copy
                       </Button>
-                      {/* Preview Button - Only for guest sessions */}
-                      {link.type === 'guest' && link.streamName && (
-                        <Button 
-                          onClick={() => previewStream(link.streamName!, link.id)}
-                          variant="outline"
-                          size="sm"
-                          className="va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
-                          disabled={previewingLink === link.id}
-                          data-testid={`button-preview-${link.id}`}
-                        >
-                          <i className={`fas ${previewingLink === link.id ? 'fa-spinner fa-spin' : 'fa-play'} mr-2`}></i>
-                          {previewingLink === link.id ? 'Previewing...' : 'Preview'}
-                        </Button>
-                      )}
-                      
-                      {/* Open Button - Different logic for guest vs viewer */}
                       <Button 
                         onClick={() => {
                           if (link.type === 'guest') {
                             window.open(`/viewer?stream=${encodeURIComponent(link.streamName || '')}`, '_blank');
                           } else {
-                            // For viewer links, open the studio-viewer page directly
                             window.open(link.url, '_blank');
                           }
                         }}
                         variant="outline"
                         size="sm"
-                        className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
+                        className="flex-1 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs"
                         data-testid={`button-open-${link.id}`}
                       >
-                        <i className="fas fa-external-link-alt mr-2"></i>
-                        {link.type === 'guest' ? 'Open Guest Session' : 'Open Viewer'}
+                        <i className="fas fa-external-link-alt mr-1"></i>
+                        Open
                       </Button>
-                      
-                      {/* Ingest Link - Only for guest sessions */}
+                    </div>
+                    
+                    {/* Secondary Actions Row */}
+                    <div className="flex gap-1">
                       {link.type === 'guest' && link.streamName && (
                         <Button 
                           onClick={() => copyIngestLink(link.streamName!)}
                           variant="outline"
                           size="sm"
-                          className="border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white"
+                          className="flex-1 border-purple-500 text-purple-400 hover:bg-purple-500 hover:text-white text-xs"
                           data-testid={`button-copy-ingest-${link.id}`}
                         >
-                          <i className="fas fa-broadcast-tower mr-2"></i>
-                          Copy Ingest Link
+                          <i className="fas fa-broadcast-tower mr-1"></i>
+                          Ingest
                         </Button>
                       )}
-                      
                       <Button 
                         onClick={() => deleteLink(link.id, link.type)}
                         variant="outline"
                         size="sm"
-                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs"
                         data-testid={`button-delete-${link.id}`}
                       >
-                        <i className="fas fa-trash mr-2"></i>
+                        <i className="fas fa-trash mr-1"></i>
                         Delete
                       </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Preview Panel */}
-          <div className="lg:col-span-1">
-            <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark sticky top-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold va-text-primary">Stream Preview</h3>
-                {previewingLink && (
-                  <Button 
-                    onClick={stopPreview}
-                    variant="outline"
-                    size="sm"
-                    className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-                    data-testid="button-stop-preview"
-                  >
-                    <i className="fas fa-stop mr-2"></i>
-                    Stop
-                  </Button>
-                )}
-              </div>
-              
-              <div className="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
-                <video 
-                  ref={previewVideoRef}
-                  autoPlay 
-                  muted 
-                  controls 
-                  playsInline 
-                  className="w-full h-full object-cover"
-                  data-testid="video-preview"
-                />
-                {!previewingLink && (
-                  <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
-                    <div className="text-center">
-                      <i className="fas fa-eye text-4xl text-gray-500 mb-4"></i>
-                      <p className="va-text-secondary">Select a link to preview</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {previewingLink && (
-                <div className="va-bg-dark-surface-2 rounded-lg p-4">
-                  <h4 className="font-medium va-text-primary flex items-center mb-2">
-                    <i className="fas fa-info-circle mr-2 va-text-green"></i>
-                    Preview Info
-                  </h4>
-                  <div className="text-sm space-y-1">
-                    <div className="flex justify-between">
-                      <span className="va-text-secondary">Status:</span>
-                      <span className="va-text-green">Live Preview</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="va-text-secondary">Stream:</span>
-                      <span className="va-text-primary font-mono text-xs">
-                        {links.find((l: GeneratedLink) => l.id === previewingLink)?.streamName}
-                      </span>
-                    </div>
-                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
