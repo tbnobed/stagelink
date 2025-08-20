@@ -775,88 +775,21 @@ export default function Links() {
                   // Preview Window (original functionality)
                   <div className="relative bg-black aspect-video">
                     {previewingLinks.has(link.id) ? (
-                      <>
                         <video 
+                          key={`video-${link.id}`}
                           ref={(el) => {
                             if (el) {
-                              console.log(`Video element set for link: ${link.id}`, el);
+                              console.log(`Simple video element set for link: ${link.id}`);
                               previewVideoRefs.current.set(link.id, el);
-                              // Force play if there's already a srcObject
-                              if (el.srcObject) {
-                                console.log(`Video element already has srcObject, attempting play...`);
-                                el.play().catch(e => console.error('Failed to play video:', e));
-                                // Check if video is ready and force refresh display
-                                setTimeout(() => {
-                                  if (el && (!el.paused || el.readyState >= 3)) {
-                                    console.log(`Video already ready for link: ${link.id}, readyState: ${el.readyState}, paused: ${el.paused}`);
-                                    // Force video element to display properly
-                                    el.style.visibility = 'visible';
-                                    el.style.opacity = '1';
-                                    // Trigger a repaint by forcing layout recalculation
-                                    el.style.transform = 'translateZ(0)';
-                                    el.offsetHeight; // Force layout recalculation
-                                    el.style.transform = '';
-                                    setVideosReady(prev => {
-                                      if (!prev.has(link.id)) {
-                                        return new Set([...prev, link.id]);
-                                      }
-                                      return prev;
-                                    });
-                                  }
-                                }, 100);
-                              }
                             }
                           }}
                           autoPlay 
                           muted 
-                          controls 
                           playsInline 
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover bg-black"
                           data-testid={`video-preview-${link.id}`}
-                          onLoadStart={() => console.log(`Video loadstart for link: ${link.id}`)}
-                          onLoadedMetadata={() => console.log(`Video metadata loaded for link: ${link.id}`)}
-                          onCanPlay={() => {
-                            console.log(`Video can play for link: ${link.id}`);
-                            // Mark video as ready when it can play
-                            setVideosReady(prev => {
-                              if (!prev.has(link.id)) {
-                                return new Set([...prev, link.id]);
-                              }
-                              return prev;
-                            });
-                          }}
-                          onPlaying={() => {
-                            console.log(`Video started playing for link: ${link.id}`);
-                            // Mark video as ready immediately when it starts playing
-                            setVideosReady(prev => {
-                              if (!prev.has(link.id)) {
-                                return new Set([...prev, link.id]);
-                              }
-                              return prev;
-                            });
-                          }}
-                          onLoadedData={() => {
-                            console.log(`Video data loaded for link: ${link.id}`);
-                            // Mark video as ready when data loads
-                            setVideosReady(prev => {
-                              if (!prev.has(link.id)) {
-                                return new Set([...prev, link.id]);
-                              }
-                              return prev;
-                            });
-                          }}
-                          onPause={() => {
-                            console.log(`Video paused unexpectedly for link: ${link.id}, attempting to resume...`);
-                            const video = previewVideoRefs.current.get(link.id);
-                            if (video && video.srcObject) {
-                              setTimeout(() => {
-                                video.play().catch(e => console.warn('Failed to resume paused video:', e));
-                              }, 100);
-                            }
-                          }}
-                          onError={(e) => console.error(`Video error for link: ${link.id}`, e)}
+                          style={{ display: 'block' }}
                         />
-                      </>
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
                         <div className="text-center">
