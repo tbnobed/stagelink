@@ -798,10 +798,21 @@ export default function Links() {
                           onLoadStart={() => console.log(`Video loadstart for link: ${link.id}`)}
                           onLoadedMetadata={() => console.log(`Video metadata loaded for link: ${link.id}`)}
                           onCanPlay={() => console.log(`Video can play for link: ${link.id}`)}
-                          onPlaying={() => console.log(`Video started playing for link: ${link.id}`)}
+                          onPlaying={() => {
+                            console.log(`Video started playing for link: ${link.id}`);
+                            // Force re-render to hide overlay
+                            setPreviewingLinks(prev => new Set(prev));
+                          }}
                           onError={(e) => console.error(`Video error for link: ${link.id}`, e)}
                         />
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        {/* Show loading overlay only if video isn't playing */}
+                        <div 
+                          className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/50 transition-opacity"
+                          style={{
+                            opacity: previewVideoRefs.current.get(link.id)?.readyState === 4 && 
+                                    !previewVideoRefs.current.get(link.id)?.paused ? 0 : 1
+                          }}
+                        >
                           <div className="text-center va-text-secondary text-sm bg-black/70 px-3 py-2 rounded-md">
                             <div className="animate-pulse">
                               {link.type === 'guest' ? 
