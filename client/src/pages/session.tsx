@@ -10,6 +10,7 @@ export default function Session() {
   const [audioCodec, setAudioCodec] = useState("-");
   const [videoCodec, setVideoCodec] = useState("-");
   const [showChat, setShowChat] = useState(false);
+  const [chatEnabled, setChatEnabled] = useState(false);
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
   const [returnFeedStatus, setReturnFeedStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed' | 'retrying'>('disconnected');
@@ -30,7 +31,10 @@ export default function Session() {
       const token = urlParams.get('token');
       const stream = urlParams.get('stream');
       const returnStream = urlParams.get('return');
-      const chatEnabled = urlParams.get('chat') === 'true';
+      const chatEnabledParam = urlParams.get('chat') === 'true';
+
+      // Store chat enabled state
+      setChatEnabled(chatEnabledParam);
 
       // Validate session token if provided
       if (token) {
@@ -79,7 +83,7 @@ export default function Session() {
 
       setIsValidatingToken(false);
 
-      if (chatEnabled) {
+      if (chatEnabledParam) {
         setShowChat(true);
       }
 
@@ -365,8 +369,8 @@ export default function Session() {
               </div>
             )}
 
-            {/* Chat Toggle */}
-            {!showChat && (
+            {/* Chat Toggle - only show if chat is enabled for this link */}
+            {chatEnabled && !showChat && (
               <div className="text-center">
                 <Button 
                   onClick={toggleChat}
