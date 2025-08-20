@@ -505,7 +505,10 @@ export default function Links() {
   };
 
   const toggleChatForLink = async (linkId: string) => {
+    console.log(`toggleChatForLink called for ${linkId}, current showChatForLink: ${showChatForLink}`);
+    
     if (showChatForLink === linkId) {
+      console.log(`Closing chat for ${linkId}`);
       setShowChatForLink(null);
       disconnectFromChatWebSocket(linkId);
       
@@ -514,8 +517,12 @@ export default function Links() {
       const link = allLinks.find(l => l.id === linkId);
       const wasPreviewingBeforeChat = previewingLinks.has(linkId);
       
+      console.log(`Link found: ${!!link}, was previewing before chat: ${wasPreviewingBeforeChat}`);
+      
       if (link && wasPreviewingBeforeChat) {
         const streamName = link.type === 'guest' ? link.streamName : link.returnFeed;
+        console.log(`Stream name: ${streamName}`);
+        
         if (streamName) {
           console.log(`Completely restarting preview for ${streamName} after closing chat`);
           
@@ -531,6 +538,7 @@ export default function Links() {
         }
       }
     } else {
+      console.log(`Opening chat for ${linkId}`);
       setShowChatForLink(linkId);
       // Load chat history and participants when opening chat
       await loadChatData(linkId);
