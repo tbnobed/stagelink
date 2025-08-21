@@ -9,6 +9,8 @@ import { Redirect } from "wouter";
 import { Loader2, Monitor, Users, Zap } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 
+import stagelinq_logo from "@assets/stagelinq_logo.png";
+
 export default function AuthPage() {
   const { user, isLoading, loginMutation, registerMutation } = useAuth();
   const { isMobile } = useMobile();
@@ -65,9 +67,9 @@ export default function AuthPage() {
         <div className="bg-gradient-to-br from-primary/10 to-primary/5 px-4 py-4 text-center">
           <div className="flex justify-center mb-2">
             <img 
-              src="/stagelinq_logo.png" 
+              src={stagelinq_logo} 
               alt="StageLinq Logo" 
-              className="h-[300px] w-auto"
+              className="h-[300px] w-auto mt-[-46px] mb-[-46px] ml-[-5px] mr-[-5px] pl-[19px] pr-[19px] pt-[70px] pb-[70px]"
               data-testid="stagelinq-logo-mobile"
             />
           </div>
@@ -78,7 +80,6 @@ export default function AuthPage() {
             Professional live streaming solution
           </p>
         </div>
-
         {/* Mobile Form */}
         <div className="flex-1 flex items-center justify-center px-4 py-8">
           <Card className="w-full max-w-sm">
@@ -185,7 +186,6 @@ export default function AuthPage() {
             </CardContent>
           </Card>
         </div>
-
         {/* Mobile Feature List */}
         <div className="px-4 pb-8">
           <div className="max-w-sm mx-auto space-y-2 text-xs text-muted-foreground">
