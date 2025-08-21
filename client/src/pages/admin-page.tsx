@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Trash2, Users, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface SafeUser {
   id: number;
@@ -24,6 +25,7 @@ interface SafeUser {
 export default function AdminPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isMobile } = useMobile();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newUser, setNewUser] = useState({
     username: "",
@@ -119,16 +121,16 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Settings className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">Admin Panel</h1>
+    <div className={`${isMobile ? 'p-4 space-y-4' : 'container mx-auto p-6 space-y-6'}`}>
+      <div className={`flex items-center gap-2 ${isMobile ? 'mb-4' : 'mb-6'}`}>
+        <Settings className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'}`} />
+        <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold`}>Admin Panel</h1>
       </div>
 
       {/* User Management Section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className={`${isMobile ? 'flex flex-col space-y-4' : 'flex items-center justify-between'}`}>
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               <div>
@@ -138,6 +140,7 @@ export default function AdminPage() {
             </div>
             <Button 
               onClick={() => setShowCreateForm(!showCreateForm)}
+              className={`${isMobile ? 'btn-touch w-full' : ''}`}
               data-testid="button-create-user"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -153,7 +156,7 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateUser} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
                     <div className="space-y-2">
                       <Label htmlFor="new-username">Username *</Label>
                       <Input
@@ -209,10 +212,11 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className={`${isMobile ? 'flex flex-col space-y-2' : 'flex gap-2'}`}>
                     <Button 
                       type="submit" 
                       disabled={createUserMutation.isPending}
+                      className={`${isMobile ? 'btn-touch' : ''}`}
                       data-testid="button-submit-create-user"
                     >
                       {createUserMutation.isPending && (
@@ -224,6 +228,7 @@ export default function AdminPage() {
                       type="button" 
                       variant="outline" 
                       onClick={() => setShowCreateForm(false)}
+                      className={`${isMobile ? 'btn-touch' : ''}`}
                       data-testid="button-cancel-create-user"
                     >
                       Cancel
@@ -239,7 +244,42 @@ export default function AdminPage() {
               <Loader2 className="h-6 w-6 animate-spin" />
               <span className="ml-2">Loading users...</span>
             </div>
+          ) : isMobile ? (
+            // Mobile Card Layout
+            <div className="space-y-3">
+              {users?.map((userData) => (
+                <Card key={userData.id} className="p-4" data-testid={`card-user-${userData.id}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-semibold">{userData.username}</h3>
+                      <Badge variant={
+                        userData.role === 'admin' ? 'destructive' : 
+                        userData.role === 'engineer' ? 'default' : 
+                        'secondary'
+                      }>
+                        {userData.role}
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteUser(userData.id, userData.username)}
+                      disabled={userData.id === user?.id || deleteUserMutation.isPending}
+                      className="btn-touch p-2"
+                      data-testid={`button-delete-user-${userData.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-1 text-sm va-text-secondary">
+                    <div><span className="font-medium">Email:</span> {userData.email || "—"}</div>
+                    <div><span className="font-medium">Created:</span> {new Date(userData.createdAt).toLocaleDateString()}</div>
+                  </div>
+                </Card>
+              ))}
+            </div>
           ) : (
+            // Desktop Table Layout
             <Table>
               <TableHeader>
                 <TableRow>
