@@ -136,7 +136,7 @@ export default function SRSMonitoring() {
             <i className="fas fa-server text-green-400 text-xl"></i>
           </div>
           <div>
-            <h3 className="text-xl font-semibold va-text-primary">SRS Server</h3>
+            <h3 className="text-xl font-semibold va-text-primary">OBTV Server</h3>
             <div className="flex items-center">
               <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
               <span className="va-text-green text-sm font-medium">Online</span>
@@ -151,7 +151,6 @@ export default function SRSMonitoring() {
           <i className={`fas fa-chevron-${showDetails ? 'up' : 'down'}`}></i>
         </button>
       </div>
-
       {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div className="text-center">
@@ -179,7 +178,6 @@ export default function SRSMonitoring() {
           <div className="va-text-secondary text-sm">Uptime</div>
         </div>
       </div>
-
       {/* Detailed Stats */}
       {showDetails && (
         <div className="border-t va-border-dark pt-4 mt-4 space-y-4">
