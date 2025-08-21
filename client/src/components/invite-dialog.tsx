@@ -117,7 +117,16 @@ export function InviteDialog({
 
   const formatExpiryText = () => {
     if (!linkDetails.expiresAt) return 'This link does not expire.';
-    return `Expires on ${linkDetails.expiresAt.toLocaleDateString()} at ${linkDetails.expiresAt.toLocaleTimeString()}`;
+    
+    // Handle both string and Date objects
+    const expiryDate = typeof linkDetails.expiresAt === 'string' 
+      ? new Date(linkDetails.expiresAt) 
+      : linkDetails.expiresAt;
+    
+    // Check if date is valid
+    if (isNaN(expiryDate.getTime())) return 'This link does not expire.';
+    
+    return `Expires on ${expiryDate.toLocaleDateString()} at ${expiryDate.toLocaleTimeString()}`;
   };
 
   return (

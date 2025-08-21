@@ -632,6 +632,25 @@ export default function Generator() {
                       return;
                     }
                     
+                    // Calculate expiration date based on user selection
+                    const getExpirationDate = () => {
+                      const currentExpOption = linkType === "guest" ? expirationOption : viewerExpirationOption;
+                      const currentCustomHours = linkType === "guest" ? customHours : viewerCustomHours;
+                      
+                      if (currentExpOption === "never") return null;
+                      
+                      let hours;
+                      if (currentExpOption === "custom") {
+                        hours = parseInt(currentCustomHours) || 24;
+                      } else {
+                        hours = parseInt(currentExpOption);
+                      }
+                      
+                      const expiration = new Date();
+                      expiration.setHours(expiration.getHours() + hours);
+                      return expiration;
+                    };
+
                     setInviteDialog({
                       open: true,
                       type: linkType === "guest" ? "streaming" : "viewer",
@@ -639,7 +658,8 @@ export default function Generator() {
                       linkDetails: {
                         streamName: linkType === "guest" ? streamName : undefined,
                         returnFeed: linkType === "guest" ? returnFeed : viewerReturnFeed,
-                        chatEnabled: linkType === "guest" ? enableChat : viewerEnableChat
+                        chatEnabled: linkType === "guest" ? enableChat : viewerEnableChat,
+                        expiresAt: getExpirationDate()
                       }
                     });
                   }}
