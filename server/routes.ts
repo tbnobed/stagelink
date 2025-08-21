@@ -760,8 +760,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!shortLink) {
         // Create a new short link with same expiration as the original link
+        const checkShortLinkExists = async (code: string) => {
+          const existing = await storage.getShortLink(code);
+          return existing !== undefined;
+        };
+        
+        const shortCode = await generateUniqueShortCode(checkShortLinkExists);
         shortLink = await storage.createShortLink({
-          id: generateUniqueShortCode(),
+          id: shortCode,
           streamName: link.streamName,
           returnFeed: link.returnFeed,
           chatEnabled: link.chatEnabled,
@@ -816,8 +822,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!shortLink) {
         // Create a new short viewer link with same expiration as the original link
+        const checkShortViewerLinkExists = async (code: string) => {
+          const existing = await storage.getShortViewerLink(code);
+          return existing !== undefined;
+        };
+        
+        const shortCode = await generateUniqueShortCode(checkShortViewerLinkExists);
         shortLink = await storage.createShortViewerLink({
-          id: generateUniqueShortCode(),
+          id: shortCode,
           returnFeed: link.returnFeed,
           chatEnabled: link.chatEnabled,
           expiresAt: link.expiresAt
