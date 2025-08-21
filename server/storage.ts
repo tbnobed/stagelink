@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, chatMessages, chatParticipants, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
@@ -54,6 +54,12 @@ export interface IStorage {
   getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
   usePasswordResetToken(token: string): Promise<boolean>;
   cleanupExpiredPasswordResetTokens(): Promise<number>;
+  
+  // Registration Tokens
+  createRegistrationToken(email: string, role: string, token: string, expiresAt: Date, inviterUserId?: number): Promise<RegistrationToken>;
+  getRegistrationToken(token: string): Promise<RegistrationToken | undefined>;
+  useRegistrationToken(token: string): Promise<boolean>;
+  cleanupExpiredRegistrationTokens(): Promise<number>;
   
   // Chat System
   getChatMessages(sessionId: string, limit?: number): Promise<ChatMessage[]>;
@@ -478,6 +484,40 @@ export class MemStorage implements IStorage {
   async cleanupExpiredTokens(): Promise<number> {
     console.warn('Token cleanup not needed in MemStorage');
     return 0;
+  }
+
+  // Registration Token Methods - Not implemented in MemStorage
+  async createRegistrationToken(email: string, role: string, token: string, expiresAt: Date, inviterUserId?: number): Promise<RegistrationToken> {
+    throw new Error('Registration tokens not supported in MemStorage - use DatabaseStorage');
+  }
+
+  async getRegistrationToken(token: string): Promise<RegistrationToken | undefined> {
+    throw new Error('Registration tokens not supported in MemStorage - use DatabaseStorage');
+  }
+
+  async useRegistrationToken(token: string): Promise<boolean> {
+    throw new Error('Registration tokens not supported in MemStorage - use DatabaseStorage');
+  }
+
+  async cleanupExpiredRegistrationTokens(): Promise<number> {
+    throw new Error('Registration tokens not supported in MemStorage - use DatabaseStorage');
+  }
+
+  // Password Reset Token Methods - Not implemented in MemStorage  
+  async createPasswordResetToken(userId: number, token: string, expiresAt: Date): Promise<PasswordResetToken> {
+    throw new Error('Password reset tokens not supported in MemStorage - use DatabaseStorage');
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    throw new Error('Password reset tokens not supported in MemStorage - use DatabaseStorage');
+  }
+
+  async usePasswordResetToken(token: string): Promise<boolean> {
+    throw new Error('Password reset tokens not supported in MemStorage - use DatabaseStorage');
+  }
+
+  async cleanupExpiredPasswordResetTokens(): Promise<number> {
+    throw new Error('Password reset tokens not supported in MemStorage - use DatabaseStorage');
   }
 
   // Chat System Methods - Not implemented in MemStorage
@@ -1061,6 +1101,62 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           lt(passwordResetTokens.expiresAt, now)
+        )
+      );
+    return result.rowCount || 0;
+  }
+
+  // Registration Token Methods
+  async createRegistrationToken(email: string, role: string, token: string, expiresAt: Date, inviterUserId?: number): Promise<RegistrationToken> {
+    const [registrationToken] = await db
+      .insert(registrationTokens)
+      .values({
+        email,
+        role: role as 'admin' | 'engineer' | 'user',
+        token,
+        expiresAt,
+        inviterUserId,
+        createdAt: new Date(),
+      })
+      .returning();
+    return registrationToken;
+  }
+
+  async getRegistrationToken(token: string): Promise<RegistrationToken | undefined> {
+    const [registrationToken] = await db
+      .select()
+      .from(registrationTokens)
+      .where(
+        and(
+          eq(registrationTokens.token, token),
+          eq(registrationTokens.used, false),
+          lt(new Date(), registrationTokens.expiresAt)
+        )
+      );
+    return registrationToken;
+  }
+
+  async useRegistrationToken(token: string): Promise<boolean> {
+    const result = await db
+      .update(registrationTokens)
+      .set({ used: true })
+      .where(
+        and(
+          eq(registrationTokens.token, token),
+          eq(registrationTokens.used, false),
+          lt(new Date(), registrationTokens.expiresAt)
+        )
+      );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async cleanupExpiredRegistrationTokens(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .delete(registrationTokens)
+      .where(
+        and(
+          lt(registrationTokens.expiresAt, now)
         )
       );
     return result.rowCount || 0;

@@ -179,3 +179,24 @@ export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatParticipant = z.infer<typeof insertChatParticipantSchema>;
 export type ChatParticipant = typeof chatParticipants.$inferSelect;
+
+// Registration tokens for user invites
+export const registrationTokens = pgTable("registration_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  role: userRoleEnum("role").notNull().default('user'),
+  token: text("token").notNull().unique(),
+  inviterUserId: integer("inviter_user_id").references(() => users.id),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  used: boolean("used").notNull().default(false),
+});
+
+export const insertRegistrationTokenSchema = createInsertSchema(registrationTokens).omit({
+  id: true,
+  createdAt: true,
+  used: true,
+});
+
+export type InsertRegistrationToken = z.infer<typeof insertRegistrationTokenSchema>;
+export type RegistrationToken = typeof registrationTokens.$inferSelect;

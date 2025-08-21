@@ -289,6 +289,100 @@ StageLinq Team
   return sendEmail({ to, subject, text, html });
 }
 
+export async function sendRegistrationInvite({
+  to,
+  inviterName,
+  registrationUrl,
+  role
+}: {
+  to: string;
+  inviterName: string;
+  registrationUrl: string;
+  role: string;
+}): Promise<boolean> {
+  const subject = `You've been invited to join StageLinq by ${inviterName}`;
+  
+  const roleText = role === 'admin' ? 'Administrator' : role === 'engineer' ? 'Engineer' : 'User';
+  
+  const text = `
+Hello!
+
+${inviterName} has invited you to join the StageLinq Virtual Audience Platform as a ${roleText}.
+
+Please complete your registration by clicking the link below:
+${registrationUrl}
+
+You'll be able to set your own username and password during registration.
+
+About StageLinq:
+StageLinq is a professional live streaming platform that enables real-time video publishing and audience interaction. You can create streaming sessions, manage viewer links, and engage with live audiences.
+
+This invitation link will expire in 7 days.
+
+Best regards,
+StageLinq Team
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #00ff9f; margin: 0;">StageLinq</h1>
+        <p style="color: #666; margin: 5px 0;">Virtual Audience Platform</p>
+      </div>
+      
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h2 style="color: #333; margin-top: 0;">You're Invited to Join StageLinq!</h2>
+        <p style="color: #666; line-height: 1.6;">
+          <strong>${inviterName}</strong> has invited you to join the StageLinq Virtual Audience Platform as a <strong>${roleText}</strong>.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${registrationUrl}" style="background-color: #00ff9f; color: #000; padding: 15px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+          Complete Registration
+        </a>
+      </div>
+
+      <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 4px solid #2196f3; margin-bottom: 20px;">
+        <h3 style="color: #1565c0; margin-top: 0;">What's Next?</h3>
+        <p style="color: #1565c0; margin: 5px 0;">
+          • Click the registration link above<br>
+          • Choose your own username and password<br>
+          • Start using StageLinq immediately
+        </p>
+      </div>
+
+      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
+        <h3 style="color: #333; margin-top: 0;">About StageLinq</h3>
+        <p style="color: #666; line-height: 1.6; margin-bottom: 10px;">
+          StageLinq is a professional live streaming platform that enables:
+        </p>
+        <ul style="color: #666; line-height: 1.6; margin: 0; padding-left: 20px;">
+          <li>Real-time video publishing with WHIP/WHEP protocols</li>
+          <li>Studio return feed monitoring</li>
+          <li>Live chat integration</li>
+          <li>QR code generation for easy session sharing</li>
+          <li>Professional email invitations</li>
+        </ul>
+      </div>
+
+      <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-top: 20px;">
+        <p style="color: #856404; margin: 0; font-size: 14px;">
+          <strong>Note:</strong> This invitation link expires in 7 days. Please complete your registration soon.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <p style="color: #999; font-size: 14px; margin: 0;">
+          This email was sent by the StageLinq Virtual Audience Platform
+        </p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({ to, subject, text, html });
+}
+
 export async function sendPasswordReset({
   to,
   resetToken,

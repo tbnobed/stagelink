@@ -119,58 +119,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'User with this email already exists' });
       }
 
-      // Generate username from email (everything before @)
-      let username = email.split('@')[0];
+      // Generate secure registration token
+      const crypto = await import('crypto');
+      const registrationToken = crypto.randomBytes(32).toString('hex');
       
-      // Check for username conflicts and add number suffix if needed
-      let usernameCounter = 1;
-      let finalUsername = username;
-      while (await storage.getUserByUsername(finalUsername)) {
-        finalUsername = `${username}${usernameCounter}`;
-        usernameCounter++;
-      }
-      username = finalUsername;
-      
-      // Generate temporary password
-      const tempPassword = Math.random().toString(36).slice(-12);
-      const { hashPassword } = await import('./auth');
-      const hashedPassword = await hashPassword(tempPassword);
+      // Token expires in 7 days
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
 
-      // Create user account
-      const user = await storage.createUser({
-        username,
-        email,
-        password: hashedPassword,
-        role: role as 'admin' | 'engineer' | 'user',
-      });
-
-      // Send invitation email
-      const { sendUserInvite } = await import('./email-service');
+      // Create registration token
       const inviterUser = req.user as any;
+      await storage.createRegistrationToken(
+        email,
+        role,
+        registrationToken,
+        expiresAt,
+        inviterUser.id
+      );
+
+      // Send registration invitation email
+      const { sendRegistrationInvite } = await import('./email-service');
       const platformUrl = `${req.protocol}://${req.get('host')}`;
+      const registrationUrl = `${platformUrl}/register?token=${registrationToken}`;
       
-      const emailSent = await sendUserInvite({
+      const emailSent = await sendRegistrationInvite({
         to: email,
         inviterName: inviterUser.username || 'StageLinq Admin',
-        tempPassword,
-        platformUrl,
+        registrationUrl,
+        role,
       });
 
       if (!emailSent) {
-        console.error('Failed to send invitation email');
-        // Don't fail the request, user was created successfully
+        console.error('Failed to send registration invitation email');
+        return res.status(500).json({ error: 'Failed to send invitation email' });
       }
 
       res.status(201).json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
+        message: 'Registration invitation sent successfully',
+        email,
+        role,
         emailSent,
       });
     } catch (error) {
       console.error('Failed to invite user:', error);
       res.status(500).json({ error: 'Failed to invite user' });
+    }
+  });
+
+  // Registration API (Public)
+  app.get('/api/registration/validate-token/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      const registrationToken = await storage.getRegistrationToken(token);
+      if (!registrationToken) {
+        return res.status(400).json({ error: 'Invalid or expired registration token' });
+      }
+
+      res.json({
+        valid: true,
+        email: registrationToken.email,
+        role: registrationToken.role,
+      });
+    } catch (error) {
+      console.error('Failed to validate registration token:', error);
+      res.status(500).json({ error: 'Failed to validate registration token' });
+    }
+  });
+
+  app.post('/api/registration/complete', async (req, res) => {
+    try {
+      const { token, username, password } = req.body;
+      
+      if (!token || !username || !password) {
+        return res.status(400).json({ error: 'Token, username, and password are required' });
+      }
+
+      // Validate registration token
+      const registrationToken = await storage.getRegistrationToken(token);
+      if (!registrationToken) {
+        return res.status(400).json({ error: 'Invalid or expired registration token' });
+      }
+
+      // Check if username is already taken
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: 'Username is already taken' });
+      }
+
+      // Check if email is already registered
+      const existingEmailUser = await storage.getUserByEmail(registrationToken.email);
+      if (existingEmailUser) {
+        return res.status(400).json({ error: 'User with this email already exists' });
+      }
+
+      // Hash password
+      const { hashPassword } = await import('./auth');
+      const hashedPassword = await hashPassword(password);
+
+      // Create user account
+      const user = await storage.createUser({
+        username,
+        email: registrationToken.email,
+        password: hashedPassword,
+        role: registrationToken.role as 'admin' | 'engineer' | 'user',
+      });
+
+      // Mark registration token as used
+      await storage.useRegistrationToken(token);
+
+      res.status(201).json({
+        message: 'Registration completed successfully',
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to complete registration:', error);
+      res.status(500).json({ error: 'Failed to complete registration' });
     }
   });
 
