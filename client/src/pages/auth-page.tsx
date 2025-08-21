@@ -62,8 +62,8 @@ export default function AuthPage() {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         {/* Mobile Header with Logo */}
-        <div className="bg-gradient-to-br from-primary/10 to-primary/5 px-4 py-8 text-center">
-          <div className="flex justify-center mb-6">
+        <div className="bg-gradient-to-br from-primary/10 to-primary/5 px-4 py-4 text-center">
+          <div className="flex justify-center mb-2">
             <img 
               src="/stagelinq_logo.png" 
               alt="StageLinq Logo" 
@@ -71,7 +71,7 @@ export default function AuthPage() {
               data-testid="stagelinq-logo-mobile"
             />
           </div>
-          <h1 className="text-2xl font-bold text-primary mb-2">
+          <h1 className="text-2xl font-bold text-primary mb-1">
             StageLinq Platform
           </h1>
           <p className="text-sm text-muted-foreground">
