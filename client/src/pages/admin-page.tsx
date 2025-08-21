@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2, Users, Settings } from "lucide-react";
+import { Loader2, Plus, Trash2, Users, Settings, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMobile } from "@/hooks/use-mobile";
+import { InviteDialog } from "@/components/invite-dialog";
 
 interface SafeUser {
   id: number;
@@ -32,6 +33,17 @@ export default function AdminPage() {
     password: "",
     email: "",
     role: "user" as "admin" | "engineer" | "user",
+  });
+  const [inviteDialog, setInviteDialog] = useState<{
+    open: boolean;
+    type: 'streaming' | 'viewer' | 'short-link';
+    linkId?: string;
+    shortCode?: string;
+    linkDetails: any;
+  }>({
+    open: false,
+    type: 'streaming',
+    linkDetails: {}
   });
 
   const { data: users, isLoading: usersLoading } = useQuery<SafeUser[]>({
@@ -325,6 +337,42 @@ export default function AdminPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Email Invite Testing Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            <div>
+              <CardTitle>Email Invites</CardTitle>
+              <CardDescription>Test email invite functionality with SendGrid</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              Email invites are now configured with SendGrid using alerts@obedtv.com as the sender.
+              You can send invites for streaming sessions, viewer links, and short links from your Links page.
+            </p>
+            <div className="mt-3 space-y-2 text-xs">
+              <div>✓ SendGrid API configured</div>
+              <div>✓ Authenticated sender: alerts@obedtv.com</div>
+              <div>✓ Professional StageLinq email templates</div>
+              <div>✓ Support for custom messages</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <InviteDialog
+        open={inviteDialog.open}
+        onOpenChange={(open) => setInviteDialog(prev => ({ ...prev, open }))}
+        inviteType={inviteDialog.type}
+        linkId={inviteDialog.linkId}
+        shortCode={inviteDialog.shortCode}
+        linkDetails={inviteDialog.linkDetails}
+      />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import Navigation from "@/components/navigation";
 import Home from "@/pages/home";
 import Generator from "@/pages/generator";
 import Session from "@/pages/session";
-import LinksPage from "@/pages/links-page";
+import Links from "@/pages/links";
 import Viewer from "@/pages/viewer";
 import StudioViewer from "@/pages/studio-viewer";
 import MobileTest from "@/pages/mobile-test";
@@ -25,7 +25,7 @@ function Router() {
       <Switch>
         <ProtectedRoute path="/" component={Home} />
         <ProtectedRoute path="/generator" component={Generator} />
-        <ProtectedRoute path="/links" component={LinksPage} />
+        <ProtectedRoute path="/links" component={Links} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/admin" component={AdminPage} adminOnly />
         <Route path="/session" component={Session} />

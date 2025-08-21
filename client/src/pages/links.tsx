@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useMobile } from "@/hooks/use-mobile";
+import { InviteDialog } from "@/components/invite-dialog";
 
 interface GeneratedLink {
   id: string;
@@ -37,6 +38,17 @@ export default function Links() {
   const [chatConnections, setChatConnections] = useState<{[sessionId: string]: WebSocket}>({});
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [inviteDialog, setInviteDialog] = useState<{
+    open: boolean;
+    type: 'streaming' | 'viewer' | 'short-link';
+    linkId?: string;
+    shortCode?: string;
+    linkDetails: any;
+  }>({
+    open: false,
+    type: 'streaming',
+    linkDetails: {}
+  });
   const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const chatScrollRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const { toast } = useToast();
@@ -624,6 +636,21 @@ export default function Links() {
     });
   };
 
+  const openInviteDialog = (link: GeneratedLink) => {
+    const linkType = link.type === 'guest' ? 'streaming' : 'viewer';
+    setInviteDialog({
+      open: true,
+      type: linkType,
+      linkId: link.id,
+      linkDetails: {
+        streamName: link.streamName,
+        returnFeed: link.returnFeed,
+        chatEnabled: link.chatEnabled,
+        expiresAt: link.expiresAt ? new Date(link.expiresAt) : null
+      }
+    });
+  };
+
   return (
     <div className={`min-h-screen ${isMobile ? 'py-4 px-3' : 'py-6 px-6'}`}>
       <div className="w-full max-w-none">
@@ -978,6 +1005,16 @@ export default function Links() {
                         <i className="fas fa-broadcast-tower"></i>
                       </Button>
                     )}
+                    {/* Email Invite Button */}
+                    <Button 
+                      onClick={() => openInviteDialog(link)}
+                      variant="outline"
+                      size="sm"
+                      className="px-2 py-1 h-7 border-green-500 text-green-400 hover:bg-green-500 hover:text-white text-xs"
+                      data-testid={`button-invite-${link.id}`}
+                    >
+                      <i className="fas fa-envelope"></i>
+                    </Button>
                     {/* Chat Button - Only show for chat-enabled links and if user is admin/engineer */}
                     {link.chatEnabled && user && (user.role === 'admin' || user.role === 'engineer') && (
                       <Button 
@@ -1054,6 +1091,16 @@ export default function Links() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Email Invite Dialog */}
+      <InviteDialog
+        open={inviteDialog.open}
+        onOpenChange={(open) => setInviteDialog(prev => ({ ...prev, open }))}
+        inviteType={inviteDialog.type}
+        linkId={inviteDialog.linkId}
+        shortCode={inviteDialog.shortCode}
+        linkDetails={inviteDialog.linkDetails}
+      />
     </div>
   );
 }
