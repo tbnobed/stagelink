@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import QRCode from "qrcode";
+import { InviteDialog } from "@/components/invite-dialog";
 
 export default function Generator() {
   // Guest Session Link States
@@ -18,6 +19,7 @@ export default function Generator() {
   const [generatedLink, setGeneratedLink] = useState("");
   const [shortLink, setShortLink] = useState("");
   const [showQR, setShowQR] = useState(false);
+  const [latestLinkId, setLatestLinkId] = useState<string>("");
   
   // Viewer Link States
   const [viewerReturnFeed, setViewerReturnFeed] = useState("studio1");
@@ -27,9 +29,23 @@ export default function Generator() {
   const [viewerGeneratedLink, setViewerGeneratedLink] = useState("");
   const [viewerShortLink, setViewerShortLink] = useState("");
   const [viewerShowQR, setViewerShowQR] = useState(false);
+  const [latestViewerLinkId, setLatestViewerLinkId] = useState<string>("");
   
   // Link Type Toggle
   const [linkType, setLinkType] = useState<"guest" | "viewer">("guest");
+  
+  // Invite Dialog State
+  const [inviteDialog, setInviteDialog] = useState<{
+    open: boolean;
+    type: 'streaming' | 'viewer' | 'short-link';
+    linkId?: string;
+    shortCode?: string;
+    linkDetails: any;
+  }>({
+    open: false,
+    type: 'streaming',
+    linkDetails: {}
+  });
   
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const viewerQrCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -98,6 +114,7 @@ export default function Generator() {
       const shortUrl = `${window.location.protocol}//${window.location.host}/s/${shortLinkData.id}`;
 
       // Use the URL with session token from the server response
+      setLatestLinkId(regularLinkData.id);
       setGeneratedLink(regularLinkData.url);
       setShortLink(shortUrl);
       setShowQR(false);
@@ -168,6 +185,7 @@ export default function Generator() {
       const shortUrl = `${window.location.protocol}//${window.location.host}/sv/${shortData.id}`;
 
       // Use the URL with session token from the server response
+      setLatestViewerLinkId(regularViewerData.id);
       setViewerGeneratedLink(regularViewerData.url);
       setViewerShortLink(shortUrl);
       
@@ -553,11 +571,11 @@ export default function Generator() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex space-x-3">
+              <div className="grid grid-cols-3 gap-3">
                 <Button 
                   onClick={() => linkType === "guest" ? copyToClipboard() : copyViewerToClipboard()}
                   variant="outline"
-                  className="flex-1 border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
+                  className="border-va-primary va-text-green hover:va-bg-primary hover:text-va-dark-bg"
                   data-testid="button-copy-link"
                 >
                   <i className="fas fa-copy mr-2"></i>
@@ -596,11 +614,41 @@ export default function Generator() {
                     }
                   }}
                   variant="outline"
-                  className="flex-1 va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
+                  className="va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
                   data-testid="button-generate-qr"
                 >
                   <i className="fas fa-qrcode mr-2"></i>
                   QR Code
+                </Button>
+                <Button
+                  onClick={() => {
+                    const linkId = linkType === "guest" ? latestLinkId : latestViewerLinkId;
+                    if (!linkId) {
+                      toast({
+                        title: "Error",
+                        description: "Please generate a link first before sending an invite.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    
+                    setInviteDialog({
+                      open: true,
+                      type: linkType === "guest" ? "streaming" : "viewer",
+                      linkId: linkId,
+                      linkDetails: {
+                        streamName: linkType === "guest" ? streamName : undefined,
+                        returnFeed: linkType === "guest" ? returnFeed : viewerReturnFeed,
+                        chatEnabled: linkType === "guest" ? enableChat : viewerEnableChat
+                      }
+                    });
+                  }}
+                  variant="outline"
+                  className="va-bg-green-600 hover:bg-green-700 text-white border-green-600 hover:border-green-700"
+                  data-testid="button-email-invite"
+                >
+                  <i className="fas fa-envelope mr-2"></i>
+                  Email Invite
                 </Button>
               </div>
 
@@ -630,6 +678,16 @@ export default function Generator() {
           </div>
         </div>
       </div>
+
+      {/* Email Invite Dialog */}
+      <InviteDialog
+        open={inviteDialog.open}
+        onOpenChange={(open) => setInviteDialog(prev => ({ ...prev, open }))}
+        inviteType={inviteDialog.type}
+        linkId={inviteDialog.linkId}
+        shortCode={inviteDialog.shortCode}
+        linkDetails={inviteDialog.linkDetails}
+      />
     </div>
   );
 }
