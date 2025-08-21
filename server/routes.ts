@@ -751,16 +751,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Streaming link not found' });
       }
 
-      // Create the full URL for the streaming link
+      // Try to find existing short link or create a new one
+      let shortLink = await storage.getShortLinkByParams(
+        link.streamName, 
+        link.returnFeed, 
+        link.chatEnabled
+      );
+
+      if (!shortLink) {
+        // Create a new short link with same expiration as the original link
+        shortLink = await storage.createShortLink({
+          id: generateUniqueShortCode(),
+          streamName: link.streamName,
+          returnFeed: link.returnFeed,
+          chatEnabled: link.chatEnabled,
+          expiresAt: link.expiresAt
+        }, user.id);
+      }
+
+      // Create the professional short URL
       const baseUrl = req.protocol + '://' + req.get('host');
-      const streamingUrl = `${baseUrl}/session?stream=${encodeURIComponent(link.streamName)}&return=${encodeURIComponent(link.returnFeed)}${link.chatEnabled ? '&chat=true' : ''}${link.sessionToken ? `&token=${link.sessionToken}` : ''}`;
+      const streamingUrl = `${baseUrl}/s/${shortLink.id}`;
 
       // Send the invite email
       const success = await sendStreamingInvite({
         to: email,
         inviterName: user.username,
         streamingLink: streamingUrl,
-        linkExpiry: link.expiresAt,
+        linkExpiry: link.expiresAt || undefined,
         message
       });
 
@@ -790,16 +808,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Viewer link not found' });
       }
 
-      // Create the full URL for the viewer link
+      // Try to find existing short viewer link or create a new one
+      let shortLink = await storage.getShortViewerLinkByParams(
+        link.returnFeed, 
+        link.chatEnabled
+      );
+
+      if (!shortLink) {
+        // Create a new short viewer link with same expiration as the original link
+        shortLink = await storage.createShortViewerLink({
+          id: generateUniqueShortCode(),
+          returnFeed: link.returnFeed,
+          chatEnabled: link.chatEnabled,
+          expiresAt: link.expiresAt
+        }, user.id);
+      }
+
+      // Create the professional short URL
       const baseUrl = req.protocol + '://' + req.get('host');
-      const viewerUrl = `${baseUrl}/studio-viewer?return=${encodeURIComponent(link.returnFeed)}${link.chatEnabled ? '&chat=true' : ''}${link.sessionToken ? `&token=${link.sessionToken}` : ''}`;
+      const viewerUrl = `${baseUrl}/v/${shortLink.id}`;
 
       // Send the invite email
       const success = await sendViewerInvite({
         to: email,
         inviterName: user.username,
         viewerLink: viewerUrl,
-        linkExpiry: link.expiresAt,
+        linkExpiry: link.expiresAt || undefined,
         message
       });
 
@@ -838,7 +872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         to: email,
         inviterName: user.username,
         streamingLink: shortUrl,
-        linkExpiry: shortLink.expiresAt,
+        linkExpiry: shortLink.expiresAt || undefined,
         message
       });
 
