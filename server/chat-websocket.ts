@@ -242,8 +242,13 @@ class ChatWebSocketServer {
           }
         }
 
-        // Update participant status in database
-        storage.updateParticipantStatus(client.sessionId, client.userId, false);
+        // Update participant status in database - handle both guest and authenticated users
+        if (client.userId) {
+          storage.updateParticipantStatus(client.sessionId, client.userId, false);
+        } else {
+          // For guest users, update by username
+          storage.updateParticipantStatusByUsername(client.sessionId, client.username, false);
+        }
 
         // Send updated participant list
         this.sendParticipantsList(client.sessionId);
