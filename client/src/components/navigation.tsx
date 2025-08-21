@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,11 +10,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { User, LogOut, Settings } from "lucide-react";
+import { User, LogOut, Settings, Menu, X } from "lucide-react";
+import { useState } from "react";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { user, isLoading, logoutMutation } = useAuth();
+  const { isMobile } = useMobile();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = user ? [
     { path: "/", label: "Home", icon: "fas fa-home" },
@@ -30,13 +34,92 @@ export default function Navigation() {
     logoutMutation.mutate();
   };
 
-  // Don't show navigation on auth page
-  if (location === '/auth') {
+  // Don't show navigation on auth page, session, or viewer pages
+  if (location === '/auth' || location === '/session' || location === '/viewer' || location === '/studio-viewer') {
     return null;
   }
 
+  // Mobile Navigation
+  if (isMobile) {
+    return (
+      <nav className="mobile-nav va-bg-dark-surface border-b va-border-dark">
+        <div className="flex items-center justify-between h-16 px-4">
+          <div className="flex items-center">
+            <img 
+              src="https://cdn2.obedtv.live:8088/obedtv.png" 
+              alt="OBTV Logo" 
+              className="h-6 w-auto mr-2 rounded"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=52";
+              }}
+            />
+            <span className="va-text-green font-bold text-base">StageLinQ</span>
+          </div>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="btn-touch p-2"
+            data-testid="button-mobile-menu"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+        </div>
+        
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="va-bg-dark-surface-2 border-t va-border-dark">
+            <div className="px-4 py-2 space-y-1">
+              {navItems.map((item) => (
+                <Link key={item.path} href={item.path}>
+                  <div 
+                    className={`flex items-center px-3 py-3 rounded-md text-base ${
+                      location === item.path 
+                        ? 'va-bg-primary va-text-dark' 
+                        : 'va-text-secondary hover:va-text-primary hover:va-bg-dark-surface'
+                    }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <i className={`${item.icon} mr-3`}></i>
+                    {item.label}
+                  </div>
+                </Link>
+              ))}
+              
+              {user && (
+                <>
+                  <div className="border-t va-border-dark my-2"></div>
+                  <div className="flex items-center px-3 py-3">
+                    <User className="w-4 h-4 mr-3" />
+                    <span className="va-text-primary">{user.username}</span>
+                    {user.role === 'admin' && (
+                      <Badge variant="secondary" className="ml-2 text-xs">Admin</Badge>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center px-3 py-3 va-text-secondary hover:va-text-primary w-full text-left"
+                  >
+                    <LogOut className="w-4 h-4 mr-3" />
+                    Sign Out
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
+    );
+  }
+
+  // Desktop Navigation
   return (
-    <nav className="va-bg-dark-surface border-b va-border-dark">
+    <nav className="desktop-only va-bg-dark-surface border-b va-border-dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">

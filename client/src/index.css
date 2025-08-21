@@ -217,9 +217,13 @@
     }
     
     /* Larger touch targets on mobile */
-    .mobile-touch button {
-      min-height: var(--mobile-touch-target);
-      padding: 0.75rem 1rem;
+    .mobile-touch button,
+    .btn-touch {
+      min-height: var(--mobile-touch-target) !important;
+      min-width: var(--mobile-touch-target) !important;
+      padding: 0.75rem 1rem !important;
+      touch-action: manipulation;
+      user-select: none;
     }
   }
   
