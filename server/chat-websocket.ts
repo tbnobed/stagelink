@@ -106,9 +106,9 @@ class ChatWebSocketServer {
       }
     });
 
-    ws.on('close', (code, reason) => {
+    ws.on('close', async (code, reason) => {
       console.log(`WebSocket closed: ${code} ${reason}`);
-      this.handleDisconnection(ws);
+      await this.handleDisconnection(ws);
     });
 
     ws.on('error', (error) => {
@@ -229,9 +229,11 @@ class ChatWebSocketServer {
   }
 
   private async handleDisconnection(ws: WebSocket) {
+    console.log(`handleDisconnection called - this method is definitely being executed`);
     // Find and remove the client
     for (const [clientKey, client] of Array.from(this.clients.entries())) {
       if (client.ws === ws) {
+        console.log(`Found disconnecting client: ${client.username}, userId: ${client.userId}, sessionId: ${client.sessionId}`);
         this.clients.delete(clientKey);
         
         // Remove from session participants
@@ -243,12 +245,20 @@ class ChatWebSocketServer {
         }
 
         // Handle participant cleanup - authenticated users go offline, guest users are removed
-        if (client.userId) {
-          // Authenticated users: mark as offline
-          await storage.updateParticipantStatus(client.sessionId, client.userId, false);
-        } else {
-          // Guest users: remove from database completely to prevent accumulation
-          await storage.removeParticipantByUsername(client.sessionId, client.username);
+        try {
+          if (client.userId) {
+            // Authenticated users: mark as offline
+            console.log(`Marking authenticated user ${client.username} as offline`);
+            await storage.updateParticipantStatus(client.sessionId, client.userId, false);
+            console.log(`Successfully marked ${client.username} as offline`);
+          } else {
+            // Guest users: remove from database completely to prevent accumulation
+            console.log(`Removing guest user ${client.username} from database for session ${client.sessionId}`);
+            await storage.removeParticipantByUsername(client.sessionId, client.username);
+            console.log(`Successfully removed guest user ${client.username} from database`);
+          }
+        } catch (error) {
+          console.error(`Error during participant cleanup for ${client.username}:`, error);
         }
 
         // Send updated participant list

@@ -123,7 +123,7 @@ export function Chat({ sessionId, enabled, className = '' }: ChatProps) {
           <div className="flex flex-wrap gap-1">
             {participants.filter(p => p.isOnline).map(participant => (
               <Badge
-                key={participant.userId}
+                key={participant.userId ? `user-${participant.userId}` : `guest-${participant.username}-${participant.id}`}
                 variant="outline"
                 className={`text-xs ${getRoleColor(participant.role)} border-current`}
               >

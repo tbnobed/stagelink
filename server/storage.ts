@@ -1,7 +1,7 @@
 import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, chatMessages, chatParticipants, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, lt, and, isNotNull, desc } from "drizzle-orm";
+import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -556,7 +556,7 @@ export class MemStorage implements IStorage {
           and(
             eq(chatParticipants.sessionId, sessionId),
             eq(chatParticipants.username, username),
-            eq(chatParticipants.userId, null) // Only update guest users
+            isNull(chatParticipants.userId) // Only update guest users
           )
         );
     }
@@ -1123,7 +1123,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(chatParticipants.sessionId, sessionId),
           eq(chatParticipants.username, username),
-          eq(chatParticipants.userId, null) // Only remove guest users
+          isNull(chatParticipants.userId) // Only remove guest users
         )
       );
   }
@@ -1138,7 +1138,7 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(chatParticipants.sessionId, sessionId),
           eq(chatParticipants.username, username),
-          eq(chatParticipants.userId, null) // Only update guest users
+          isNull(chatParticipants.userId) // Only update guest users
         )
       );
   }
