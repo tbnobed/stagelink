@@ -567,16 +567,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: number): Promise<boolean> {
-    // First, delete all links created by this user
-    await db.delete(generatedLinks).where(eq(generatedLinks.createdBy, id));
+    // Set createdBy to null for links created by this user (preserve links but remove user reference)
+    await db.update(generatedLinks)
+      .set({ createdBy: null })
+      .where(eq(generatedLinks.createdBy, id));
     
-    // Also delete any viewer links created by this user
-    await db.delete(viewerLinks).where(eq(viewerLinks.createdBy, id));
+    // Set createdBy to null for viewer links created by this user
+    await db.update(viewerLinks)
+      .set({ createdBy: null })
+      .where(eq(viewerLinks.createdBy, id));
     
-    // Also delete any chat participants associated with this user
+    // Delete chat participants associated with this user
     await db.delete(chatParticipants).where(eq(chatParticipants.userId, id));
     
-    // Also delete any password reset tokens for this user
+    // Delete password reset tokens for this user
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, id));
     
     // Finally, delete the user
