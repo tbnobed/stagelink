@@ -61,9 +61,10 @@ export function setupAuth(app: Express) {
       createTableIfMissing: false 
     }),
     cookie: {
-      secure: false, // Set to true in production with HTTPS
+      secure: process.env.NODE_ENV === 'production', // Auto-detect HTTPS in production
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24, // 24 hours
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Strict in production
     },
   };
 
@@ -158,6 +159,15 @@ export function setupAuth(app: Express) {
 // Middleware to require authentication
 export function requireAuth(req: any, res: any, next: any) {
   if (!req.isAuthenticated()) {
+    // Add debugging info for production troubleshooting
+    console.log('Authentication failed:', {
+      isAuthenticated: req.isAuthenticated(),
+      hasSession: !!req.session,
+      sessionID: req.sessionID,
+      hasUser: !!req.user,
+      cookies: req.headers.cookie ? 'present' : 'missing',
+      userAgent: req.headers['user-agent']
+    });
     return res.status(401).json({ error: "Authentication required" });
   }
   next();
