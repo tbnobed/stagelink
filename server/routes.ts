@@ -113,12 +113,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email is required' });
       }
 
-      // Check if user already exists
-      const existingUser = await storage.getUserByUsername(email);
-      if (existingUser) {
+      // Check if user already exists by email
+      const existingUserByEmail = await storage.getUserByEmail(email);
+      if (existingUserByEmail) {
         return res.status(400).json({ error: 'User with this email already exists' });
       }
 
+      // Generate username from email (everything before @)
+      let username = email.split('@')[0];
+      
+      // Check for username conflicts and add number suffix if needed
+      let usernameCounter = 1;
+      let finalUsername = username;
+      while (await storage.getUserByUsername(finalUsername)) {
+        finalUsername = `${username}${usernameCounter}`;
+        usernameCounter++;
+      }
+      username = finalUsername;
+      
       // Generate temporary password
       const tempPassword = Math.random().toString(36).slice(-12);
       const { hashPassword } = await import('./auth');
@@ -126,7 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create user account
       const user = await storage.createUser({
-        username: email,
+        username,
         email,
         password: hashedPassword,
         role: role as 'admin' | 'engineer' | 'user',
