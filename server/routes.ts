@@ -733,6 +733,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SRS Server Monitoring API
+  app.get('/api/srs/stats', async (req, res) => {
+    try {
+      const srsApiUrl = 'http://cdn2.obedtv.live:1985/api/v1/summaries';
+      const response = await fetch(srsApiUrl);
+      
+      if (!response.ok) {
+        throw new Error(`SRS API responded with status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('Error fetching SRS stats:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch SRS server statistics',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Initialize WebSocket server for chat

@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import SRSMonitoring from "@/components/srs-monitoring";
 
 export default function Home() {
 
@@ -14,6 +15,11 @@ export default function Home() {
           <p className="text-xl va-text-secondary max-w-2xl mx-auto">
             Professional live streaming solution with real-time video publishing and audience interaction capabilities
           </p>
+        </div>
+
+        {/* SRS Server Monitoring */}
+        <div className="mb-12">
+          <SRSMonitoring />
         </div>
 
         {/* Feature Cards */}
