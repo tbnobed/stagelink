@@ -15,17 +15,14 @@ import { useToast } from "@/hooks/use-toast";
 import stagelinq_logo from "@assets/stagelinq_logo.png";
 
 export default function AuthPage() {
-  const { user, isLoading, loginMutation, registerMutation } = useAuth();
+  const { user, isLoading, loginMutation } = useAuth();
   const { isMobile } = useMobile();
   const { toast } = useToast();
-  const [isLogin, setIsLogin] = useState(true);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    email: "",
-    role: "user" as "admin" | "user",
   });
 
   const passwordResetMutation = useMutation({
@@ -58,19 +55,10 @@ export default function AuthPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isLogin) {
-      loginMutation.mutate({
-        username: formData.username,
-        password: formData.password,
-      });
-    } else {
-      registerMutation.mutate({
-        username: formData.username,
-        password: formData.password,
-        email: formData.email || undefined,
-        role: formData.role,
-      });
-    }
+    loginMutation.mutate({
+      username: formData.username,
+      password: formData.password,
+    });
   };
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
@@ -126,13 +114,10 @@ export default function AuthPage() {
           <Card className="w-full max-w-sm">
             <CardHeader className="text-center pb-4">
               <CardTitle className="text-xl font-bold">
-                {isLogin ? "Welcome Back" : "Create Account"}
+                Welcome Back
               </CardTitle>
               <CardDescription className="text-sm">
-                {isLogin 
-                  ? "Sign in to continue"
-                  : "Join the platform"
-                }
+                Sign in to continue
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -165,77 +150,30 @@ export default function AuthPage() {
                   />
                 </div>
 
-                {!isLogin && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="text-sm">Email (Optional)</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange("email", e.target.value)}
-                        className="h-12 text-base"
-                        data-testid="input-email"
-                      />
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="role" className="text-sm">Role</Label>
-                      <Select 
-                        value={formData.role} 
-                        onValueChange={(value: "admin" | "user") => handleInputChange("role", value)}
-                      >
-                        <SelectTrigger className="h-12" data-testid="select-role">
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                )}
 
                 <Button
                   type="submit"
                   className="w-full h-12 text-base font-medium"
-                  disabled={loginMutation.isPending || registerMutation.isPending}
+                  disabled={loginMutation.isPending}
                   data-testid="button-submit"
                 >
-                  {(loginMutation.isPending || registerMutation.isPending) && (
+                  {loginMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {isLogin ? "Sign In" : "Create Account"}
+                  Sign In
                 </Button>
               </form>
 
-              <div className="mt-6 text-center space-y-3">
+              <div className="mt-6 text-center">
                 <button
                   type="button"
-                  onClick={() => setIsLogin(!isLogin)}
+                  onClick={() => setShowPasswordReset(true)}
                   className="text-sm text-muted-foreground hover:text-foreground touch-target"
-                  data-testid="button-toggle-form"
+                  data-testid="button-forgot-password"
                 >
-                  {isLogin 
-                    ? "Don't have an account? Sign up" 
-                    : "Already have an account? Sign in"
-                  }
+                  Forgot your password?
                 </button>
-                
-                {isLogin && (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowPasswordReset(true)}
-                      className="text-sm text-muted-foreground hover:text-foreground touch-target"
-                      data-testid="button-forgot-password"
-                    >
-                      Forgot your password?
-                    </button>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -324,13 +262,10 @@ export default function AuthPage() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">
-              {isLogin ? "Welcome Back" : "Create Account"}
+              Welcome Back
             </CardTitle>
             <CardDescription>
-              {isLogin 
-                ? "Sign in to your Virtual Audience account"
-                : "Join the Virtual Audience platform"
-              }
+              Sign in to your Virtual Audience account
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -361,76 +296,30 @@ export default function AuthPage() {
                 />
               </div>
 
-              {!isLogin && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email (Optional)</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      data-testid="input-email"
-                    />
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Select 
-                      value={formData.role} 
-                      onValueChange={(value: "admin" | "user") => handleInputChange("role", value)}
-                    >
-                      <SelectTrigger data-testid="select-role">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
 
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loginMutation.isPending || registerMutation.isPending}
+                disabled={loginMutation.isPending}
                 data-testid="button-submit"
               >
-                {(loginMutation.isPending || registerMutation.isPending) && (
+                {loginMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                {isLogin ? "Sign In" : "Create Account"}
+                Sign In
               </Button>
             </form>
 
-            <div className="mt-4 text-center space-y-2">
+            <div className="mt-4 text-center">
               <button
                 type="button"
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => setShowPasswordReset(true)}
                 className="text-sm text-muted-foreground hover:text-foreground"
-                data-testid="button-toggle-form"
+                data-testid="button-forgot-password-desktop"
               >
-                {isLogin 
-                  ? "Don't have an account? Sign up" 
-                  : "Already have an account? Sign in"
-                }
+                Forgot your password?
               </button>
-              
-              {isLogin && (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordReset(true)}
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                    data-testid="button-forgot-password-desktop"
-                  >
-                    Forgot your password?
-                  </button>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
