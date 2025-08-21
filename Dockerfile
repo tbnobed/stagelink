@@ -1,12 +1,16 @@
 # Virtual Audience Platform v2.0 - Production Docker Build with Guest User Fixes
 FROM node:18-alpine AS builder
 
+ARG CACHE_BUST
+RUN echo "Cache bust: $CACHE_BUST"
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --include=dev
 
 COPY . .
-# Build with latest guest user fixes (null user_id for guests)
+# Force clean build with guest user fixes - build timestamp: 2025-08-21
+RUN rm -rf dist/ node_modules/.cache/ .vite/ 2>/dev/null || true
 RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --allow-overwrite
 
 # Production stage

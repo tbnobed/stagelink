@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        CACHE_BUST: "2025-08-21-guest-user-fix"
     container_name: virtual-audience-app-v2
     restart: unless-stopped
     ports:
