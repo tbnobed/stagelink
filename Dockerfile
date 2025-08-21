@@ -1,4 +1,4 @@
-# Virtual Audience Platform v2.0 - Production Docker Build
+# Virtual Audience Platform v2.0 - Production Docker Build with Guest User Fixes
 FROM node:18-alpine AS builder
 
 WORKDIR /app
@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm ci --include=dev
 
 COPY . .
+# Build with latest guest user fixes (null user_id for guests)
 RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --allow-overwrite
 
 # Production stage
@@ -162,6 +163,7 @@ ON CONFLICT ("username") DO NOTHING;
 SCHEMA_EOF
 
 echo "Virtual Audience Platform v2.0 database schema ready"
+echo "Guest user fixes applied - using null user_id for guests"
 echo "Starting application server..."
 exec node dist/production.js
 EOF
