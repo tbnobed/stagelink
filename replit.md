@@ -8,6 +8,14 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes
 
+## Database Guest User Cleanup Fix (August 21, 2025) - COMPLETED
+- **Issue**: Guest users like "Viewer_livestream5_764470" were accumulating in database without proper cleanup when disconnecting
+- **Root Cause**: WebSocket disconnect handler was missing `await` keywords for async database operations, preventing cleanup completion
+- **Solution**: Added proper async/await pattern to `handleDisconnection` method in WebSocket server
+- **Result**: Guest users are now automatically removed from database when they disconnect, preventing infinite table growth
+- **Technical**: Added `removeParticipantByUsername` method to storage interface, implemented in both storage classes, fixed TypeScript errors
+- **Status**: FIXED - Guest user database cleanup now working properly, authenticated users still preserved with offline status
+
 ## Engineer Role Docker Support (August 21, 2025) - COMPLETED
 - **Issue**: Engineer role creation working in development but Docker builds needed enum support
 - **Root Cause**: Database enum needed "engineer" value added to production schema

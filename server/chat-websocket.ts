@@ -65,13 +65,13 @@ class ChatWebSocketServer {
     // Set up periodic ping to keep connections alive and cleanup stale connections
     setInterval(() => {
       this.wss.clients.forEach((ws) => {
-        if (ws.isAlive === false) {
+        if ((ws as any).isAlive === false) {
           console.log('Terminating stale WebSocket connection');
           ws.terminate();
           return;
         }
         
-        ws.isAlive = false;
+        (ws as any).isAlive = false;
         if (ws.readyState === WebSocket.OPEN) {
           ws.ping();
         }
@@ -85,10 +85,10 @@ class ChatWebSocketServer {
     console.log('New WebSocket connection');
 
     // Set up connection keepalive
-    ws.isAlive = true;
+    (ws as any).isAlive = true;
     
     ws.on('pong', () => {
-      ws.isAlive = true;
+      (ws as any).isAlive = true;
     });
 
     ws.on('message', async (data: Buffer) => {
@@ -152,7 +152,7 @@ class ChatWebSocketServer {
 
     const client: ChatClient = {
       ws,
-      userId: message.userId,
+      userId: message.userId || null,
       username: message.username,
       role: message.role,
       sessionId: message.sessionId,
@@ -228,7 +228,7 @@ class ChatWebSocketServer {
     console.log(`User ${message.userId} left session ${message.sessionId}`);
   }
 
-  private handleDisconnection(ws: WebSocket) {
+  private async handleDisconnection(ws: WebSocket) {
     // Find and remove the client
     for (const [clientKey, client] of Array.from(this.clients.entries())) {
       if (client.ws === ws) {
@@ -245,14 +245,14 @@ class ChatWebSocketServer {
         // Handle participant cleanup - authenticated users go offline, guest users are removed
         if (client.userId) {
           // Authenticated users: mark as offline
-          storage.updateParticipantStatus(client.sessionId, client.userId, false);
+          await storage.updateParticipantStatus(client.sessionId, client.userId, false);
         } else {
           // Guest users: remove from database completely to prevent accumulation
-          storage.removeParticipantByUsername(client.sessionId, client.username);
+          await storage.removeParticipantByUsername(client.sessionId, client.username);
         }
 
         // Send updated participant list
-        this.sendParticipantsList(client.sessionId);
+        await this.sendParticipantsList(client.sessionId);
 
         console.log(`Client disconnected: ${client.username}`);
         break;
