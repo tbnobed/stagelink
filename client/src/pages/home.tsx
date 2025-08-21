@@ -17,11 +17,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* SRS Server Monitoring */}
-        <div className="mb-12">
-          <SRSMonitoring />
-        </div>
-
         {/* Feature Cards */}
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           {/* Links Management Card */}
@@ -91,6 +86,11 @@ export default function Home() {
               Open Link Generator
             </Link>
           </div>
+        </div>
+
+        {/* SRS Server Monitoring */}
+        <div className="mt-12">
+          <SRSMonitoring />
         </div>
       </div>
     </div>
