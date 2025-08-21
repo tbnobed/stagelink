@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, chatMessages, chatParticipants, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, chatMessages, chatParticipants, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
@@ -47,6 +47,12 @@ export interface IStorage {
   validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }>;
   createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken>;
   cleanupExpiredTokens(): Promise<number>;
+  
+  // Password Reset Tokens
+  createPasswordResetToken(userId: number, token: string, expiresAt: Date): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  usePasswordResetToken(token: string): Promise<boolean>;
+  cleanupExpiredPasswordResetTokens(): Promise<number>;
   
   // Chat System
   getChatMessages(sessionId: string, limit?: number): Promise<ChatMessage[]>;
@@ -971,6 +977,61 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(sessionTokens)
       .where(lt(sessionTokens.expiresAt, now));
+    return result.rowCount || 0;
+  }
+
+  // Password Reset Token Methods
+  async createPasswordResetToken(userId: number, token: string, expiresAt: Date): Promise<PasswordResetToken> {
+    const [resetToken] = await db
+      .insert(passwordResetTokens)
+      .values({
+        id: token,
+        userId,
+        createdAt: new Date(),
+        expiresAt,
+        used: false,
+      })
+      .returning();
+    return resetToken;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.id, token),
+          eq(passwordResetTokens.used, false),
+          lt(new Date(), passwordResetTokens.expiresAt)
+        )
+      );
+    return resetToken;
+  }
+
+  async usePasswordResetToken(token: string): Promise<boolean> {
+    const result = await db
+      .update(passwordResetTokens)
+      .set({ used: true })
+      .where(
+        and(
+          eq(passwordResetTokens.id, token),
+          eq(passwordResetTokens.used, false),
+          lt(new Date(), passwordResetTokens.expiresAt)
+        )
+      );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async cleanupExpiredPasswordResetTokens(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .delete(passwordResetTokens)
+      .where(
+        and(
+          lt(passwordResetTokens.expiresAt, now)
+        )
+      );
     return result.rowCount || 0;
   }
 

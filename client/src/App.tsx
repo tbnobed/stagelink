@@ -16,6 +16,7 @@ import MobileTest from "@/pages/mobile-test";
 import AuthPage from "@/pages/auth-page";
 import AdminPage from "@/pages/admin-page";
 import ProfilePage from "@/pages/profile-page";
+import ResetPasswordPage from "@/pages/reset-password-page";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -33,6 +34,7 @@ function Router() {
         <Route path="/studio-viewer" component={StudioViewer} />
         <Route path="/mobile-test" component={MobileTest} />
         <Route path="/auth" component={AuthPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
         <Route component={NotFound} />
       </Switch>
     </div>

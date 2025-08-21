@@ -104,6 +104,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User Invite API (Admin only)
+  app.post('/api/users/invite', requireAdmin, async (req, res) => {
+    try {
+      const { email, role = 'user' } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByUsername(email);
+      if (existingUser) {
+        return res.status(400).json({ error: 'User with this email already exists' });
+      }
+
+      // Generate temporary password
+      const tempPassword = Math.random().toString(36).slice(-12);
+      const { hashPassword } = await import('./auth');
+      const hashedPassword = await hashPassword(tempPassword);
+
+      // Create user account
+      const user = await storage.createUser({
+        username: email,
+        email,
+        password: hashedPassword,
+        role: role as 'admin' | 'engineer' | 'user',
+      });
+
+      // Send invitation email
+      const { sendUserInvite } = await import('./email-service');
+      const inviterUser = req.user as any;
+      const platformUrl = `${req.protocol}://${req.get('host')}`;
+      
+      const emailSent = await sendUserInvite({
+        to: email,
+        inviterName: inviterUser.username || 'StageLinq Admin',
+        tempPassword,
+        platformUrl,
+      });
+
+      if (!emailSent) {
+        console.error('Failed to send invitation email');
+        // Don't fail the request, user was created successfully
+      }
+
+      res.status(201).json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        emailSent,
+      });
+    } catch (error) {
+      console.error('Failed to invite user:', error);
+      res.status(500).json({ error: 'Failed to invite user' });
+    }
+  });
+
+  // Password Reset Request API (Public)
+  app.post('/api/password-reset/request', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      const user = await storage.getUserByUsername(email);
+      if (!user) {
+        // Don't reveal if user exists for security
+        return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+      }
+
+      // Generate reset token
+      const resetToken = require('crypto').randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await storage.createPasswordResetToken(user.id, resetToken, expiresAt);
+
+      // Send password reset email
+      const { sendPasswordReset } = await import('./email-service');
+      const platformUrl = `${req.protocol}://${req.get('host')}`;
+      
+      const emailSent = await sendPasswordReset({
+        to: email,
+        resetToken,
+        platformUrl,
+      });
+
+      if (!emailSent) {
+        console.error('Failed to send password reset email');
+      }
+
+      res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+    } catch (error) {
+      console.error('Failed to process password reset request:', error);
+      res.status(500).json({ error: 'Failed to process password reset request' });
+    }
+  });
+
+  // Password Reset Confirmation API (Public)
+  app.post('/api/password-reset/confirm', async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ error: 'Token and new password are required' });
+      }
+
+      // Validate reset token
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ error: 'Invalid or expired reset token' });
+      }
+
+      // Hash new password
+      const { hashPassword } = await import('./auth');
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update user password
+      await storage.updateUserPassword(resetToken.userId, hashedPassword);
+
+      // Mark token as used
+      await storage.usePasswordResetToken(token);
+
+      res.json({ message: 'Password has been reset successfully' });
+    } catch (error) {
+      console.error('Failed to reset password:', error);
+      res.status(500).json({ error: 'Failed to reset password' });
+    }
+  });
+
   // Links API routes (authenticated users)
   app.get('/api/links', requireAuth, async (req, res) => {
     try {

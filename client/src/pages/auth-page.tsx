@@ -1,25 +1,53 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Redirect } from "wouter";
-import { Loader2, Monitor, Users, Zap } from "lucide-react";
+import { Loader2, Monitor, Users, Zap, ArrowLeft, Mail } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 import stagelinq_logo from "@assets/stagelinq_logo.png";
 
 export default function AuthPage() {
   const { user, isLoading, loginMutation, registerMutation } = useAuth();
   const { isMobile } = useMobile();
+  const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
   const [formData, setFormData] = useState({
     username: "",
     password: "",
     email: "",
     role: "user" as "admin" | "user",
+  });
+
+  const passwordResetMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await apiRequest("POST", "/api/password-reset/request", { email });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Password reset email sent",
+        description: data.message,
+      });
+      setShowPasswordReset(false);
+      setResetEmail("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to send reset email",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // Redirect if already logged in
@@ -50,6 +78,19 @@ export default function AuthPage() {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handlePasswordReset = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+    passwordResetMutation.mutate(resetEmail);
   };
 
   if (isLoading) {
@@ -170,7 +211,7 @@ export default function AuthPage() {
                 </Button>
               </form>
 
-              <div className="mt-6 text-center">
+              <div className="mt-6 text-center space-y-3">
                 <button
                   type="button"
                   onClick={() => setIsLogin(!isLogin)}
@@ -182,9 +223,78 @@ export default function AuthPage() {
                     : "Already have an account? Sign in"
                   }
                 </button>
+                
+                {isLogin && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordReset(true)}
+                      className="text-sm text-muted-foreground hover:text-foreground touch-target"
+                      data-testid="button-forgot-password"
+                    >
+                      Forgot your password?
+                    </button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+          
+          {/* Password Reset Modal for Mobile */}
+          {showPasswordReset && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <Card className="w-full max-w-sm">
+                <CardHeader className="text-center">
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPasswordReset(false)}
+                      className="p-2"
+                      data-testid="button-close-password-reset"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <CardTitle className="text-lg">Reset Password</CardTitle>
+                    <div className="w-8" />
+                  </div>
+                  <CardDescription className="text-sm">
+                    Enter your email to receive a password reset link
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handlePasswordReset} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email" className="text-sm">Email Address</Label>
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        required
+                        className="h-12 text-base"
+                        data-testid="input-reset-email"
+                      />
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full h-12 text-base font-medium"
+                      disabled={passwordResetMutation.isPending}
+                      data-testid="button-send-reset-email"
+                    >
+                      {passwordResetMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Reset Link
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
         {/* Mobile Feature List */}
         <div className="px-4 pb-8">
@@ -296,7 +406,7 @@ export default function AuthPage() {
               </Button>
             </form>
 
-            <div className="mt-4 text-center">
+            <div className="mt-4 text-center space-y-2">
               <button
                 type="button"
                 onClick={() => setIsLogin(!isLogin)}
@@ -308,16 +418,84 @@ export default function AuthPage() {
                   : "Already have an account? Sign in"
                 }
               </button>
+              
+              {isLogin && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordReset(true)}
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                    data-testid="button-forgot-password-desktop"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
+        
+        {/* Password Reset Modal for Desktop */}
+        {showPasswordReset && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md">
+              <CardHeader className="text-center">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPasswordReset(false)}
+                    className="p-2"
+                    data-testid="button-close-password-reset-desktop"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <CardTitle className="text-xl">Reset Password</CardTitle>
+                  <div className="w-8" />
+                </div>
+                <CardDescription>
+                  Enter your email to receive a password reset link
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email-desktop">Email Address</Label>
+                    <Input
+                      id="reset-email-desktop"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                      data-testid="input-reset-email-desktop"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={passwordResetMutation.isPending}
+                    data-testid="button-send-reset-email-desktop"
+                  >
+                    {passwordResetMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send Reset Link
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
       {/* Right side - Hero */}
       <div className="flex-1 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-8">
         <div className="max-w-md text-center">
           <div className="flex justify-center mb-6">
             <img 
-              src="/stagelinq_logo.png" 
+              src={stagelinq_logo} 
               alt="StageLinq Logo" 
               className="h-[30rem] w-auto mt-[-179px] mb-[-179px]"
               data-testid="stagelinq-logo"

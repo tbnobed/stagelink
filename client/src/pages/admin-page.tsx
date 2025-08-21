@@ -34,6 +34,11 @@ export default function AdminPage() {
     email: "",
     role: "user" as "admin" | "engineer" | "user",
   });
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteUser, setInviteUser] = useState({
+    email: "",
+    role: "user" as "admin" | "engineer" | "user",
+  });
   const [inviteDialog, setInviteDialog] = useState<{
     open: boolean;
     type: 'streaming' | 'viewer' | 'short-link';
@@ -93,6 +98,32 @@ export default function AdminPage() {
     },
   });
 
+  const inviteUserMutation = useMutation({
+    mutationFn: async (userData: typeof inviteUser) => {
+      const res = await apiRequest("POST", "/api/users/invite", userData);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setInviteUser({ email: "", role: "user" });
+      setShowInviteForm(false);
+      toast({
+        title: "Invitation sent",
+        description: data.emailSent 
+          ? `Invitation email sent to ${data.email}` 
+          : `User created but email failed to send. User: ${data.email}`,
+        variant: data.emailSent ? "default" : "destructive",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to invite user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUser.username || !newUser.password) {
@@ -104,6 +135,19 @@ export default function AdminPage() {
       return;
     }
     createUserMutation.mutate(newUser);
+  };
+
+  const handleInviteUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteUser.email) {
+      toast({
+        title: "Missing email",
+        description: "Email address is required for invitation.",
+        variant: "destructive",
+      });
+      return;
+    }
+    inviteUserMutation.mutate(inviteUser);
   };
 
   const handleDeleteUser = (userId: number, username: string) => {
@@ -150,14 +194,25 @@ export default function AdminPage() {
                 <CardDescription>Manage platform users and their permissions</CardDescription>
               </div>
             </div>
-            <Button 
-              onClick={() => setShowCreateForm(!showCreateForm)}
-              className={`${isMobile ? 'btn-touch w-full' : ''}`}
-              data-testid="button-create-user"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create User
-            </Button>
+            <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'flex-row'}`}>
+              <Button 
+                onClick={() => setShowCreateForm(!showCreateForm)}
+                className={`${isMobile ? 'btn-touch' : ''}`}
+                data-testid="button-create-user"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create User
+              </Button>
+              <Button 
+                onClick={() => setShowInviteForm(!showInviteForm)}
+                variant="outline"
+                className={`${isMobile ? 'btn-touch' : ''}`}
+                data-testid="button-invite-user"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Invite User
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -242,6 +297,73 @@ export default function AdminPage() {
                       onClick={() => setShowCreateForm(false)}
                       className={`${isMobile ? 'btn-touch' : ''}`}
                       data-testid="button-cancel-create-user"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {showInviteForm && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg">Invite New User</CardTitle>
+                <CardDescription>Send an email invitation with temporary login credentials</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleInviteUser} className="space-y-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+                    <div className="space-y-2">
+                      <Label htmlFor="invite-email">Email Address *</Label>
+                      <Input
+                        id="invite-email"
+                        type="email"
+                        value={inviteUser.email}
+                        onChange={(e) => setInviteUser(prev => ({ ...prev, email: e.target.value }))}
+                        placeholder="Enter email address"
+                        required
+                        data-testid="input-invite-email"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="invite-role">Role</Label>
+                      <Select 
+                        value={inviteUser.role} 
+                        onValueChange={(value: "admin" | "engineer" | "user") => setInviteUser(prev => ({ ...prev, role: value }))}
+                      >
+                        <SelectTrigger data-testid="select-invite-role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="engineer">Engineer</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className={`${isMobile ? 'flex flex-col space-y-2' : 'flex gap-2'}`}>
+                    <Button 
+                      type="submit" 
+                      disabled={inviteUserMutation.isPending}
+                      className={`${isMobile ? 'btn-touch' : ''}`}
+                      data-testid="button-submit-invite-user"
+                    >
+                      {inviteUserMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Send Invitation
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setShowInviteForm(false)}
+                      className={`${isMobile ? 'btn-touch' : ''}`}
+                      data-testid="button-cancel-invite-user"
                     >
                       Cancel
                     </Button>

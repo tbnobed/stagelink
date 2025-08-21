@@ -204,3 +204,151 @@ StageLinq Team
     html
   });
 }
+export async function sendUserInvite({
+  to,
+  inviterName,
+  tempPassword,
+  platformUrl
+}: {
+  to: string;
+  inviterName: string;
+  tempPassword: string;
+  platformUrl: string;
+}): Promise<boolean> {
+  const subject = `You've been invited to join StageLinq by ${inviterName}`;
+  
+  const text = `
+Hello!
+
+${inviterName} has invited you to join the StageLinq Virtual Audience Platform.
+
+Your account has been created with the following details:
+Email: ${to}
+Temporary Password: ${tempPassword}
+
+Please log in and change your password immediately for security.
+
+Login here: ${platformUrl}/auth
+
+About StageLinq:
+StageLinq is a professional live streaming platform that enables real-time video publishing and audience interaction. You can create streaming sessions, manage viewer links, and engage with live audiences.
+
+Best regards,
+StageLinq Team
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #00ff9f; margin: 0;">StageLinq</h1>
+        <p style="color: #666; margin: 5px 0;">Virtual Audience Platform</p>
+      </div>
+      
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h2 style="color: #333; margin-top: 0;">Welcome to StageLinq!</h2>
+        <p style="color: #666; line-height: 1.6;">
+          <strong>${inviterName}</strong> has invited you to join the StageLinq Virtual Audience Platform.
+        </p>
+      </div>
+
+      <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+        <h3 style="color: #856404; margin-top: 0;">Your Account Details</h3>
+        <p style="color: #856404; margin: 5px 0;"><strong>Email:</strong> ${to}</p>
+        <p style="color: #856404; margin: 5px 0;"><strong>Temporary Password:</strong> <code style="background-color: #fff; padding: 2px 4px; border-radius: 3px;">${tempPassword}</code></p>
+        <p style="color: #856404; margin: 5px 0; font-size: 14px;"><em>Please change this password after your first login for security.</em></p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${platformUrl}/auth" style="background-color: #00ff9f; color: #000; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+          Log In to StageLinq
+        </a>
+      </div>
+
+      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
+        <h3 style="color: #333; margin-top: 0;">About StageLinq</h3>
+        <p style="color: #666; line-height: 1.6; margin-bottom: 10px;">
+          StageLinq is a professional live streaming platform that enables:
+        </p>
+        <ul style="color: #666; line-height: 1.6; margin: 0; padding-left: 20px;">
+          <li>Real-time video publishing with WHIP/WHEP protocols</li>
+          <li>Studio return feed monitoring</li>
+          <li>Live chat integration</li>
+          <li>QR code generation for easy session sharing</li>
+          <li>Professional email invitations</li>
+        </ul>
+      </div>
+
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <p style="color: #999; font-size: 14px; margin: 0;">
+          This email was sent by the StageLinq Virtual Audience Platform
+        </p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({ to, subject, text, html });
+}
+
+export async function sendPasswordReset({
+  to,
+  resetToken,
+  platformUrl
+}: {
+  to: string;
+  resetToken: string;
+  platformUrl: string;
+}): Promise<boolean> {
+  const resetUrl = `${platformUrl}/reset-password?token=${resetToken}`;
+  const subject = 'Reset your StageLinq password';
+  
+  const text = `
+Hello!
+
+You requested a password reset for your StageLinq account.
+
+Click here to reset your password: ${resetUrl}
+
+This link will expire in 1 hour for security reasons.
+
+If you didn't request this reset, please ignore this email.
+
+Best regards,
+StageLinq Team
+  `;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #00ff9f; margin: 0;">StageLinq</h1>
+        <p style="color: #666; margin: 5px 0;">Virtual Audience Platform</p>
+      </div>
+      
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h2 style="color: #333; margin-top: 0;">Password Reset Request</h2>
+        <p style="color: #666; line-height: 1.6;">
+          You requested a password reset for your StageLinq account.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetUrl}" style="background-color: #007bff; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+          Reset Your Password
+        </a>
+      </div>
+
+      <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+        <p style="color: #856404; margin: 0; font-size: 14px;">
+          <strong>Security Notice:</strong> This link will expire in 1 hour. If you didn't request this reset, please ignore this email.
+        </p>
+      </div>
+
+      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+        <p style="color: #999; font-size: 14px; margin: 0;">
+          This email was sent by the StageLinq Virtual Audience Platform
+        </p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({ to, subject, text, html });
+}
