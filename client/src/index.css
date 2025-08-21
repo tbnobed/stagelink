@@ -296,4 +296,14 @@
   .va-text-green {
     color: var(--va-primary);
   }
+  
+  /* Touch target optimization */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
