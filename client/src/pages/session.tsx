@@ -5,6 +5,9 @@ import { useLocation } from "wouter";
 import { initializeStreaming, startPublishing, stopPublishing, startPlayback } from "@/lib/streaming";
 import { Chat } from "@/components/chat";
 import { GuestChat } from "@/components/guest-chat";
+import { MobileNav } from "@/components/mobile-nav";
+import { MobileVideoControls } from "@/components/mobile-video-controls";
+import { useMobile, useSwipeGestures } from "@/hooks/use-mobile";
 
 export default function Session() {
   const [isPublishing, setIsPublishing] = useState(false);
@@ -20,11 +23,15 @@ export default function Session() {
   const [isReturnFeedStarted, setIsReturnFeedStarted] = useState(false);
   const [guestUser, setGuestUser] = useState<any>(null);
   const [linkId, setLinkId] = useState<string | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const initializationRef = useRef(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { isMobile } = useMobile();
 
   useEffect(() => {
     if (initializationRef.current) return; // Prevent multiple initializations
@@ -207,6 +214,64 @@ export default function Session() {
     console.log('Toggling chat, current showChat:', showChat);
     setShowChat(!showChat);
   };
+
+  const toggleMute = () => {
+    if (publisherVideoRef.current) {
+      publisherVideoRef.current.muted = !publisherVideoRef.current.muted;
+      setIsMuted(publisherVideoRef.current.muted);
+    }
+    if (playerVideoRef.current) {
+      playerVideoRef.current.muted = !playerVideoRef.current.muted;
+    }
+  };
+
+  const toggleFullscreen = async () => {
+    if (!containerRef.current) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await containerRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      console.warn('Fullscreen error:', error);
+    }
+  };
+
+  // Handle fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Mobile swipe gestures
+  useSwipeGestures(
+    () => {
+      // Swipe left - toggle chat if enabled
+      if (chatEnabled && isMobile) {
+        setShowChat(true);
+      }
+    },
+    () => {
+      // Swipe right - close chat
+      if (showChat && isMobile) {
+        setShowChat(false);
+      }
+    },
+    () => {
+      // Swipe up - toggle fullscreen
+      if (isMobile) {
+        toggleFullscreen();
+      }
+    }
+  );
   
   // Debug effect to log chat states
   useEffect(() => {
@@ -240,9 +305,21 @@ export default function Session() {
   }
 
   return (
-    <div className="h-screen va-bg-dark flex flex-col">
-      {/* Compact Header */}
-      <div className="px-4 py-3 border-b va-border-dark flex items-center justify-center bg-va-dark-bg/50 backdrop-blur shrink-0">
+    <div ref={containerRef} className={`h-screen va-bg-dark flex flex-col swipe-container ${isMobile ? 'mobile-layout' : ''}`}>
+      {/* Mobile Navigation */}
+      <MobileNav
+        title={`Live Session - ${streamName || 'Stream'}`}
+        onBack={() => setLocation('/')}
+        onToggleChat={chatEnabled ? toggleChat : undefined}
+        onToggleFullscreen={toggleFullscreen}
+        showChatButton={chatEnabled}
+        showFullscreenButton={true}
+        isFullscreen={isFullscreen}
+        chatEnabled={chatEnabled}
+      />
+
+      {/* Desktop Header */}
+      <div className="desktop-only px-4 py-3 border-b va-border-dark flex items-center justify-center bg-va-dark-bg/50 backdrop-blur shrink-0">
         <div className="text-center">
           <h1 className="text-xl font-bold va-text-primary">Live Session</h1>
           <p className="va-text-secondary text-sm">Publish your stream and view the studio return feed</p>
@@ -250,11 +327,11 @@ export default function Session() {
       </div>
 
       {/* Main Content - Full Height */}
-      <div className="flex-1 p-4">
-        <div className="grid lg:grid-cols-2 gap-4 h-full">
+      <div className={`flex-1 ${isMobile ? 'p-2' : 'p-4'}`}>
+        <div className={`${isMobile ? 'flex flex-col gap-2' : 'grid lg:grid-cols-2 gap-4'} h-full`}>
           {/* Publisher Section */}
           <div className="va-bg-dark-surface rounded-xl border va-border-dark h-full flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b va-border-dark">
+            <div className={`flex items-center justify-between ${isMobile ? 'p-3' : 'p-4'} border-b va-border-dark desktop-only`}>
               <h3 className="text-lg font-semibold va-text-primary">Publisher</h3>
               <span className={`px-3 py-1 rounded-full text-sm ${
                 isPublishing 
@@ -265,75 +342,113 @@ export default function Session() {
               </span>
             </div>
             
-            <div className="flex-1 p-4 flex flex-col">
-            
-            {/* Welcome Alert */}
-            <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 mb-4">
-              <div className="flex items-start">
-                <i className="fas fa-info-circle text-blue-400 mt-1 mr-3"></i>
-                <div>
-                  <p className="text-blue-400 font-medium">Welcome to Virtual Audience</p>
-                  <p className="text-blue-300 text-sm mt-1">Click <strong>Start Stream</strong> and allow video/audio access to begin broadcasting</p>
+            <div className={`flex-1 ${isMobile ? 'p-2' : 'p-4'} flex flex-col`}>
+              {/* Mobile Video View */}
+              {isMobile ? (
+                <div className="mobile-video-container flex-1">
+                  <video 
+                    ref={publisherVideoRef} 
+                    autoPlay 
+                    muted 
+                    playsInline
+                    className="w-full h-full"
+                    style={{ display: isPublishing ? 'block' : 'none' }}
+                    data-testid="video-publisher"
+                  />
+                  {!isPublishing && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                      <div className="text-center">
+                        <i className="fas fa-video text-4xl text-gray-500 mb-4"></i>
+                        <p className="va-text-secondary">Tap Start Stream to begin</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Mobile Controls Overlay */}
+                  <MobileVideoControls
+                    isPublishing={isPublishing}
+                    isConnected={isPublishing}
+                    onTogglePublishing={togglePublishing}
+                    onToggleChat={chatEnabled ? toggleChat : undefined}
+                    onToggleFullscreen={toggleFullscreen}
+                    onToggleMute={toggleMute}
+                    chatEnabled={chatEnabled}
+                    isMuted={isMuted}
+                    streamName={streamName || 'Publisher'}
+                    showPublishingControls={true}
+                  />
                 </div>
-              </div>
-            </div>
-
-            {/* Stream Control */}
-            <Button 
-              onClick={togglePublishing}
-              className={`w-full font-semibold mb-4 ${
-                isPublishing
-                  ? 'bg-red-500 hover:bg-red-600 text-white'
-                  : 'va-bg-primary hover:va-bg-primary-dark text-va-dark-bg'
-              }`}
-              data-testid="button-toggle-stream"
-            >
-              <i className={`fas ${isPublishing ? 'fa-stop' : 'fa-video'} mr-2`}></i>
-              {isPublishing ? 'Stop Stream' : 'Start Stream'}
-            </Button>
-
-            {/* Video Element */}
-            <div className="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
-              <video 
-                ref={publisherVideoRef}
-                autoPlay 
-                muted 
-                playsInline 
-                className="w-full h-full object-cover"
-                style={{ display: isPublishing ? 'block' : 'none' }}
-                data-testid="video-publisher"
-              />
-              {!isPublishing && (
-                <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
-                  <div className="text-center">
-                    <i className="fas fa-video text-4xl text-gray-500 mb-4"></i>
-                    <p className="va-text-secondary">Click Start Stream to begin</p>
+              ) : (
+                <>
+                  {/* Desktop Welcome Alert */}
+                  <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 mb-4">
+                    <div className="flex items-start">
+                      <i className="fas fa-info-circle text-blue-400 mt-1 mr-3"></i>
+                      <div>
+                        <p className="text-blue-400 font-medium">Welcome to Virtual Audience</p>
+                        <p className="text-blue-300 text-sm mt-1">Click <strong>Start Stream</strong> and allow video/audio access to begin broadcasting</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
 
-            {/* Session Statistics */}
-            <div className="va-bg-dark-surface-2 rounded-lg p-4 space-y-3">
-              <h4 className="font-medium va-text-primary flex items-center">
-                <i className="fas fa-chart-line mr-2 va-text-green"></i>
-                Session Statistics
-              </h4>
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="va-text-secondary">Session ID:</span>
-                  <span className="va-text-primary font-mono" data-testid="text-session-id">{sessionId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="va-text-secondary">Audio Codec:</span>
-                  <span className="va-text-primary font-mono" data-testid="text-audio-codec">{audioCodec}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="va-text-secondary">Video Codec:</span>
-                  <span className="va-text-primary font-mono" data-testid="text-video-codec">{videoCodec}</span>
-                </div>
-              </div>
-            </div>
+                  {/* Stream Control */}
+                  <Button 
+                    onClick={togglePublishing}
+                    className={`w-full font-semibold mb-4 ${
+                      isPublishing
+                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                        : 'va-bg-primary hover:va-bg-primary-dark text-va-dark-bg'
+                    }`}
+                    data-testid="button-toggle-stream"
+                  >
+                    <i className={`fas ${isPublishing ? 'fa-stop' : 'fa-video'} mr-2`}></i>
+                    {isPublishing ? 'Stop Stream' : 'Start Stream'}
+                  </Button>
+
+                  {/* Video Element */}
+                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
+                    <video 
+                      ref={publisherVideoRef}
+                      autoPlay 
+                      muted 
+                      playsInline 
+                      className="w-full h-full object-cover"
+                      style={{ display: isPublishing ? 'block' : 'none' }}
+                      data-testid="video-publisher"
+                    />
+                    {!isPublishing && (
+                      <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
+                        <div className="text-center">
+                          <i className="fas fa-video text-4xl text-gray-500 mb-4"></i>
+                          <p className="va-text-secondary">Click Start Stream to begin</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Session Statistics */}
+                  <div className="va-bg-dark-surface-2 rounded-lg p-4 space-y-3">
+                    <h4 className="font-medium va-text-primary flex items-center">
+                      <i className="fas fa-chart-line mr-2 va-text-green"></i>
+                      Session Statistics
+                    </h4>
+                    <div className="grid grid-cols-1 gap-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="va-text-secondary">Session ID:</span>
+                        <span className="va-text-primary font-mono" data-testid="text-session-id">{sessionId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="va-text-secondary">Audio Codec:</span>
+                        <span className="va-text-primary font-mono" data-testid="text-audio-codec">{audioCodec}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="va-text-secondary">Video Codec:</span>
+                        <span className="va-text-primary font-mono" data-testid="text-video-codec">{videoCodec}</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

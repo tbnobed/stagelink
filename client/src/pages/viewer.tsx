@@ -2,14 +2,19 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { startPlayback } from "@/lib/streaming";
+import { MobileNav } from "@/components/mobile-nav";
+import { MobileVideoControls } from "@/components/mobile-video-controls";
+import { useMobile, useSwipeGestures } from "@/hooks/use-mobile";
 
 export default function Viewer() {
   const [streamName, setStreamName] = useState<string>("");
   const [isConnected, setIsConnected] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { isMobile } = useMobile();
 
   useEffect(() => {
     // Get stream name from URL parameters
@@ -35,6 +40,18 @@ export default function Viewer() {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  // Mobile swipe gestures
+  useSwipeGestures(
+    undefined, // No left swipe action
+    undefined, // No right swipe action
+    () => {
+      // Swipe up - toggle fullscreen
+      if (isMobile) {
+        toggleFullscreen();
+      }
+    }
+  );
 
   const startStream = async (stream: string) => {
     if (!videoRef.current) return;
@@ -73,6 +90,13 @@ export default function Viewer() {
     }
   };
 
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
+  };
+
   const goBack = () => {
     window.close();
     // Fallback if window.close() doesn't work
@@ -84,11 +108,22 @@ export default function Viewer() {
   return (
     <div 
       ref={containerRef}
-      className={`${isFullscreen ? 'fixed inset-0 z-50' : 'min-h-screen'} bg-va-dark-bg text-va-text-primary font-inter`}
+      className={`${isFullscreen ? 'fixed inset-0 z-50' : 'min-h-screen'} ${isMobile ? 'mobile-layout swipe-container' : ''} bg-va-dark-bg text-va-text-primary font-inter`}
       data-testid="viewer-container"
     >
-      {/* Header - Hidden in fullscreen */}
-      {!isFullscreen && (
+      {/* Mobile Navigation */}
+      {isMobile && !isFullscreen && (
+        <MobileNav
+          title={`${streamName || 'Stream'} - Viewer`}
+          onBack={() => window.history.back()}
+          onToggleFullscreen={toggleFullscreen}
+          showFullscreenButton={true}
+          isFullscreen={isFullscreen}
+        />
+      )}
+
+      {/* Desktop Header - Hidden in fullscreen and mobile */}
+      {!isFullscreen && !isMobile && (
         <div className="va-bg-dark-surface border-b va-border-dark p-4">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -145,8 +180,20 @@ export default function Viewer() {
           data-testid="video-main"
         />
         
-        {/* Fullscreen Controls Overlay */}
-        {isFullscreen && (
+        {/* Mobile Controls Overlay */}
+        {isMobile && (
+          <MobileVideoControls
+            isConnected={isConnected}
+            onToggleFullscreen={toggleFullscreen}
+            onToggleMute={toggleMute}
+            isMuted={isMuted}
+            streamName={streamName || 'Stream'}
+            showPublishingControls={false}
+          />
+        )}
+
+        {/* Desktop Fullscreen Controls Overlay */}
+        {isFullscreen && !isMobile && (
           <div className="absolute top-4 right-4 z-10">
             <Button 
               onClick={toggleFullscreen}
