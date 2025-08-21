@@ -330,11 +330,14 @@ class ChatWebSocketServer {
     const participants = await storage.getChatParticipants(sessionId);
     const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
 
-    const participantsData = participants.map(p => ({
+    // Only show online participants to avoid duplicates
+    const onlineParticipants = participants.filter(p => p.isOnline);
+    
+    const participantsData = onlineParticipants.map(p => ({
       userId: p.userId,
       username: p.username,
       role: p.role,
-      isOnline: sessionClients.some(client => client.userId === p.userId),
+      isOnline: true, // All filtered participants are online
     }));
 
     const message = {
