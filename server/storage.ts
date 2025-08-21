@@ -610,6 +610,11 @@ export class MemStorage implements IStorage {
     console.warn('updateParticipantStatus not implemented in MemStorage');
   }
 
+  async updateParticipantStatusByUsername(sessionId: string, username: string, isOnline: boolean): Promise<void> {
+    // In memory implementation - would need to add chat storage maps
+    console.warn('updateParticipantStatusByUsername not implemented in MemStorage');
+  }
+
   async removeParticipant(sessionId: string, userId: number): Promise<void> {
     // In memory implementation - would need to add chat storage maps
     console.warn('removeParticipant not implemented in MemStorage');
