@@ -9,6 +9,7 @@ import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   deleteUser(id: number): Promise<boolean>;
@@ -90,6 +91,12 @@ export class MemStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
       (user) => user.username === username,
+    );
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
     );
   }
 
@@ -538,6 +545,11 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -982,11 +994,13 @@ export class DatabaseStorage implements IStorage {
 
   // Password Reset Token Methods
   async createPasswordResetToken(userId: number, token: string, expiresAt: Date): Promise<PasswordResetToken> {
+    const tokenId = randomUUID();
     const [resetToken] = await db
       .insert(passwordResetTokens)
       .values({
-        id: token,
+        id: tokenId,
         userId,
+        token,
         createdAt: new Date(),
         expiresAt,
         used: false,
@@ -1001,7 +1015,7 @@ export class DatabaseStorage implements IStorage {
       .from(passwordResetTokens)
       .where(
         and(
-          eq(passwordResetTokens.id, token),
+          eq(passwordResetTokens.token, token),
           eq(passwordResetTokens.used, false),
           lt(new Date(), passwordResetTokens.expiresAt)
         )
@@ -1015,7 +1029,7 @@ export class DatabaseStorage implements IStorage {
       .set({ used: true })
       .where(
         and(
-          eq(passwordResetTokens.id, token),
+          eq(passwordResetTokens.token, token),
           eq(passwordResetTokens.used, false),
           lt(new Date(), passwordResetTokens.expiresAt)
         )

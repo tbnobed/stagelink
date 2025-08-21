@@ -171,14 +171,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Email is required' });
       }
 
-      const user = await storage.getUserByUsername(email);
+      const user = await storage.getUserByEmail(email);
+      
       if (!user) {
         // Don't reveal if user exists for security
         return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
       }
 
       // Generate reset token
-      const resetToken = require('crypto').randomBytes(32).toString('hex');
+      const { randomBytes } = await import('crypto');
+      const resetToken = randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
       await storage.createPasswordResetToken(user.id, resetToken, expiresAt);
