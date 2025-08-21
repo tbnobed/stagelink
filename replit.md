@@ -8,6 +8,14 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes
 
+## Engineer Role Docker Support (August 21, 2025) - COMPLETED
+- **Issue**: Engineer role creation working in development but Docker builds needed enum support
+- **Root Cause**: Database enum needed "engineer" value added to production schema
+- **Solution**: All Docker files already correctly configured with ('admin', 'engineer', 'user') enum
+- **Verification**: Confirmed init.sql, migrate-session-tokens.sql, and fix-production-database.sql all include engineer role
+- **Result**: Docker deployments now fully support all three user roles without additional changes needed
+- **Status**: READY - All Docker database files properly configured for engineer role support
+
 ## Docker Production Guest User Fix (August 21, 2025) - COMPLETED
 - **Issue**: Docker production deployment using old compiled code with user_id 999999 causing foreign key violations
 - **Root Cause**: Docker build was compiling old source code before guest user fixes were applied
