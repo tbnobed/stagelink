@@ -413,11 +413,11 @@ export default function Generator() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="va-bg-dark-surface-2 va-border-dark">
-                    <SelectItem value="studio1">Studio 1 (Main)</SelectItem>
-                    <SelectItem value="livestream1">Studio 1 Legacy (livestream1)</SelectItem>
-                    <SelectItem value="livestream2">Studio 2 (Backup)</SelectItem>
-                    <SelectItem value="livestream3">Studio 3 (Guest)</SelectItem>
-                    <SelectItem value="livestream5">Studio 4 (Archive)</SelectItem>
+                    <SelectItem value="Socal1">Socal 1</SelectItem>
+                    <SelectItem value="Socal2">Socal 2</SelectItem>
+                    <SelectItem value="Socal3">Socal 3</SelectItem>
+                    <SelectItem value="Socal4">Socal 4</SelectItem>
+                    <SelectItem value="Socal5">Socal 5</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
