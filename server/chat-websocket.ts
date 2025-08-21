@@ -132,7 +132,7 @@ class ChatWebSocketServer {
   }
 
   private async handleJoin(ws: WebSocket, message: ChatMessage) {
-    if (message.userId === undefined || !message.username || !message.role || !message.sessionId) {
+    if (!message.username || !message.role || !message.sessionId) {
       ws.send(JSON.stringify({ 
         type: 'error', 
         message: 'Missing required fields for join' 
