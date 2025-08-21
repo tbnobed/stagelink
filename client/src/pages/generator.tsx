@@ -335,15 +335,15 @@ export default function Generator() {
   };
 
   return (
-    <div className="min-h-screen py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
+    <div className="min-h-screen py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-6">
           <h1 className="text-3xl font-bold va-text-primary mb-2">Link Generator</h1>
           <p className="va-text-secondary">Generate custom streaming links for guests or return feed viewers</p>
         </div>
 
         {/* Link Type Toggle */}
-        <div className="max-w-md mx-auto mb-8">
+        <div className="max-w-md mx-auto mb-6">
           <div className="va-bg-dark-surface rounded-2xl p-2 border va-border-dark">
             <div className="grid grid-cols-2 gap-1">
               <Button
@@ -374,14 +374,14 @@ export default function Generator() {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Generator Form */}
-          <div className="va-bg-dark-surface rounded-2xl p-8 border va-border-dark">
+          <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark">
             <h3 className="text-xl font-semibold va-text-primary mb-6">
               {linkType === "guest" ? "Guest Session Configuration" : "Viewer Link Configuration"}
             </h3>
             
-            <div className="space-y-6">
+            <div className="space-y-5">
               {/* Guest Stream Name - Only for Guest Sessions */}
               {linkType === "guest" && (
                 <div>
@@ -506,8 +506,8 @@ export default function Generator() {
           </div>
 
           {/* Generated Output */}
-          <div className="va-bg-dark-surface rounded-2xl p-8 border va-border-dark">
-            <div className="flex items-center justify-between mb-6">
+          <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold va-text-primary">
                 Generated {linkType === "guest" ? "Guest Session" : "Viewer"} Link
               </h3>
@@ -521,7 +521,7 @@ export default function Generator() {
               </a>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Short Link Output */}
               {(linkType === "guest" ? shortLink : viewerShortLink) && (
                 <div>

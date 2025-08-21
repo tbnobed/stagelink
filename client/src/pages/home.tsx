@@ -4,23 +4,23 @@ import SRSMonitoring from "@/components/srs-monitoring";
 export default function Home() {
 
   return (
-    <div className="min-h-screen py-12 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen py-8 px-4">
+      <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           <h1 className="text-4xl md:text-6xl font-bold va-text-primary mb-4">
             Virtual Audience
             <span className="va-text-green ml-4">Platform</span>
           </h1>
-          <p className="text-xl va-text-secondary max-w-2xl mx-auto">
+          <p className="text-xl va-text-secondary max-w-3xl mx-auto">
             Professional live streaming solution with real-time video publishing and audience interaction capabilities
           </p>
         </div>
 
         {/* Feature Cards */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
+        <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
           {/* Links Management Card */}
-          <div className="va-bg-dark-surface rounded-2xl p-8 border va-border-dark hover:border-va-primary/50 transition-all duration-300 hover:transform hover:scale-105">
+          <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark hover:border-va-primary/50 transition-all duration-300 hover:transform hover:scale-105">
             <div className="flex items-center mb-6">
               <div className="bg-va-primary/20 p-3 rounded-lg mr-4">
                 <i className="fas fa-eye va-text-green text-2xl"></i>
@@ -54,7 +54,7 @@ export default function Home() {
           </div>
 
           {/* Link Generator Card */}
-          <div className="va-bg-dark-surface rounded-2xl p-8 border va-border-dark hover:border-va-primary/50 transition-all duration-300 hover:transform hover:scale-105">
+          <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark hover:border-va-primary/50 transition-all duration-300 hover:transform hover:scale-105">
             <div className="flex items-center mb-6">
               <div className="bg-va-primary/20 p-3 rounded-lg mr-4">
                 <i className="fas fa-link va-text-green text-2xl"></i>
@@ -86,10 +86,38 @@ export default function Home() {
               Open Link Generator
             </Link>
           </div>
+          {/* Quick Stats/Admin Card - Only on larger screens */}
+          <div className="hidden xl:block va-bg-dark-surface rounded-2xl p-6 border va-border-dark">
+            <div className="flex items-center mb-4">
+              <div className="bg-va-primary/20 p-3 rounded-lg mr-4">
+                <i className="fas fa-chart-line va-text-green text-2xl"></i>
+              </div>
+              <h3 className="text-2xl font-semibold va-text-primary">Quick Access</h3>
+            </div>
+            <p className="va-text-secondary mb-4">
+              Admin tools and platform management
+            </p>
+            <div className="space-y-3">
+              <Link
+                href="/admin"
+                className="w-full bg-transparent hover:va-bg-primary border border-va-primary hover:text-va-dark-bg va-text-green font-medium py-2 px-4 rounded transition-all duration-200 flex items-center justify-center text-sm"
+              >
+                <i className="fas fa-users-cog mr-2"></i>
+                Admin Panel
+              </Link>
+              <Link
+                href="/links"
+                className="w-full bg-transparent hover:bg-gray-700 border border-gray-600 hover:text-white va-text-secondary font-medium py-2 px-4 rounded transition-all duration-200 flex items-center justify-center text-sm"
+              >
+                <i className="fas fa-link mr-2"></i>
+                All Links
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* SRS Server Monitoring */}
-        <div className="mt-12">
+        <div className="mt-8">
           <SRSMonitoring />
         </div>
       </div>
