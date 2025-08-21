@@ -17,6 +17,7 @@ export interface IStorage {
   
   // Generated Links
   getAllLinks(): Promise<GeneratedLink[]>;
+  getLink(id: string): Promise<GeneratedLink | undefined>;
   createLink(link: InsertGeneratedLink, userId?: number): Promise<GeneratedLink>;
   deleteLink(id: string): Promise<boolean>;
   deleteExpiredLinks(): Promise<number>;
@@ -30,6 +31,7 @@ export interface IStorage {
   
   // Viewer Links
   getAllViewerLinks(): Promise<ViewerLink[]>;
+  getViewerLink(id: string): Promise<ViewerLink | undefined>;
   createViewerLink(link: InsertViewerLink, userId?: number): Promise<ViewerLink>;
   deleteViewerLink(id: string): Promise<boolean>;
   deleteExpiredViewerLinks(): Promise<number>;
@@ -135,6 +137,19 @@ export class MemStorage implements IStorage {
     
     // Filter out expired links
     return allLinks.filter(link => !link.expiresAt || link.expiresAt > now);
+  }
+
+  async getLink(id: string): Promise<GeneratedLink | undefined> {
+    const link = this.links.get(id);
+    if (!link) return undefined;
+    
+    // Check if link has expired
+    if (link.expiresAt && link.expiresAt <= new Date()) {
+      this.links.delete(id);
+      return undefined;
+    }
+    
+    return link;
   }
 
   async createLink(insertLink: InsertGeneratedLink, userId?: number): Promise<GeneratedLink> {
@@ -266,6 +281,19 @@ export class MemStorage implements IStorage {
     
     // Filter out expired links
     return allLinks.filter(link => !link.expiresAt || link.expiresAt > now);
+  }
+
+  async getViewerLink(id: string): Promise<ViewerLink | undefined> {
+    const link = this.viewerLinks.get(id);
+    if (!link) return undefined;
+    
+    // Check if link has expired
+    if (link.expiresAt && link.expiresAt <= new Date()) {
+      this.viewerLinks.delete(id);
+      return undefined;
+    }
+    
+    return link;
   }
 
   async createViewerLink(insertViewerLink: InsertViewerLink, userId?: number): Promise<ViewerLink> {
@@ -439,85 +467,32 @@ export class MemStorage implements IStorage {
     return 0;
   }
 
-  // Chat System Methods
+  // Chat System Methods - Not implemented in MemStorage
   async getChatMessages(sessionId: string, limit: number = 50): Promise<ChatMessage[]> {
-    if (this.isDatabaseMode) {
-      const messages = await this.db!.select()
-        .from(chatMessages)
-        .where(eq(chatMessages.sessionId, sessionId))
-        .orderBy(desc(chatMessages.createdAt))
-        .limit(limit);
-      return messages.reverse(); // Return in chronological order
-    }
+    console.warn('getChatMessages not implemented in MemStorage');
     return [];
   }
 
   async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
-    if (this.isDatabaseMode) {
-      const [newMessage] = await this.db!.insert(chatMessages)
-        .values(message)
-        .returning();
-      return newMessage;
-    }
-    
-    // Memory fallback
+    console.warn('createChatMessage not implemented in MemStorage');
     const chatMessage: ChatMessage = {
       id: Math.floor(Math.random() * 1000000),
       ...message,
       senderId: message.senderId || null,
       recipientId: message.recipientId || null,
+      messageType: message.messageType || 'individual',
       createdAt: new Date(),
     };
     return chatMessage;
   }
 
   async getChatParticipants(sessionId: string): Promise<ChatParticipant[]> {
-    if (this.isDatabaseMode) {
-      const participants = await this.db!.select()
-        .from(chatParticipants)
-        .where(
-          and(
-            eq(chatParticipants.sessionId, sessionId),
-            eq(chatParticipants.isOnline, true)
-          )
-        );
-      return participants;
-    }
+    console.warn('getChatParticipants not implemented in MemStorage');
     return [];
   }
 
   async addChatParticipant(participant: InsertChatParticipant): Promise<ChatParticipant> {
-    if (this.isDatabaseMode) {
-      // Check if participant already exists by userId AND sessionId (not just username)
-      const existing = await this.db!.select()
-        .from(chatParticipants)
-        .where(
-          and(
-            eq(chatParticipants.sessionId, participant.sessionId),
-            eq(chatParticipants.userId, participant.userId)
-          )
-        );
-
-      if (existing.length > 0) {
-        // Update existing participant as online
-        const [updated] = await this.db!.update(chatParticipants)
-          .set({
-            isOnline: true,
-            lastSeenAt: new Date(),
-          })
-          .where(eq(chatParticipants.id, existing[0].id))
-          .returning();
-        return updated;
-      }
-
-      // Create new participant
-      const [newParticipant] = await this.db!.insert(chatParticipants)
-        .values(participant)
-        .returning();
-      return newParticipant;
-    }
-    
-    // Memory fallback
+    console.warn('addChatParticipant not implemented in MemStorage');
     const chatParticipant: ChatParticipant = {
       id: Math.floor(Math.random() * 1000000),
       ...participant,
@@ -530,104 +505,18 @@ export class MemStorage implements IStorage {
   }
 
   async updateParticipantStatus(sessionId: string, userId: number, isOnline: boolean): Promise<void> {
-    if (this.isDatabaseMode) {
-      await this.db!.update(chatParticipants)
-        .set({
-          isOnline,
-          lastSeenAt: new Date(),
-        })
-        .where(
-          and(
-            eq(chatParticipants.sessionId, sessionId),
-            eq(chatParticipants.userId, userId)
-          )
-        );
-    }
-  }
-
-  async updateParticipantStatusByUsername(sessionId: string, username: string, isOnline: boolean): Promise<void> {
-    if (this.isDatabaseMode) {
-      await this.db!.update(chatParticipants)
-        .set({
-          isOnline,
-          lastSeenAt: new Date(),
-        })
-        .where(
-          and(
-            eq(chatParticipants.sessionId, sessionId),
-            eq(chatParticipants.username, username),
-            isNull(chatParticipants.userId) // Only update guest users
-          )
-        );
-    }
-  }
-
-  async removeParticipant(sessionId: string, userId: number): Promise<void> {
-    if (this.isDatabaseMode) {
-      await this.db!.update(chatParticipants)
-        .set({
-          isOnline: false,
-          lastSeenAt: new Date(),
-        })
-        .where(
-          and(
-            eq(chatParticipants.sessionId, sessionId),
-            eq(chatParticipants.userId, userId)
-          )
-        );
-    }
-  }
-
-  async cleanupDuplicateParticipants(sessionId: string): Promise<void> {
-    if (this.isDatabaseMode) {
-      // Get all participants for this session
-      const participants = await this.db!.select()
-        .from(chatParticipants)
-        .where(eq(chatParticipants.sessionId, sessionId))
-        .orderBy(chatParticipants.joinedAt);
-
-      // Group by userId
-      const userGroups = new Map<number, any[]>();
-      for (const participant of participants) {
-        if (!userGroups.has(participant.userId)) {
-          userGroups.set(participant.userId, []);
-        }
-        userGroups.get(participant.userId)!.push(participant);
-      }
-
-      // Keep the latest entry for each user, delete the rest
-      for (const [userId, userParticipants] of userGroups) {
-        if (userParticipants.length > 1) {
-          // Sort by joinedAt descending to keep the latest
-          userParticipants.sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime());
-          const toDelete = userParticipants.slice(1); // Keep first (latest), delete rest
-          
-          for (const participant of toDelete) {
-            await this.db!.delete(chatParticipants)
-              .where(eq(chatParticipants.id, participant.id));
-          }
-        }
-      }
-    }
-  }
-
-  async updateParticipantStatus(sessionId: string, userId: number, isOnline: boolean): Promise<void> {
-    // In memory implementation - would need to add chat storage maps
     console.warn('updateParticipantStatus not implemented in MemStorage');
   }
 
   async updateParticipantStatusByUsername(sessionId: string, username: string, isOnline: boolean): Promise<void> {
-    // In memory implementation - would need to add chat storage maps
     console.warn('updateParticipantStatusByUsername not implemented in MemStorage');
   }
 
   async removeParticipant(sessionId: string, userId: number): Promise<void> {
-    // In memory implementation - would need to add chat storage maps
     console.warn('removeParticipant not implemented in MemStorage');
   }
 
   async removeParticipantByUsername(sessionId: string, username: string): Promise<void> {
-    // In memory implementation - would need to add chat storage maps
     console.warn('removeParticipantByUsername not implemented in MemStorage');
   }
 }
@@ -694,6 +583,27 @@ export class DatabaseStorage implements IStorage {
     
     // Return all non-expired links
     return await db.select().from(generatedLinks);
+  }
+
+  async getLink(id: string): Promise<GeneratedLink | undefined> {
+    try {
+      const [link] = await db.select()
+        .from(generatedLinks)
+        .where(eq(generatedLinks.id, id));
+      
+      if (!link) return undefined;
+      
+      // Check if expired
+      if (link.expiresAt && link.expiresAt <= new Date()) {
+        await db.delete(generatedLinks).where(eq(generatedLinks.id, id));
+        return undefined;
+      }
+      
+      return link;
+    } catch (error) {
+      console.error('Error fetching link:', error);
+      return undefined;
+    }
   }
 
   async createLink(insertLink: InsertGeneratedLink, userId?: number): Promise<GeneratedLink> {
@@ -843,6 +753,27 @@ export class DatabaseStorage implements IStorage {
     
     // Filter out expired links
     return allLinks.filter((link: ViewerLink) => !link.expiresAt || link.expiresAt > now);
+  }
+
+  async getViewerLink(id: string): Promise<ViewerLink | undefined> {
+    try {
+      const [link] = await db.select()
+        .from(viewerLinks)
+        .where(eq(viewerLinks.id, id));
+      
+      if (!link) return undefined;
+      
+      // Check if expired
+      if (link.expiresAt && link.expiresAt <= new Date()) {
+        await db.delete(viewerLinks).where(eq(viewerLinks.id, id));
+        return undefined;
+      }
+      
+      return link;
+    } catch (error) {
+      console.error('Error fetching viewer link:', error);
+      return undefined;
+    }
   }
 
   async createViewerLink(insertViewerLink: InsertViewerLink, userId?: number): Promise<ViewerLink> {
