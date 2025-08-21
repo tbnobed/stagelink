@@ -1,6 +1,6 @@
 {
-  "name": "Virtual Audience Platform",
-  "short_name": "VirtualAudience",
+  "name": "StageLinq Virtual Audience Platform",
+  "short_name": "StageLinq",
   "description": "Professional live streaming platform with real-time audience interaction",
   "start_url": "/",
   "display": "standalone",
