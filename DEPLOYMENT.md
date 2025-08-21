@@ -15,6 +15,7 @@ This guide will help you deploy the Virtual Audience Platform v2.0 on your Ubunt
 - ✅ **NEW**: URL shortening system with secure 6-character codes
 - ✅ **NEW**: Short links hide technical parameters from end users
 - ✅ **NEW**: StageLinq branding integration
+- ✅ **NEW**: SRS server environment configuration support
 
 ## Prerequisites
 
@@ -48,8 +49,26 @@ This guide will help you deploy the Virtual Audience Platform v2.0 on your Ubunt
    chmod +x deploy.sh && ./deploy.sh
    ```
 
+### For Custom SRS Server Configuration:
+1. **Create/modify .env file:**
+   ```bash
+   # Copy example and customize
+   cp .env.example .env
+   # Edit .env to set your SRS server settings:
+   # SRS_HOST=your-srs-server.com
+   # SRS_WHIP_PORT=1990
+   # SRS_API_PORT=1985
+   # SRS_USE_HTTPS=true
+   ```
+
+2. **Deploy with settings from .env:**
+   ```bash
+   ./deploy.sh
+   ```
+
 4. **Access your application:**
    - HTTP: `http://your-server-ip`
+   - SRS Config API: `http://your-server-ip/api/srs/config`
 
 > **See QUICKSTART.md for simplified instructions**
 

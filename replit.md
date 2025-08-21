@@ -20,6 +20,8 @@ Preferred communication style: Simple, everyday language.
 - **Result**: Application can now easily switch between different SRS servers by changing environment variables
 - **Technical**: Backend provides configuration API, frontend caches config and builds URLs dynamically
 - **Status**: READY - SRS server connections now fully configurable via environment variables
+- **Docker**: Updated docker-compose.yml to read SRS configuration from .env file with fallback defaults
+- **Deployment**: Standard deploy.sh now handles SRS configuration via .env file automatically
 
 ## Database Guest User Cleanup Fix (August 21, 2025) - COMPLETED ✅
 - **Issue**: Guest users like "Viewer_livestream5_764470" were accumulating in database without proper cleanup when disconnecting

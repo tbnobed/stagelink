@@ -1,4 +1,4 @@
-# Virtual Audience Platform v2.0 - Production Docker Build with Guest User Fixes
+# Virtual Audience Platform v2.0 - Production Docker Build with Guest User Fixes + SRS Config
 FROM node:18-alpine AS builder
 
 ARG CACHE_BUST
