@@ -1,4 +1,4 @@
-# Virtual Audience Platform v2.0 - Production Docker Build with Guest User Fixes + SRS Config
+# Virtual Audience Platform v2.1 - Production Docker Build with Email Invites + Screen Optimization
 FROM node:18-alpine AS builder
 
 ARG CACHE_BUST
@@ -9,7 +9,7 @@ COPY package*.json ./
 RUN npm ci --include=dev
 
 COPY . .
-# Force clean build with guest user fixes - build timestamp: 2025-08-21
+# Force clean build with email functionality and screen optimization - build timestamp: 2025-08-21
 RUN rm -rf dist/ node_modules/.cache/ .vite/ 2>/dev/null || true
 RUN npx vite build && npx esbuild server/production.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --allow-overwrite
 
@@ -30,13 +30,13 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 
-# Create startup script that ensures complete v2.0 database schema
+# Create startup script that ensures complete v2.1 database schema with email invites
 RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
-echo "Starting Virtual Audience Platform v2.0..."
+echo "Starting Virtual Audience Platform v2.1..."
 sleep 10
 
-# Ensure database has complete v2.0 schema
+# Ensure database has complete v2.1 schema with email functionality
 psql "$DATABASE_URL" << 'SCHEMA_EOF'
 -- Create enums safely
 DO $$ BEGIN
@@ -166,7 +166,9 @@ ON CONFLICT ("username") DO NOTHING;
 
 SCHEMA_EOF
 
-echo "Virtual Audience Platform v2.0 database schema ready"
+echo "Virtual Audience Platform v2.1 database schema ready"
+echo "Email invite system enabled - SendGrid integration active"
+echo "Screen optimization applied - better space utilization"
 echo "Guest user fixes applied - using null user_id for guests"
 echo "Starting application server..."
 exec node dist/production.js

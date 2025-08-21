@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        CACHE_BUST: "2025-08-21-srs-config-fix"
-    container_name: virtual-audience-app-v2
+        CACHE_BUST: "2025-08-21-email-invites-screen-optimization"
+    container_name: virtual-audience-app-v2-1
     restart: unless-stopped
     ports:
       - "80:5000"
@@ -26,6 +26,9 @@ services:
       - SRS_WHIP_PORT=${SRS_WHIP_PORT:-1990}
       - SRS_API_PORT=${SRS_API_PORT:-1985}
       - SRS_USE_HTTPS=${SRS_USE_HTTPS:-true}
+      # Email Configuration - Required for invite functionality
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-alerts@obedtv.com}
     depends_on:
       db:
         condition: service_healthy
@@ -42,7 +45,7 @@ services:
 
   db:
     image: postgres:15-alpine
-    container_name: virtual-audience-db-v2
+    container_name: virtual-audience-db-v2-1
     restart: unless-stopped
     environment:
       - POSTGRES_DB=virtual_audience

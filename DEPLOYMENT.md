@@ -1,6 +1,6 @@
 # Virtual Audience Platform - Docker Deployment Guide
 
-This guide will help you deploy the Virtual Audience Platform v2.0 on your Ubuntu server using Docker.
+This guide will help you deploy the Virtual Audience Platform v2.1 on your Ubuntu server using Docker.
 
 ## Latest Updates (August 2025)
 - ✅ Fixed link sharing across browsers with server-side storage
@@ -11,11 +11,15 @@ This guide will help you deploy the Virtual Audience Platform v2.0 on your Ubunt
 - ✅ Fixed QR code generation with proper npm package integration
 - ✅ Added production Docker compose configuration
 - ✅ Enhanced deployment scripts with QR code support verification
-- ✅ **NEW**: Complete authentication system with admin/user roles
-- ✅ **NEW**: URL shortening system with secure 6-character codes
-- ✅ **NEW**: Short links hide technical parameters from end users
-- ✅ **NEW**: StageLinq branding integration
-- ✅ **NEW**: SRS server environment configuration support
+- ✅ Complete authentication system with admin/user roles
+- ✅ URL shortening system with secure 6-character codes
+- ✅ Short links hide technical parameters from end users
+- ✅ StageLinq branding integration
+- ✅ SRS server environment configuration support
+- ✅ **NEW**: Professional email invite system with SendGrid integration
+- ✅ **NEW**: Clean short links in email invites (yourapp.com/s/ABC123)
+- ✅ **NEW**: Optimized screen space utilization on Home and Generator pages
+- ✅ **NEW**: Mobile-optimized responsive layouts with PWA support
 
 ## Prerequisites
 
@@ -49,19 +53,21 @@ This guide will help you deploy the Virtual Audience Platform v2.0 on your Ubunt
    chmod +x deploy.sh && ./deploy.sh
    ```
 
-### For Custom SRS Server Configuration:
+### For Custom Configuration (SRS Server + Email):
 1. **Create/modify .env file:**
    ```bash
    # Copy example and customize
    cp .env.example .env
-   # Edit .env to set your SRS server settings:
+   # Edit .env to set your configuration:
    # SRS_HOST=your-srs-server.com
    # SRS_WHIP_PORT=1990
    # SRS_API_PORT=1985
    # SRS_USE_HTTPS=true
+   # SENDGRID_API_KEY=your-sendgrid-api-key
+   # SENDGRID_FROM_EMAIL=alerts@yourdomain.com
    ```
 
-2. **Deploy with settings from .env:**
+2. **Deploy with custom settings:**
    ```bash
    ./deploy.sh
    ```
@@ -71,6 +77,32 @@ This guide will help you deploy the Virtual Audience Platform v2.0 on your Ubunt
    - SRS Config API: `http://your-server-ip/api/srs/config`
 
 > **See QUICKSTART.md for simplified instructions**
+
+## Email Invite System Setup
+
+The platform now includes professional email invites powered by SendGrid:
+
+### Features:
+- **Clean Short Links**: Emails contain professional URLs like `yourapp.com/s/ABC123` instead of technical parameters
+- **Email Validation**: Built-in email format validation and error handling
+- **Professional Templates**: Clean, branded email templates for invitations
+- **Integration**: Seamlessly integrated into both Home and Generator pages
+
+### Setup Requirements:
+1. **SendGrid Account**: Create account at [sendgrid.com](https://sendgrid.com)
+2. **API Key**: Generate API key in SendGrid dashboard
+3. **Verified Sender**: Configure verified sender email address
+4. **Environment Variables**: Add to your `.env` file:
+   ```bash
+   SENDGRID_API_KEY=your-api-key-here
+   SENDGRID_FROM_EMAIL=alerts@yourdomain.com
+   ```
+
+### Usage:
+- Email invite buttons appear next to Copy Link and QR Code options
+- Automatically generates short links for professional appearance
+- Works for both guest session links and viewer links
+- Validates email addresses before sending
 
 ## Manual Deployment Steps
 

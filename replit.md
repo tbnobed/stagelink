@@ -50,12 +50,15 @@ Preferred communication style: Simple, everyday language.
 - **Monorepo Layout**: Client, server, and shared code
 - **Path Aliases**: Configured for @/, @shared/, and @assets
 - **Build Process**: Vite for frontend, esbuild for backend production
-- **Deployment**: Comprehensive Docker configurations for Ubuntu servers with Nginx reverse proxy, SSL, and automated migrations. Docker files are updated to match the current database schema and properly support all user roles and guest user fixes.
+- **Deployment**: Comprehensive Docker v2.1 configurations for Ubuntu servers with Nginx reverse proxy, SSL, and automated migrations. Docker files include email functionality, screen optimization updates, and properly support all user roles and guest user fixes.
+- **Email Service**: SendGrid integration for professional email invites with clean short link formatting.
 
 ## Key Features
 - **Link Generation**: Dynamic streaming link creation with QR code support, including short links with a 6-character alphanumeric code system. Links respect expiration settings.
 - **Session Management**: Real-time video streaming with WebRTC, including session token system for single-use link security (reusable until link expiration or deletion).
 - **Live Chat**: Integrated chat functionality with independent chat sessions for each streaming or viewer link.
+- **Email Invites**: Professional email invitation system using SendGrid integration with clean short links (yourapp.com/s/ABC123) for better appearance and trustworthiness.
+- **Screen Optimization**: Enhanced layouts with max-width-7xl containers and better space utilization on Home and Generator pages, including responsive 3-column layouts on large screens.
 - **Responsive Design**: Mobile-first approach with progressive web app features.
 - **Error Handling**: Comprehensive error boundaries and toast notifications.
 
