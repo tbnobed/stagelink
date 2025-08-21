@@ -1100,6 +1100,21 @@ export class DatabaseStorage implements IStorage {
       );
   }
 
+  async updateParticipantStatusByUsername(sessionId: string, username: string, isOnline: boolean): Promise<void> {
+    await db.update(chatParticipants)
+      .set({
+        isOnline,
+        lastSeenAt: new Date(),
+      })
+      .where(
+        and(
+          eq(chatParticipants.sessionId, sessionId),
+          eq(chatParticipants.username, username),
+          eq(chatParticipants.userId, null) // Only update guest users
+        )
+      );
+  }
+
   async cleanupDuplicateParticipants(sessionId: string): Promise<void> {
     // Get all participants for this session
     const participants = await db
