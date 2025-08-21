@@ -34,8 +34,8 @@ export default function Navigation() {
     logoutMutation.mutate();
   };
 
-  // Don't show navigation on auth page, session, or viewer pages
-  if (location === '/auth' || location === '/session' || location === '/viewer' || location === '/studio-viewer') {
+  // Don't show navigation on auth page, session, viewer, or reset password pages
+  if (location === '/auth' || location === '/session' || location === '/viewer' || location === '/studio-viewer' || location === '/reset-password') {
     return null;
   }
 

@@ -21,8 +21,8 @@ export default function ResetPasswordPage() {
   const [resetComplete, setResetComplete] = useState(false);
 
   useEffect(() => {
-    // Extract token from URL query parameters
-    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    // Extract token from URL query parameters using window.location.search
+    const urlParams = new URLSearchParams(window.location.search);
     const tokenParam = urlParams.get('token');
     if (tokenParam) {
       setToken(tokenParam);
