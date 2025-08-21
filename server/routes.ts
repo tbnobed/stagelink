@@ -6,6 +6,7 @@ import { ChatWebSocketServer } from "./chat-websocket";
 import { insertUserSchema, insertShortLinkSchema } from "@shared/schema";
 import { generateUniqueShortCode } from "./utils/shortCode";
 import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl } from "./utils/srs-config";
+import { sendStreamingInvite, sendViewerInvite } from "./email-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -731,6 +732,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error cleaning up duplicate participants:', error);
       res.status(500).json({ error: 'Failed to clean up duplicates' });
+    }
+  });
+
+  // Email Invite API Routes
+  app.post('/api/invites/streaming', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { email, linkId, message } = req.body;
+
+      if (!email || !linkId) {
+        return res.status(400).json({ error: 'Email and link ID are required' });
+      }
+
+      // Get the streaming link details
+      const link = await storage.getLink(linkId);
+      if (!link) {
+        return res.status(404).json({ error: 'Streaming link not found' });
+      }
+
+      // Create the full URL for the streaming link
+      const baseUrl = req.protocol + '://' + req.get('host');
+      const streamingUrl = `${baseUrl}/session?stream=${encodeURIComponent(link.streamName)}&return=${encodeURIComponent(link.returnFeed)}${link.chatEnabled ? '&chat=true' : ''}${link.sessionToken ? `&token=${link.sessionToken}` : ''}`;
+
+      // Send the invite email
+      const success = await sendStreamingInvite({
+        to: email,
+        inviterName: user.username,
+        streamingLink: streamingUrl,
+        linkExpiry: link.expiresAt,
+        message
+      });
+
+      if (success) {
+        res.json({ success: true, message: 'Streaming invite sent successfully' });
+      } else {
+        res.status(500).json({ error: 'Failed to send invite email' });
+      }
+    } catch (error) {
+      console.error('Failed to send streaming invite:', error);
+      res.status(500).json({ error: 'Failed to send streaming invite' });
+    }
+  });
+
+  app.post('/api/invites/viewer', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { email, linkId, message } = req.body;
+
+      if (!email || !linkId) {
+        return res.status(400).json({ error: 'Email and link ID are required' });
+      }
+
+      // Get the viewer link details
+      const link = await storage.getViewerLink(linkId);
+      if (!link) {
+        return res.status(404).json({ error: 'Viewer link not found' });
+      }
+
+      // Create the full URL for the viewer link
+      const baseUrl = req.protocol + '://' + req.get('host');
+      const viewerUrl = `${baseUrl}/studio-viewer?return=${encodeURIComponent(link.returnFeed)}${link.chatEnabled ? '&chat=true' : ''}${link.sessionToken ? `&token=${link.sessionToken}` : ''}`;
+
+      // Send the invite email
+      const success = await sendViewerInvite({
+        to: email,
+        inviterName: user.username,
+        viewerLink: viewerUrl,
+        linkExpiry: link.expiresAt,
+        message
+      });
+
+      if (success) {
+        res.json({ success: true, message: 'Viewer invite sent successfully' });
+      } else {
+        res.status(500).json({ error: 'Failed to send invite email' });
+      }
+    } catch (error) {
+      console.error('Failed to send viewer invite:', error);
+      res.status(500).json({ error: 'Failed to send viewer invite' });
+    }
+  });
+
+  app.post('/api/invites/short-link', requireAuth, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { email, shortCode, message } = req.body;
+
+      if (!email || !shortCode) {
+        return res.status(400).json({ error: 'Email and short code are required' });
+      }
+
+      // Get the short link details
+      const shortLink = await storage.getShortLink(shortCode);
+      if (!shortLink) {
+        return res.status(404).json({ error: 'Short link not found' });
+      }
+
+      // Create the full URL for the short link
+      const baseUrl = req.protocol + '://' + req.get('host');
+      const shortUrl = `${baseUrl}/s/${shortCode}`;
+
+      // Send the invite email as a streaming invite since short links redirect to streaming sessions
+      const success = await sendStreamingInvite({
+        to: email,
+        inviterName: user.username,
+        streamingLink: shortUrl,
+        linkExpiry: shortLink.expiresAt,
+        message
+      });
+
+      if (success) {
+        res.json({ success: true, message: 'Short link invite sent successfully' });
+      } else {
+        res.status(500).json({ error: 'Failed to send invite email' });
+      }
+    } catch (error) {
+      console.error('Failed to send short link invite:', error);
+      res.status(500).json({ error: 'Failed to send short link invite' });
     }
   });
 
