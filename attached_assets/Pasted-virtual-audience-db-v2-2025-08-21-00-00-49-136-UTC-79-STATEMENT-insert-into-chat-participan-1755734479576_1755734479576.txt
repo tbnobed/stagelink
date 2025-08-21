@@ -1,0 +1,33 @@
+virtual-audience-db-v2   | 2025-08-21 00:00:49.136 UTC [79] STATEMENT:  insert into "chat_participants" ("id", "session_id", "user_id", "username", "role", "is_online", "joined_at", "last_seen_at") values (default, $1, $2, $3, $4, $5, $6, $7) returning "id", "session_id", "user_id", "username", "role", "is_online", "joined_at", "last_seen_at"
+virtual-audience-app-v2  | Invalid message received: error: insert or update on table "chat_participants" violates foreign key constraint "chat_participants_user_id_fkey"
+virtual-audience-app-v2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2  |     at async DatabaseStorage.addChatParticipant (file:///app/dist/production.js:504:35)
+virtual-audience-app-v2  |     at async ChatWebSocketServer.handleJoin (file:///app/dist/production.js:877:7)
+virtual-audience-app-v2  |     at async ChatWebSocketServer.handleMessage (file:///app/dist/production.js:832:9)
+virtual-audience-app-v2  |     at async WebSocket.<anonymous> (file:///app/dist/production.js:811:9) {
+virtual-audience-app-v2  |   length: 295,
+virtual-audience-app-v2  |   severity: 'ERROR',
+virtual-audience-app-v2  |   code: '23503',
+virtual-audience-app-v2  |   detail: 'Key (user_id)=(999999) is not present in table "users".',
+virtual-audience-app-v2  |   hint: undefined,
+virtual-audience-app-v2  |   position: undefined,
+virtual-audience-app-v2  |   internalPosition: undefined,
+virtual-audience-app-v2  |   internalQuery: undefined,
+virtual-audience-app-v2  |   where: undefined,
+virtual-audience-app-v2  |   schema: 'public',
+virtual-audience-app-v2  |   table: 'chat_participants',
+virtual-audience-app-v2  |   column: undefined,
+virtual-audience-app-v2  |   dataType: undefined,
+virtual-audience-app-v2  |   constraint: 'chat_participants_user_id_fkey',
+virtual-audience-app-v2  |   file: 'ri_triggers.c',
+virtual-audience-app-v2  |   line: '2596',
+virtual-audience-app-v2  |   routine: 'ri_ReportViolation'
+virtual-audience-app-v2  | }
+virtual-audience-app-v2  | 12:00:49 AM [express] GET /api/chat/messages/1755733747750 304 in 53ms :: []
+virtual-audience-app-v2  | 12:00:49 AM [express] GET /api/links 401 in 15ms :: {"error":"Authentication required"}
+virtual-audience-app-v2  | 12:00:54 AM [express] GET /api/links 401 in 6ms :: {"error":"Authentication required"}
+virtual-audience-app-v2  | 12:00:59 AM [express] GET /api/links 401 in 6ms :: {"error":"Authentication required"}
+virtual-audience-app-v2  | 12:01:04 AM [express] GET /api/links 401 in 6ms :: {"error":"Authentication required"}
+virtual-audience-app-v2  | 12:01:09 AM [express] GET /api/links 401 in 5ms :: {"error":"Authentication required"}

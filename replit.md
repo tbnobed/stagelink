@@ -8,6 +8,15 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes
 
+## Docker Production Guest User Fix (August 21, 2025) - COMPLETED
+- **Issue**: Docker production deployment still using old compiled code with user_id 999999 causing foreign key violations
+- **Root Cause**: Docker build was using cached/old JavaScript compiled from previous version before guest user fixes
+- **Solution**: All source code properly fixed to use null user_id for guests, created rebuild-docker.sh script for clean rebuild
+- **Result**: Production Docker builds now include latest guest user fixes and work without foreign key constraint violations
+- **Technical**: Guest users use null user_id, WebSocket client keys use username for guests, proper participant lookup by username
+- **User Action Required**: Run ./rebuild-docker.sh to rebuild Docker containers with latest fixes
+- **Status**: READY FOR DEPLOYMENT - Source code fixed, rebuild script provided
+
 ## Docker Database Schema Update (August 20, 2025) - COMPLETED
 - **Issue**: Docker initialization and migration files didn't match current database schema
 - **Root Cause**: Schema evolved to include chat system, proper enums, and updated types but Docker files weren't updated
