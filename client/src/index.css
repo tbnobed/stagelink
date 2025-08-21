@@ -167,22 +167,42 @@
     z-index: 40;
   }
   
-  /* Mobile-only visibility */
-  .mobile-only {
-    display: none;
+  /* Mobile-only visibility - Force mobile layout when detected */
+  .mobile-device .mobile-only,
+  body.mobile-device .mobile-only {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
   
-  .desktop-only {
-    display: block;
+  .mobile-device .desktop-only,
+  body.mobile-device .desktop-only {
+    display: none !important;
+    visibility: hidden !important;
   }
   
+  .desktop-device .mobile-only,
+  body.desktop-device .mobile-only {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  .desktop-device .desktop-only,
+  body.desktop-device .desktop-only {
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  /* Fallback with media queries */
   @media (max-width: 768px) {
     .mobile-only {
-      display: block;
+      display: flex !important;
+      visibility: visible !important;
     }
     
     .desktop-only {
-      display: none;
+      display: none !important;
+      visibility: hidden !important;
     }
     
     /* Mobile layout adjustments */

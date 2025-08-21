@@ -9,9 +9,22 @@ export function useMobile() {
     const checkMobile = () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
-      setIsMobile(width <= 768);
+      const isMobileDevice = width <= 768;
+      setIsMobile(isMobileDevice);
       setIsLandscape(width > height);
       setScreenSize({ width, height });
+      
+      // Debug logging (remove in production)
+      console.log(`Mobile detection: width=${width}, isMobile=${isMobileDevice}`);
+      
+      // Apply mobile class to body for CSS targeting
+      if (isMobileDevice) {
+        document.body.classList.add('mobile-device');
+        document.body.classList.remove('desktop-device');
+      } else {
+        document.body.classList.add('desktop-device');
+        document.body.classList.remove('mobile-device');
+      }
     };
 
     checkMobile();

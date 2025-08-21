@@ -111,6 +111,7 @@ export default function Viewer() {
       className={`${isFullscreen ? 'fixed inset-0 z-50' : 'min-h-screen'} ${isMobile ? 'mobile-layout swipe-container' : ''} bg-va-dark-bg text-va-text-primary font-inter`}
       data-testid="viewer-container"
     >
+      
       {/* Mobile Navigation */}
       {isMobile && !isFullscreen && (
         <MobileNav

@@ -23,7 +23,7 @@ export function MobileNav({
   chatEnabled = false 
 }: MobileNavProps) {
   return (
-    <div className="mobile-nav mobile-only">
+    <div className="mobile-nav mobile-only" style={{ display: 'flex' }}>
       <div className="flex items-center gap-3">
         {onBack && (
           <Button 

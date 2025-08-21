@@ -306,6 +306,7 @@ export default function Session() {
 
   return (
     <div ref={containerRef} className={`h-screen va-bg-dark flex flex-col swipe-container ${isMobile ? 'mobile-layout' : ''}`}>
+      
       {/* Mobile Navigation */}
       <MobileNav
         title={`Live Session - ${streamName || 'Stream'}`}
