@@ -475,7 +475,12 @@ export class MemStorage implements IStorage {
     if (this.isDatabaseMode) {
       const participants = await this.db!.select()
         .from(chatParticipants)
-        .where(eq(chatParticipants.sessionId, sessionId));
+        .where(
+          and(
+            eq(chatParticipants.sessionId, sessionId),
+            eq(chatParticipants.isOnline, true)
+          )
+        );
       return participants;
     }
     return [];
@@ -1063,7 +1068,12 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(chatParticipants)
-      .where(eq(chatParticipants.sessionId, sessionId))
+      .where(
+        and(
+          eq(chatParticipants.sessionId, sessionId),
+          eq(chatParticipants.isOnline, true)
+        )
+      )
       .orderBy(chatParticipants.joinedAt);
   }
 
