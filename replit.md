@@ -8,6 +8,19 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes
 
+## SRS Server Environment Configuration (August 21, 2025) - COMPLETED ✅
+- **Issue**: SRS server URLs were hardcoded throughout the application making it difficult to switch servers
+- **Solution**: 
+  - Added environment variables for SRS server configuration (SRS_HOST, SRS_WHIP_PORT, SRS_API_PORT, SRS_USE_HTTPS)
+  - Created server utility functions for SRS URL generation with fallback defaults
+  - Added `/api/srs/config` endpoint to provide dynamic server configuration to frontend
+  - Updated frontend streaming library to use dynamic URLs from server configuration
+  - Modified both WHIP (publishing) and WHEP (playback) connections to use environment-based URLs
+- **Configuration**: SRS server now configurable via .env variables with cdn2.obedtv.live:1990 as default
+- **Result**: Application can now easily switch between different SRS servers by changing environment variables
+- **Technical**: Backend provides configuration API, frontend caches config and builds URLs dynamically
+- **Status**: READY - SRS server connections now fully configurable via environment variables
+
 ## Database Guest User Cleanup Fix (August 21, 2025) - COMPLETED ✅
 - **Issue**: Guest users like "Viewer_livestream5_764470" were accumulating in database without proper cleanup when disconnecting
 - **Root Cause**: Multiple issues: WebSocket disconnect handler missing `await`, TypeScript compilation errors with `isNull` import, and historical zombie guest users marked online

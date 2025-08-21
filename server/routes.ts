@@ -5,6 +5,7 @@ import { setupAuth, requireAuth, requireAdmin, requireAdminOrEngineer } from "./
 import { ChatWebSocketServer } from "./chat-websocket";
 import { insertUserSchema, insertShortLinkSchema } from "@shared/schema";
 import { generateUniqueShortCode } from "./utils/shortCode";
+import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl } from "./utils/srs-config";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -733,10 +734,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SRS Server Configuration API
+  app.get('/api/srs/config', (req, res) => {
+    try {
+      const config = getSRSConfig();
+      res.json({
+        host: config.host,
+        whipPort: config.whipPort,
+        apiPort: config.apiPort,
+        useHttps: config.useHttps,
+        // Helper URLs for frontend
+        whipBaseUrl: `${config.useHttps ? 'https' : 'http'}://${config.host}:${config.whipPort}/rtc/v1/whip/`,
+        whepBaseUrl: `${config.useHttps ? 'https' : 'http'}://${config.host}:${config.whipPort}/rtc/v1/whep/`
+      });
+    } catch (error) {
+      console.error('Error getting SRS config:', error);
+      res.status(500).json({ error: 'Failed to get SRS server configuration' });
+    }
+  });
+
   // SRS Server Monitoring API
   app.get('/api/srs/stats', async (req, res) => {
     try {
-      const srsApiUrl = 'http://cdn2.obedtv.live:1985/api/v1/summaries';
+      const srsApiUrl = getSRSApiUrl();
       const response = await fetch(srsApiUrl);
       
       if (!response.ok) {
