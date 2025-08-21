@@ -242,12 +242,13 @@ class ChatWebSocketServer {
           }
         }
 
-        // Update participant status in database - handle both guest and authenticated users
+        // Handle participant cleanup - authenticated users go offline, guest users are removed
         if (client.userId) {
+          // Authenticated users: mark as offline
           storage.updateParticipantStatus(client.sessionId, client.userId, false);
         } else {
-          // For guest users, update by username
-          storage.updateParticipantStatusByUsername(client.sessionId, client.username, false);
+          // Guest users: remove from database completely to prevent accumulation
+          storage.removeParticipantByUsername(client.sessionId, client.username);
         }
 
         // Send updated participant list

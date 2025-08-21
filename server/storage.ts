@@ -54,6 +54,7 @@ export interface IStorage {
   updateParticipantStatus(sessionId: string, userId: number, isOnline: boolean): Promise<void>;
   updateParticipantStatusByUsername(sessionId: string, username: string, isOnline: boolean): Promise<void>;
   removeParticipant(sessionId: string, userId: number): Promise<void>;
+  removeParticipantByUsername(sessionId: string, username: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -619,6 +620,11 @@ export class MemStorage implements IStorage {
     // In memory implementation - would need to add chat storage maps
     console.warn('removeParticipant not implemented in MemStorage');
   }
+
+  async removeParticipantByUsername(sessionId: string, username: string): Promise<void> {
+    // In memory implementation - would need to add chat storage maps
+    console.warn('removeParticipantByUsername not implemented in MemStorage');
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1096,6 +1102,18 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(chatParticipants.sessionId, sessionId),
           eq(chatParticipants.userId, userId)
+        )
+      );
+  }
+
+  async removeParticipantByUsername(sessionId: string, username: string): Promise<void> {
+    await db
+      .delete(chatParticipants)
+      .where(
+        and(
+          eq(chatParticipants.sessionId, sessionId),
+          eq(chatParticipants.username, username),
+          eq(chatParticipants.userId, null) // Only remove guest users
         )
       );
   }
