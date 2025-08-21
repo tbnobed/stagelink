@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface GeneratedLink {
   id: string;
@@ -40,6 +41,7 @@ export default function Links() {
   const chatScrollRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isMobile } = useMobile();
 
   // Function to scroll chat to bottom
   const scrollChatToBottom = (sessionId: string) => {
@@ -623,42 +625,42 @@ export default function Links() {
   };
 
   return (
-    <div className="min-h-screen py-6 px-6">
+    <div className={`min-h-screen ${isMobile ? 'py-4 px-3' : 'py-6 px-6'}`}>
       <div className="w-full max-w-none">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold va-text-primary mb-2">Generated Links</h1>
+        <div className={`${isMobile ? 'mb-6' : 'flex items-center justify-between mb-8'}`}>
+          <div className={`${isMobile ? 'text-center mb-4' : ''}`}>
+            <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold va-text-primary mb-2`}>Generated Links</h1>
             <p className="va-text-secondary">View and preview all your generated streaming links</p>
           </div>
-          <div className="flex gap-2">
+          <div className={`${isMobile ? 'flex flex-col space-y-2' : 'flex gap-2'}`}>
             <Button 
               onClick={() => setShowBroadcastModal(true)}
               variant="outline"
-              className="border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white"
+              className={`border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white ${isMobile ? 'btn-touch text-sm' : ''}`}
               data-testid="button-broadcast-message"
             >
               <i className="fas fa-broadcast-tower mr-2"></i>
-              Broadcast Message
+              {isMobile ? 'Broadcast' : 'Broadcast Message'}
             </Button>
             {links.length > 0 && (
               <>
                 <Button 
                   onClick={removeExpiredLinks}
                   variant="outline"
-                  className="border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white"
+                  className={`border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white ${isMobile ? 'btn-touch text-sm' : ''}`}
                   data-testid="button-remove-expired"
                 >
                   <i className="fas fa-clock mr-2"></i>
-                  Remove Expired
+                  {isMobile ? 'Remove Expired' : 'Remove Expired'}
                 </Button>
                 <Button 
                   onClick={clearAllLinks}
                   variant="outline"
-                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                  className={`border-red-500 text-red-500 hover:bg-red-500 hover:text-white ${isMobile ? 'btn-touch text-sm' : ''}`}
                   data-testid="button-clear-all"
                 >
                   <i className="fas fa-trash mr-2"></i>
-                  Clear All
+                  {isMobile ? 'Clear All' : 'Clear All'}
                 </Button>
               </>
             )}
@@ -681,7 +683,11 @@ export default function Links() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className={`grid gap-6 ${
+            isMobile 
+              ? 'grid-cols-1' 
+              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+          }`}>
             {links.map((link: GeneratedLink) => (
               <div key={link.id} className="va-bg-dark-surface rounded-lg border va-border-dark hover:border-va-primary/50 transition-all duration-200 hover:shadow-lg overflow-hidden">
                 {/* Chat Interface or Preview Window */}

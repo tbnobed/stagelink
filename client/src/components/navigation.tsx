@@ -42,7 +42,7 @@ export default function Navigation() {
   // Mobile Navigation
   if (isMobile) {
     return (
-      <nav className="mobile-nav va-bg-dark-surface border-b va-border-dark">
+      <nav className="mobile-nav va-bg-dark-surface border-b va-border-dark relative">
         <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center">
             <img 
@@ -70,8 +70,8 @@ export default function Navigation() {
         
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
-          <div className="va-bg-dark-surface-2 border-t va-border-dark">
-            <div className="px-4 py-2 space-y-1">
+          <div className="absolute top-full left-0 right-0 va-bg-dark-surface-2 border-t va-border-dark z-50 shadow-lg">
+            <div className="px-4 py-2 space-y-1 max-h-96 overflow-y-auto">
               {navItems.map((item) => (
                 <Link key={item.path} href={item.path}>
                   <div 
