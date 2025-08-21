@@ -16,7 +16,7 @@ interface SafeUser {
   id: number;
   username: string;
   email: string | null;
-  role: "admin" | "user";
+  role: "admin" | "engineer" | "user";
   createdAt: string;
   updatedAt: string;
 }
@@ -29,7 +29,7 @@ export default function AdminPage() {
     username: "",
     password: "",
     email: "",
-    role: "user" as "admin" | "user",
+    role: "user" as "admin" | "engineer" | "user",
   });
 
   const { data: users, isLoading: usersLoading } = useQuery<SafeUser[]>({
@@ -43,7 +43,7 @@ export default function AdminPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      setNewUser({ username: "", password: "", email: "", role: "user" });
+      setNewUser({ username: "", password: "", email: "", role: "user" as "admin" | "engineer" | "user" });
       setShowCreateForm(false);
       toast({
         title: "User created",
@@ -195,13 +195,14 @@ export default function AdminPage() {
                       <Label htmlFor="new-role">Role</Label>
                       <Select 
                         value={newUser.role} 
-                        onValueChange={(value: "admin" | "user") => setNewUser(prev => ({ ...prev, role: value }))}
+                        onValueChange={(value: "admin" | "engineer" | "user") => setNewUser(prev => ({ ...prev, role: value }))}
                       >
                         <SelectTrigger data-testid="select-new-role">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="engineer">Engineer</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
@@ -255,7 +256,11 @@ export default function AdminPage() {
                     <TableCell className="font-medium">{userData.username}</TableCell>
                     <TableCell>{userData.email || "—"}</TableCell>
                     <TableCell>
-                      <Badge variant={userData.role === 'admin' ? 'destructive' : 'secondary'}>
+                      <Badge variant={
+                        userData.role === 'admin' ? 'destructive' : 
+                        userData.role === 'engineer' ? 'default' : 
+                        'secondary'
+                      }>
                         {userData.role}
                       </Badge>
                     </TableCell>
