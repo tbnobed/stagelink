@@ -63,11 +63,11 @@ export default function AuthPage() {
       <div className="min-h-screen bg-background flex flex-col">
         {/* Mobile Header with Logo */}
         <div className="bg-gradient-to-br from-primary/10 to-primary/5 px-4 py-8 text-center">
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-6">
             <img 
               src="/stagelinq_logo.png" 
               alt="StageLinq Logo" 
-              className="h-16 w-auto"
+              className="h-32 w-auto"
               data-testid="stagelinq-logo-mobile"
             />
           </div>
