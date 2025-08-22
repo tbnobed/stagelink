@@ -50,7 +50,7 @@ Preferred communication style: Simple, everyday language.
 - **Monorepo Layout**: Client, server, and shared code
 - **Path Aliases**: Configured for @/, @shared/, and @assets
 - **Build Process**: Vite for frontend, esbuild for backend production
-- **Deployment**: Comprehensive Docker v2.1 configurations for Ubuntu servers with Nginx reverse proxy, SSL, and automated migrations. Docker files include email functionality, screen optimization updates, and properly support all user roles and guest user fixes.
+- **Deployment**: Comprehensive Docker v2.2 configurations for Ubuntu servers with Nginx reverse proxy, SSL, and automated migrations. Docker files include user registration system, password reset functionality, and properly support all user roles and guest user fixes.
 - **Email Service**: SendGrid integration for professional email invites with clean short link formatting.
 
 ## Key Features
