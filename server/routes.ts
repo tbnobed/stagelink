@@ -1119,13 +1119,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const config = getSRSConfig();
       res.json({
+        // Legacy properties for backward compatibility
         host: config.host,
         whipPort: config.whipPort,
         apiPort: config.apiPort,
         useHttps: config.useHttps,
+        
+        // New separate server configurations
+        whip: config.whip,
+        whep: config.whep,
+        api: config.api,
+        
         // Helper URLs for frontend
-        whipBaseUrl: `${config.useHttps ? 'https' : 'http'}://${config.host}:${config.whipPort}/rtc/v1/whip/`,
-        whepBaseUrl: `${config.useHttps ? 'https' : 'http'}://${config.host}:${config.whipPort}/rtc/v1/whep/`
+        whipBaseUrl: `${config.whip.useHttps ? 'https' : 'http'}://${config.whip.host}:${config.whip.port}/rtc/v1/whip/`,
+        whepBaseUrl: `${config.whep.useHttps ? 'https' : 'http'}://${config.whep.host}:${config.whep.port}/rtc/v1/whep/`,
+        apiBaseUrl: `${config.api.useHttps ? 'https' : 'http'}://${config.api.host}:${config.api.port}/api/v1/`
       });
     } catch (error) {
       console.error('Error getting SRS config:', error);
