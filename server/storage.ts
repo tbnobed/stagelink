@@ -612,6 +612,11 @@ export class DatabaseStorage implements IStorage {
       .set({ createdBy: null })
       .where(eq(generatedLinks.createdBy, id));
     
+    // Set createdBy to null for short links created by this user
+    await db.update(shortLinks)
+      .set({ createdBy: null })
+      .where(eq(shortLinks.createdBy, id));
+    
     // Set createdBy to null for viewer links created by this user
     await db.update(viewerLinks)
       .set({ createdBy: null })

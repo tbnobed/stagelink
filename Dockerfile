@@ -33,7 +33,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 # Create startup script that ensures complete v2.2 database schema with user registration system
 RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
-echo "Starting Virtual Audience Platform v2.2..."
+echo "Starting Virtual Audience Platform v2.2.1..."
 sleep 10
 
 # Ensure database has complete v2.2 schema with user registration and password reset system
@@ -194,10 +194,11 @@ ON CONFLICT ("username") DO NOTHING;
 
 SCHEMA_EOF
 
-echo "Virtual Audience Platform v2.2 database schema ready"
+echo "Virtual Audience Platform v2.2.1 database schema ready"
 echo "User registration system enabled - email invitations with custom credentials"
 echo "Password reset functionality enabled - secure token-based flow"
 echo "SendGrid email integration active - professional email templates"
+echo "User deletion bug fix applied - handles all foreign key constraints properly"
 echo "Guest user fixes applied - using null user_id for guests"
 echo "Starting application server..."
 exec node dist/production.js
