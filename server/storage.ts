@@ -622,6 +622,30 @@ export class DatabaseStorage implements IStorage {
       .set({ createdBy: null })
       .where(eq(viewerLinks.createdBy, id));
     
+    // Set createdBy to null for short viewer links created by this user
+    await db.update(shortViewerLinks)
+      .set({ createdBy: null })
+      .where(eq(shortViewerLinks.createdBy, id));
+    
+    // Set createdBy to null for session tokens created by this user
+    await db.update(sessionTokens)
+      .set({ createdBy: null })
+      .where(eq(sessionTokens.createdBy, id));
+    
+    // Set senderId and recipientId to null for chat messages from/to this user
+    await db.update(chatMessages)
+      .set({ senderId: null })
+      .where(eq(chatMessages.senderId, id));
+    
+    await db.update(chatMessages)
+      .set({ recipientId: null })
+      .where(eq(chatMessages.recipientId, id));
+    
+    // Set inviterUserId to null for registration tokens created by this user
+    await db.update(registrationTokens)
+      .set({ inviterUserId: null })
+      .where(eq(registrationTokens.inviterUserId, id));
+    
     // Delete chat participants associated with this user
     await db.delete(chatParticipants).where(eq(chatParticipants.userId, id));
     

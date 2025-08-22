@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        CACHE_BUST: "2025-08-21-user-deletion-fix"
-    container_name: virtual-audience-app-v2-2-1
+        CACHE_BUST: "2025-08-21-complete-user-deletion-fix"
+    container_name: virtual-audience-app-v2-2-2
     restart: unless-stopped
     ports:
       - "80:5000"
@@ -45,7 +45,7 @@ services:
 
   db:
     image: postgres:15-alpine
-    container_name: virtual-audience-db-v2-2-1
+    container_name: virtual-audience-db-v2-2-2
     restart: unless-stopped
     environment:
       - POSTGRES_DB=virtual_audience
