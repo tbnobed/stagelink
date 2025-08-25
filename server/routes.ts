@@ -1237,21 +1237,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
 
-      // Fetch stats from all servers and their APIs in parallel
-      const [whipStats, whepStats, whipApiStats, whepApiStats] = await Promise.all([
-        fetchServerStats(config.whip, 'WHIP'),
-        fetchServerStats(config.whep, 'WHEP'),
-        fetchServerStats(config.whip.api, 'WHIP API'),
-        fetchServerStats(config.whep.api, 'WHEP API')
+      // Fetch stats from each server's API
+      const [whipStats, whepStats] = await Promise.all([
+        fetchServerStats(config.whip.api, 'WHIP Server'),
+        fetchServerStats(config.whep.api, 'WHEP Server')
       ]);
 
       res.json({
         timestamp: Date.now(),
         servers: {
           whip: whipStats,
-          whep: whepStats,
-          whipApi: whipApiStats,
-          whepApi: whepApiStats
+          whep: whepStats
         }
       });
     } catch (error) {
