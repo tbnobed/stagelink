@@ -73,6 +73,23 @@ interface SRSConfig {
   apiBaseUrl: string;
 }
 
+interface ServiceHealth {
+  name: string;
+  status: 'online' | 'error' | 'offline';
+  statusCode?: number;
+  error?: string;
+  url: string;
+}
+
+interface SRSHealth {
+  timestamp: number;
+  services: {
+    whip: ServiceHealth;
+    whep: ServiceHealth;
+    api: ServiceHealth;
+  };
+}
+
 const formatBytes = (bytes: number): string => {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let value = bytes;
@@ -119,7 +136,12 @@ export default function SRSMonitoring() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  if (isLoading || configLoading) {
+  const { data: health, isLoading: healthLoading } = useQuery<SRSHealth>({
+    queryKey: ["/api/srs/health"],
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  if (isLoading || configLoading || healthLoading) {
     return (
       <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark">
         <div className="flex items-center mb-4">
@@ -242,8 +264,22 @@ export default function SRSMonitoring() {
                   <h4 className="font-semibold va-text-primary">WHIP Server</h4>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                  <span className="va-text-green text-xs">Ready</span>
+                  {health?.services.whip.status === 'online' ? (
+                    <>
+                      <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                      <span className="va-text-green text-xs">Online</span>
+                    </>
+                  ) : health?.services.whip.status === 'error' ? (
+                    <>
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
+                      <span className="va-text-yellow text-xs">Warning</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                      <span className="va-text-red text-xs">Offline</span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="text-sm space-y-1">
@@ -251,6 +287,11 @@ export default function SRSMonitoring() {
                   {config.whip.useHttps ? 'https' : 'http'}://{config.whip.host}:{config.whip.port}
                 </div>
                 <div className="va-text-secondary text-xs">Publishing Service</div>
+                {health?.services.whip.error && (
+                  <div className="va-text-red text-xs truncate" title={health.services.whip.error}>
+                    {health.services.whip.error}
+                  </div>
+                )}
               </div>
             </div>
             {/* WHEP Server */}
@@ -261,8 +302,22 @@ export default function SRSMonitoring() {
                   <h4 className="font-semibold va-text-primary">WHEP Server</h4>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                  <span className="va-text-green text-xs">Ready</span>
+                  {health?.services.whep.status === 'online' ? (
+                    <>
+                      <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                      <span className="va-text-green text-xs">Online</span>
+                    </>
+                  ) : health?.services.whep.status === 'error' ? (
+                    <>
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
+                      <span className="va-text-yellow text-xs">Warning</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                      <span className="va-text-red text-xs">Offline</span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="text-sm space-y-1">
@@ -270,6 +325,11 @@ export default function SRSMonitoring() {
                   {config.whep.useHttps ? 'https' : 'http'}://{config.whep.host}:{config.whep.port}
                 </div>
                 <div className="va-text-secondary text-xs">Viewing Service</div>
+                {health?.services.whep.error && (
+                  <div className="va-text-red text-xs truncate" title={health.services.whep.error}>
+                    {health.services.whep.error}
+                  </div>
+                )}
               </div>
             </div>
             {/* API Server */}
@@ -280,8 +340,22 @@ export default function SRSMonitoring() {
                   <h4 className="font-semibold va-text-primary">API Server</h4>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                  <span className="va-text-green text-xs">Online</span>
+                  {health?.services.api.status === 'online' ? (
+                    <>
+                      <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                      <span className="va-text-green text-xs">Online</span>
+                    </>
+                  ) : health?.services.api.status === 'error' ? (
+                    <>
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
+                      <span className="va-text-yellow text-xs">Warning</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                      <span className="va-text-red text-xs">Offline</span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="text-sm space-y-1">
@@ -289,6 +363,11 @@ export default function SRSMonitoring() {
                   {config.api.useHttps ? 'https' : 'http'}://{config.api.host}:{config.api.port}
                 </div>
                 <div className="va-text-secondary text-xs">Statistics & Management</div>
+                {health?.services.api.error && (
+                  <div className="va-text-red text-xs truncate" title={health.services.api.error}>
+                    {health.services.api.error}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -306,7 +385,10 @@ export default function SRSMonitoring() {
               <h3 className="text-xl font-semibold va-text-primary">Server Performance</h3>
               <div className="flex items-center">
                 <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                <span className="va-text-green text-sm font-medium">Monitoring {config?.api.host || 'SRS Server'}</span>
+                <span className="va-text-green text-sm font-medium">Unified Stats from {config?.api.host || 'SRS Cluster'}</span>
+              </div>
+              <div className="va-text-secondary text-xs mt-1">
+                Performance metrics represent the entire SRS server cluster
               </div>
             </div>
           </div>

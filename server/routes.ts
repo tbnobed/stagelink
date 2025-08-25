@@ -1141,6 +1141,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SRS Server Health Check API
+  app.get('/api/srs/health', async (req, res) => {
+    try {
+      const config = getSRSConfig();
+      
+      // Health check functions with timeout
+      const checkService = async (url: string, name: string) => {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+          
+          const response = await fetch(url, { 
+            signal: controller.signal,
+            method: 'HEAD' // Use HEAD to avoid downloading content
+          });
+          clearTimeout(timeout);
+          
+          return {
+            name,
+            status: response.ok ? 'online' : 'error',
+            statusCode: response.status,
+            url
+          };
+        } catch (error) {
+          return {
+            name,
+            status: 'offline',
+            error: error instanceof Error ? error.message : 'Unknown error',
+            url
+          };
+        }
+      };
+
+      // Check all services in parallel
+      const [whipHealth, whepHealth, apiHealth] = await Promise.all([
+        checkService(`${config.whip.useHttps ? 'https' : 'http'}://${config.whip.host}:${config.whip.port}/`, 'WHIP'),
+        checkService(`${config.whep.useHttps ? 'https' : 'http'}://${config.whep.host}:${config.whep.port}/`, 'WHEP'),
+        checkService(`${config.api.useHttps ? 'https' : 'http'}://${config.api.host}:${config.api.port}/api/v1/summaries`, 'API')
+      ]);
+
+      res.json({
+        timestamp: Date.now(),
+        services: {
+          whip: whipHealth,
+          whep: whepHealth,
+          api: apiHealth
+        }
+      });
+    } catch (error) {
+      console.error('Error checking SRS health:', error);
+      res.status(500).json({ 
+        error: 'Failed to check SRS server health',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // SRS Server Monitoring API
   app.get('/api/srs/stats', async (req, res) => {
     try {
