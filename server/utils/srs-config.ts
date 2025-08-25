@@ -24,34 +24,33 @@ export interface SRSServerConfig {
 }
 
 export function getSRSConfig(): SRSServerConfig {
-  // Legacy fallback values
-  const legacyHost = process.env.SRS_HOST || 'cdn2.obedtv.live';
-  const legacyUseHttps = process.env.SRS_USE_HTTPS === 'true' || process.env.SRS_USE_HTTPS === undefined;
+  // Production server configurations from .env.example
+  // WHIP Server: cdn2.obedtv.live:1990 (HTTPS)
+  // WHEP Server: cdn1.obedtv.live:2022 (HTTP)  
+  // API Server: cdn1.obedtv.live:1985 (HTTP)
   
   return {
     // Legacy properties for backward compatibility
-    host: legacyHost,
-    whipPort: parseInt(process.env.SRS_WHIP_PORT || '1990'),
-    apiPort: parseInt(process.env.SRS_API_PORT || '1985'),
-    useHttps: legacyUseHttps,
+    host: 'cdn2.obedtv.live',
+    whipPort: 1990,
+    apiPort: 1985,
+    useHttps: true,
     
-    // New separate server configurations
+    // Production separate server configurations
     whip: {
-      host: process.env.SRS_WHIP_HOST || legacyHost,
-      port: parseInt(process.env.SRS_WHIP_PORT || '1990'),
-      useHttps: process.env.SRS_WHIP_USE_HTTPS === 'true' || 
-                (process.env.SRS_WHIP_USE_HTTPS === undefined && legacyUseHttps),
+      host: 'cdn2.obedtv.live',
+      port: 1990,
+      useHttps: true,
     },
     whep: {
-      host: process.env.SRS_WHEP_HOST || legacyHost,
-      port: parseInt(process.env.SRS_WHEP_PORT || '1990'), // Use same as WHIP for development
-      useHttps: process.env.SRS_WHEP_USE_HTTPS === 'true' || 
-                (process.env.SRS_WHEP_USE_HTTPS === undefined && legacyUseHttps),
+      host: 'cdn1.obedtv.live',
+      port: 2022,
+      useHttps: false,
     },
     api: {
-      host: process.env.SRS_API_HOST || legacyHost,
-      port: parseInt(process.env.SRS_API_PORT || '1985'),
-      useHttps: process.env.SRS_API_USE_HTTPS === 'true' || false, // API typically uses HTTP
+      host: 'cdn1.obedtv.live',
+      port: 1985,
+      useHttps: false,
     },
   };
 }
