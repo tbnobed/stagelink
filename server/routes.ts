@@ -1198,18 +1198,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // SRS Server Monitoring API
+  // SRS Server Monitoring API - Multiple Servers
   app.get('/api/srs/stats', async (req, res) => {
     try {
-      const srsApiUrl = getSRSApiUrl();
-      const response = await fetch(srsApiUrl);
+      const config = getSRSConfig();
       
-      if (!response.ok) {
-        throw new Error(`SRS API responded with status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      res.json(data);
+      // Function to fetch stats from a server
+      const fetchServerStats = async (serverConfig: any, serverName: string) => {
+        try {
+          const protocol = serverConfig.useHttps ? 'https' : 'http';
+          const statsUrl = `${protocol}://${serverConfig.host}:${serverConfig.port}/api/v1/summaries`;
+          
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+          
+          const response = await fetch(statsUrl, { 
+            signal: controller.signal 
+          });
+          clearTimeout(timeout);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const data = await response.json();
+          return {
+            server: serverName,
+            status: 'online',
+            data
+          };
+        } catch (error) {
+          return {
+            server: serverName,
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Unknown error',
+            data: null
+          };
+        }
+      };
+
+      // Fetch stats from all servers in parallel
+      const [whipStats, whepStats, apiStats] = await Promise.all([
+        fetchServerStats(config.whip, 'WHIP'),
+        fetchServerStats(config.whep, 'WHEP'), 
+        fetchServerStats(config.api, 'API')
+      ]);
+
+      res.json({
+        timestamp: Date.now(),
+        servers: {
+          whip: whipStats,
+          whep: whepStats,
+          api: apiStats
+        }
+      });
     } catch (error) {
       console.error('Error fetching SRS stats:', error);
       res.status(500).json({ 
