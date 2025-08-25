@@ -258,309 +258,131 @@ export default function SRSMonitoring() {
     );
   }
 
-  // Helper function to render server performance card
-  const renderServerCard = (serverStats: ServerStats, serverType: 'whip' | 'whep' | 'api') => {
-    if (serverStats.status !== 'online' || !serverStats.data || serverStats.data.code !== 0) {
-      return (
-        <div className="va-bg-dark-surface rounded-lg p-4 border va-border-dark">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold va-text-primary">{serverStats.server} Performance</h4>
-            <div className="flex items-center">
-              <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
-              <span className="va-text-red text-xs">Unavailable</span>
-            </div>
-          </div>
-          <div className="text-center py-8 va-text-secondary text-sm">
-            {serverStats.error || 'Performance data unavailable'}
-          </div>
-        </div>
-      );
-    }
-
-    const serverData = serverStats.data.data;
-    const colors = {
-      whip: 'purple',
-      whep: 'green', 
-      api: 'blue'
-    };
-    const color = colors[serverType];
-
-    return (
-      <div className={`bg-${color}-500/10 rounded-lg p-4 border border-${color}-500/20`}>
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="font-semibold va-text-primary">{serverStats.server} Performance</h4>
-          <div className="flex items-center">
-            <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-            <span className="va-text-green text-xs">Online</span>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4 text-center">
-          <div>
-            <div className={`text-lg font-bold ${getStatusColor(serverData.system.cpu_percent, { warning: 70, critical: 90 })}`}>
-              {serverData.system.cpu_percent.toFixed(1)}%
-            </div>
-            <div className="va-text-secondary text-xs">CPU</div>
-          </div>
-          <div>
-            <div className={`text-lg font-bold ${getStatusColor(serverData.system.mem_ram_percent * 100, { warning: 80, critical: 95 })}`}>
-              {(serverData.system.mem_ram_percent * 100).toFixed(1)}%
-            </div>
-            <div className="va-text-secondary text-xs">Memory</div>
-          </div>
-          <div>
-            <div className="text-lg font-bold va-text-green">
-              {serverData.system.conn_srs}
-            </div>
-            <div className="va-text-secondary text-xs">Connections</div>
-          </div>
-          <div>
-            <div className="text-lg font-bold va-text-primary">
-              {formatUptime(serverData.self.srs_uptime)}
-            </div>
-            <div className="va-text-secondary text-xs">Uptime</div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-6">
-      {/* Server Configuration Status */}
-      {config && (
-        <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark hover:border-va-primary/50 transition-all duration-300">
-          <div className="flex items-center mb-6">
-            <div className="bg-blue-500/20 p-3 rounded-lg mr-4">
-              <i className="fas fa-network-wired text-blue-400 text-xl"></i>
+      {/* WHIP Server */}
+      <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark hover:border-va-primary/50 transition-all duration-300">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <div className="bg-purple-500/20 p-3 rounded-lg mr-4">
+              <i className="fas fa-upload text-purple-400 text-xl"></i>
             </div>
-            <h3 className="text-xl font-semibold va-text-primary">SRS Server Configuration</h3>
+            <div>
+              <h3 className="text-xl font-semibold va-text-primary">WHIP Server</h3>
+              <div className="va-text-secondary text-sm mt-1">
+                Publishing server performance metrics
+              </div>
+            </div>
           </div>
-          <div className="grid md:grid-cols-3 gap-4">
-            {/* WHIP Server */}
-            <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <i className="fas fa-upload text-purple-400 mr-2"></i>
-                  <h4 className="font-semibold va-text-primary">WHIP Server</h4>
-                </div>
-                <div className="flex items-center">
-                  {health?.services.whip.status === 'online' ? (
-                    <>
-                      <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                      <span className="va-text-green text-xs">Online</span>
-                    </>
-                  ) : health?.services.whip.status === 'error' ? (
-                    <>
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
-                      <span className="va-text-yellow text-xs">Warning</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
-                      <span className="va-text-red text-xs">Offline</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="text-sm space-y-1">
-                <div className="va-text-secondary font-mono text-xs">
-                  {config.whip.useHttps ? 'https' : 'http'}://{config.whip.host}:{config.whip.port}
-                </div>
-                <div className="va-text-secondary text-xs">Publishing Service</div>
-                {health?.services.whip.error && (
-                  <div className="va-text-red text-xs truncate" title={health.services.whip.error}>
-                    {health.services.whip.error}
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* WHEP Server */}
-            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <i className="fas fa-download text-green-400 mr-2"></i>
-                  <h4 className="font-semibold va-text-primary">WHEP Server</h4>
-                </div>
-                <div className="flex items-center">
-                  {health?.services.whep.status === 'online' ? (
-                    <>
-                      <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                      <span className="va-text-green text-xs">Online</span>
-                    </>
-                  ) : health?.services.whep.status === 'error' ? (
-                    <>
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
-                      <span className="va-text-yellow text-xs">Warning</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
-                      <span className="va-text-red text-xs">Offline</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="text-sm space-y-1">
-                <div className="va-text-secondary font-mono text-xs">
-                  {config.whep.useHttps ? 'https' : 'http'}://{config.whep.host}:{config.whep.port}
-                </div>
-                <div className="va-text-secondary text-xs">Viewing Service</div>
-                {health?.services.whep.error && (
-                  <div className="va-text-red text-xs truncate" title={health.services.whep.error}>
-                    {health.services.whep.error}
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* API Server */}
-            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <i className="fas fa-cog text-blue-400 mr-2"></i>
-                  <h4 className="font-semibold va-text-primary">API Server</h4>
-                </div>
-                <div className="flex items-center">
-                  {health?.services.api.status === 'online' ? (
-                    <>
-                      <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                      <span className="va-text-green text-xs">Online</span>
-                    </>
-                  ) : health?.services.api.status === 'error' ? (
-                    <>
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
-                      <span className="va-text-yellow text-xs">Warning</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
-                      <span className="va-text-red text-xs">Offline</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="text-sm space-y-1">
-                <div className="va-text-secondary font-mono text-xs">
-                  {config.api.useHttps ? 'https' : 'http'}://{config.api.host}:{config.api.port}
-                </div>
-                <div className="va-text-secondary text-xs">Statistics & Management</div>
-                {health?.services.api.error && (
-                  <div className="va-text-red text-xs truncate" title={health.services.api.error}>
-                    {health.services.api.error}
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="flex items-center">
+            {stats.servers.whip.status === 'online' ? (
+              <>
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                <span className="va-text-green text-sm font-medium">Online</span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                <span className="va-text-red text-sm font-medium">Offline</span>
+              </>
+            )}
           </div>
         </div>
-      )}
-      
-      {/* Individual Server Performance */}
+        
+        {stats.servers.whip.status === 'online' && stats.servers.whip.data && stats.servers.whip.data.code === 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getStatusColor(stats.servers.whip.data.data.system.cpu_percent, { warning: 70, critical: 90 })}`}>
+                {stats.servers.whip.data.data.system.cpu_percent.toFixed(1)}%
+              </div>
+              <div className="va-text-secondary text-sm">CPU Usage</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getStatusColor(stats.servers.whip.data.data.system.mem_ram_percent * 100, { warning: 80, critical: 95 })}`}>
+                {(stats.servers.whip.data.data.system.mem_ram_percent * 100).toFixed(1)}%
+              </div>
+              <div className="va-text-secondary text-sm">Memory</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold va-text-green">
+                {stats.servers.whip.data.data.system.conn_srs}
+              </div>
+              <div className="va-text-secondary text-sm">Connections</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold va-text-primary">
+                {formatUptime(stats.servers.whip.data.data.self.srs_uptime)}
+              </div>
+              <div className="va-text-secondary text-sm">Uptime</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 va-text-secondary">
+            {stats.servers.whip.error || 'Server unavailable'}
+          </div>
+        )}
+      </div>
+
+      {/* WHEP Server */}
       <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark hover:border-va-primary/50 transition-all duration-300">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
             <div className="bg-green-500/20 p-3 rounded-lg mr-4">
-              <i className="fas fa-server text-green-400 text-xl"></i>
+              <i className="fas fa-download text-green-400 text-xl"></i>
             </div>
             <div>
-              <h3 className="text-xl font-semibold va-text-primary">Individual Server Performance</h3>
+              <h3 className="text-xl font-semibold va-text-primary">WHEP Server</h3>
               <div className="va-text-secondary text-sm mt-1">
-                Real-time performance metrics from each server
+                Viewing server performance metrics
               </div>
             </div>
           </div>
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="va-text-secondary hover:va-text-primary transition-colors"
-            data-testid="button-toggle-srs-details"
-          >
-            <i className={`fas fa-chevron-${showDetails ? 'up' : 'down'}`}></i>
-          </button>
+          <div className="flex items-center">
+            {stats.servers.whep.status === 'online' ? (
+              <>
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                <span className="va-text-green text-sm font-medium">Online</span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                <span className="va-text-red text-sm font-medium">Offline</span>
+              </>
+            )}
+          </div>
         </div>
         
-        {/* Server Performance Cards */}
-        <div className="grid md:grid-cols-3 gap-4 mb-4">
-          {renderServerCard(stats.servers.whip, 'whip')}
-          {renderServerCard(stats.servers.whep, 'whep')}
-          {renderServerCard(stats.servers.api, 'api')}
-        </div>
-        {/* Detailed Stats */}
-        {showDetails && (
-          <div className="border-t va-border-dark pt-4 mt-4 space-y-6">
-            {/* Render detailed stats for each online server */}
-            {[stats.servers.whip, stats.servers.whep, stats.servers.api].map((serverStats, index) => {
-              if (serverStats.status !== 'online' || !serverStats.data || serverStats.data.code !== 0) return null;
-              
-              const serverData = serverStats.data.data;
-              return (
-                <div key={index} className="bg-gray-800/50 rounded-lg p-4">
-                  <h3 className="va-text-primary font-semibold mb-4 flex items-center">
-                    <i className="fas fa-server mr-2 text-blue-400"></i>
-                    {serverStats.server} Server Details
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {/* Server Information */}
-                    <div>
-                      <h4 className="va-text-primary font-semibold mb-3 flex items-center">
-                        <i className="fas fa-info-circle mr-2 text-blue-400"></i>
-                        Server Info
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="va-text-secondary">Version:</span>
-                          <span className="va-text-primary font-mono">{serverData.self.version}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="va-text-secondary">Server ID:</span>
-                          <span className="va-text-primary font-mono">{serverStats.data.server}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="va-text-secondary">Process ID:</span>
-                          <span className="va-text-primary font-mono">{serverData.self.pid}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="va-text-secondary">CPUs:</span>
-                          <span className="va-text-primary">{serverData.system.cpus_online}/{serverData.system.cpus}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* System Resources */}
-                    <div>
-                      <h4 className="va-text-primary font-semibold mb-3 flex items-center">
-                        <i className="fas fa-chart-line mr-2 text-green-400"></i>
-                        System Resources
-                      </h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="va-text-secondary">Load Average (1m):</span>
-                          <span className="va-text-primary">{serverData.system.load_1m}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="va-text-secondary">Load Average (5m):</span>
-                          <span className="va-text-primary">{serverData.system.load_5m}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="va-text-secondary">RAM Usage:</span>
-                          <span className="va-text-primary">{formatBytes(serverData.system.mem_ram_kbyte * 1024)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="va-text-secondary">System Uptime:</span>
-                          <span className="va-text-primary">{formatUptime(serverData.system.uptime)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Last updated */}
-            <div className="text-center pt-4 border-t va-border-dark">
-              <span className="va-text-secondary text-xs">
-                <i className="fas fa-clock mr-1"></i>
-                Last updated: {new Date(stats.timestamp).toLocaleTimeString()}
-              </span>
+        {stats.servers.whep.status === 'online' && stats.servers.whep.data && stats.servers.whep.data.code === 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getStatusColor(stats.servers.whep.data.data.system.cpu_percent, { warning: 70, critical: 90 })}`}>
+                {stats.servers.whep.data.data.system.cpu_percent.toFixed(1)}%
+              </div>
+              <div className="va-text-secondary text-sm">CPU Usage</div>
             </div>
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getStatusColor(stats.servers.whep.data.data.system.mem_ram_percent * 100, { warning: 80, critical: 95 })}`}>
+                {(stats.servers.whep.data.data.system.mem_ram_percent * 100).toFixed(1)}%
+              </div>
+              <div className="va-text-secondary text-sm">Memory</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold va-text-green">
+                {stats.servers.whep.data.data.system.conn_srs}
+              </div>
+              <div className="va-text-secondary text-sm">Connections</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold va-text-primary">
+                {formatUptime(stats.servers.whep.data.data.self.srs_uptime)}
+              </div>
+              <div className="va-text-secondary text-sm">Uptime</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 va-text-secondary">
+            {stats.servers.whep.error || 'Server unavailable'}
           </div>
         )}
       </div>
