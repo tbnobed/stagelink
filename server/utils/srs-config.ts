@@ -34,46 +34,42 @@ export interface SRSServerConfig {
 }
 
 export function getSRSConfig(): SRSServerConfig {
-  // Legacy fallback values
-  const legacyHost = process.env.SRS_HOST || 'cdn2.obedtv.live';
-  const legacyUseHttps = process.env.SRS_USE_HTTPS === 'true' || process.env.SRS_USE_HTTPS === undefined;
+  // Legacy fallback values from environment
+  const legacyHost = process.env.SRS_HOST;
+  const legacyUseHttps = process.env.SRS_USE_HTTPS === 'true';
   
   return {
     // Legacy properties for backward compatibility
-    host: legacyHost,
-    whipPort: parseInt(process.env.SRS_WHIP_PORT || '1990'),
-    apiPort: parseInt(process.env.SRS_API_PORT || '1985'),
+    host: legacyHost || '',
+    whipPort: parseInt(process.env.SRS_WHIP_PORT || '0'),
+    apiPort: parseInt(process.env.SRS_API_PORT || '0'),
     useHttps: legacyUseHttps,
     
     // New separate server configurations
     whip: {
-      host: process.env.SRS_WHIP_HOST || legacyHost,
-      port: parseInt(process.env.SRS_WHIP_PORT || '1990'),
-      useHttps: process.env.SRS_WHIP_USE_HTTPS === 'true' || 
-                (process.env.SRS_WHIP_USE_HTTPS === undefined && legacyUseHttps),
+      host: process.env.SRS_WHIP_HOST || '',
+      port: parseInt(process.env.SRS_WHIP_PORT || '0'),
+      useHttps: process.env.SRS_WHIP_USE_HTTPS === 'true',
       api: {
-        host: process.env.SRS_WHIP_HOST || legacyHost,
-        port: parseInt(process.env.SRS_WHIP_API_PORT || '1985'),
-        useHttps: process.env.SRS_WHIP_USE_HTTPS === 'true' || 
-                  (process.env.SRS_WHIP_USE_HTTPS === undefined && legacyUseHttps),
+        host: process.env.SRS_WHIP_HOST || '',
+        port: parseInt(process.env.SRS_API_PORT || '0'),
+        useHttps: process.env.SRS_API_USE_HTTPS === 'true',
       }
     },
     whep: {
-      host: process.env.SRS_WHEP_HOST || legacyHost,
-      port: parseInt(process.env.SRS_WHEP_PORT || '8080'),
-      useHttps: process.env.SRS_WHEP_USE_HTTPS === 'true' || 
-                (process.env.SRS_WHEP_USE_HTTPS === undefined && legacyUseHttps),
+      host: process.env.SRS_WHEP_HOST || '',
+      port: parseInt(process.env.SRS_WHEP_PORT || '0'),
+      useHttps: process.env.SRS_WHEP_USE_HTTPS === 'true',
       api: {
-        host: process.env.SRS_WHEP_HOST || legacyHost,
-        port: parseInt(process.env.SRS_WHEP_API_PORT || '1985'),
-        useHttps: process.env.SRS_WHEP_USE_HTTPS === 'true' || 
-                  (process.env.SRS_WHEP_USE_HTTPS === undefined && legacyUseHttps),
+        host: process.env.SRS_WHEP_HOST || '',
+        port: parseInt(process.env.SRS_API_PORT || '0'),
+        useHttps: process.env.SRS_API_USE_HTTPS === 'true',
       }
     },
     api: {
-      host: process.env.SRS_API_HOST || legacyHost,
-      port: parseInt(process.env.SRS_API_PORT || '1985'),
-      useHttps: process.env.SRS_API_USE_HTTPS === 'true' || false,
+      host: process.env.SRS_API_HOST || '',
+      port: parseInt(process.env.SRS_API_PORT || '0'),
+      useHttps: process.env.SRS_API_USE_HTTPS === 'true',
     },
   };
 }
