@@ -44,7 +44,7 @@ export function getSRSConfig(): SRSServerConfig {
     },
     whep: {
       host: process.env.SRS_WHEP_HOST || legacyHost,
-      port: parseInt(process.env.SRS_WHEP_PORT || '8080'),
+      port: parseInt(process.env.SRS_WHEP_PORT || '1990'), // Use same as WHIP for development
       useHttps: process.env.SRS_WHEP_USE_HTTPS === 'true' || 
                 (process.env.SRS_WHEP_USE_HTTPS === undefined && legacyUseHttps),
     },
