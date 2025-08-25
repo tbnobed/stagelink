@@ -60,9 +60,8 @@ interface MultiServerStats {
   servers: {
     whip: ServerStats;
     whep: ServerStats;
-    api1: ServerStats;
-    api2: ServerStats;
-    [key: string]: ServerStats; // Allow additional API servers
+    whipApi: ServerStats;
+    whepApi: ServerStats;
   };
 }
 
@@ -389,72 +388,131 @@ export default function SRSMonitoring() {
         )}
       </div>
 
-      {/* API Servers */}
-      {Object.entries(stats.servers)
-        .filter(([key]) => key.startsWith('api'))
-        .map(([key, serverStats]) => (
-          <div key={key} className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark hover:border-va-primary/50 transition-all duration-300">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <div className="bg-blue-500/20 p-3 rounded-lg mr-4">
-                  <i className="fas fa-cog text-blue-400 text-xl"></i>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold va-text-primary">{serverStats.server}</h3>
-                  <div className="va-text-secondary text-sm mt-1">
-                    API server performance metrics
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center">
-                {serverStats.status === 'online' ? (
-                  <>
-                    <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
-                    <span className="va-text-green text-sm font-medium">Online</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
-                    <span className="va-text-red text-sm font-medium">Offline</span>
-                  </>
-                )}
+      {/* WHIP API Server */}
+      <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark hover:border-va-primary/50 transition-all duration-300">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <div className="bg-blue-500/20 p-3 rounded-lg mr-4">
+              <i className="fas fa-cog text-blue-400 text-xl"></i>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold va-text-primary">{stats.servers.whipApi.server}</h3>
+              <div className="va-text-secondary text-sm mt-1">
+                WHIP server API performance metrics
               </div>
             </div>
-            
-            {serverStats.status === 'online' && serverStats.data && serverStats.data.code === 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${getStatusColor(serverStats.data.data.system.cpu_percent, { warning: 70, critical: 90 })}`}>
-                    {serverStats.data.data.system.cpu_percent.toFixed(1)}%
-                  </div>
-                  <div className="va-text-secondary text-sm">CPU Usage</div>
-                </div>
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${getStatusColor(serverStats.data.data.system.mem_ram_percent * 100, { warning: 80, critical: 95 })}`}>
-                    {(serverStats.data.data.system.mem_ram_percent * 100).toFixed(1)}%
-                  </div>
-                  <div className="va-text-secondary text-sm">Memory</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold va-text-green">
-                    {serverStats.data.data.system.conn_srs}
-                  </div>
-                  <div className="va-text-secondary text-sm">Connections</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold va-text-primary">
-                    {formatUptime(serverStats.data.data.self.srs_uptime)}
-                  </div>
-                  <div className="va-text-secondary text-sm">Uptime</div>
-                </div>
-              </div>
+          </div>
+          <div className="flex items-center">
+            {stats.servers.whipApi.status === 'online' ? (
+              <>
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                <span className="va-text-green text-sm font-medium">Online</span>
+              </>
             ) : (
-              <div className="text-center py-8 va-text-secondary">
-                {serverStats.error || 'Server unavailable'}
-              </div>
+              <>
+                <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                <span className="va-text-red text-sm font-medium">Offline</span>
+              </>
             )}
           </div>
-        ))}
+        </div>
+        
+        {stats.servers.whipApi.status === 'online' && stats.servers.whipApi.data && stats.servers.whipApi.data.code === 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getStatusColor(stats.servers.whipApi.data.data.system.cpu_percent, { warning: 70, critical: 90 })}`}>
+                {stats.servers.whipApi.data.data.system.cpu_percent.toFixed(1)}%
+              </div>
+              <div className="va-text-secondary text-sm">CPU Usage</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getStatusColor(stats.servers.whipApi.data.data.system.mem_ram_percent * 100, { warning: 80, critical: 95 })}`}>
+                {(stats.servers.whipApi.data.data.system.mem_ram_percent * 100).toFixed(1)}%
+              </div>
+              <div className="va-text-secondary text-sm">Memory</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold va-text-green">
+                {stats.servers.whipApi.data.data.system.conn_srs}
+              </div>
+              <div className="va-text-secondary text-sm">Connections</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold va-text-primary">
+                {formatUptime(stats.servers.whipApi.data.data.self.srs_uptime)}
+              </div>
+              <div className="va-text-secondary text-sm">Uptime</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 va-text-secondary">
+            {stats.servers.whipApi.error || 'Server unavailable'}
+          </div>
+        )}
+      </div>
+
+      {/* WHEP API Server */}
+      <div className="va-bg-dark-surface rounded-2xl p-6 border va-border-dark hover:border-va-primary/50 transition-all duration-300">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <div className="bg-purple-500/20 p-3 rounded-lg mr-4">
+              <i className="fas fa-cog text-purple-400 text-xl"></i>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold va-text-primary">{stats.servers.whepApi.server}</h3>
+              <div className="va-text-secondary text-sm mt-1">
+                WHEP server API performance metrics
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center">
+            {stats.servers.whepApi.status === 'online' ? (
+              <>
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                <span className="va-text-green text-sm font-medium">Online</span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                <span className="va-text-red text-sm font-medium">Offline</span>
+              </>
+            )}
+          </div>
+        </div>
+        
+        {stats.servers.whepApi.status === 'online' && stats.servers.whepApi.data && stats.servers.whepApi.data.code === 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getStatusColor(stats.servers.whepApi.data.data.system.cpu_percent, { warning: 70, critical: 90 })}`}>
+                {stats.servers.whepApi.data.data.system.cpu_percent.toFixed(1)}%
+              </div>
+              <div className="va-text-secondary text-sm">CPU Usage</div>
+            </div>
+            <div className="text-center">
+              <div className={`text-2xl font-bold ${getStatusColor(stats.servers.whepApi.data.data.system.mem_ram_percent * 100, { warning: 80, critical: 95 })}`}>
+                {(stats.servers.whepApi.data.data.system.mem_ram_percent * 100).toFixed(1)}%
+              </div>
+              <div className="va-text-secondary text-sm">Memory</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold va-text-green">
+                {stats.servers.whepApi.data.data.system.conn_srs}
+              </div>
+              <div className="va-text-secondary text-sm">Connections</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold va-text-primary">
+                {formatUptime(stats.servers.whepApi.data.data.self.srs_uptime)}
+              </div>
+              <div className="va-text-secondary text-sm">Uptime</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 va-text-secondary">
+            {stats.servers.whepApi.error || 'Server unavailable'}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
