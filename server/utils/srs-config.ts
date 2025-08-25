@@ -21,37 +21,60 @@ export interface SRSServerConfig {
     port: number;
     useHttps: boolean;
   };
+  // Multiple API servers support
+  apiServers: Array<{
+    name: string;
+    host: string;
+    port: number;
+    useHttps: boolean;
+  }>;
 }
 
 export function getSRSConfig(): SRSServerConfig {
-  // Production server configurations from .env.example
-  // WHIP Server: cdn2.obedtv.live:1990 (HTTPS)
-  // WHEP Server: cdn1.obedtv.live:2022 (HTTP)  
-  // API Server: cdn1.obedtv.live:1985 (HTTP)
+  // Legacy fallback values
+  const legacyHost = process.env.SRS_HOST || 'cdn2.obedtv.live';
+  const legacyUseHttps = process.env.SRS_USE_HTTPS === 'true' || process.env.SRS_USE_HTTPS === undefined;
   
   return {
     // Legacy properties for backward compatibility
-    host: 'cdn2.obedtv.live',
-    whipPort: 1990,
-    apiPort: 1985,
-    useHttps: true,
+    host: legacyHost,
+    whipPort: parseInt(process.env.SRS_WHIP_PORT || '1990'),
+    apiPort: parseInt(process.env.SRS_API_PORT || '1985'),
+    useHttps: legacyUseHttps,
     
-    // Production separate server configurations
+    // New separate server configurations
     whip: {
-      host: 'cdn2.obedtv.live',
-      port: 1990,
-      useHttps: true,
+      host: process.env.SRS_WHIP_HOST || legacyHost,
+      port: parseInt(process.env.SRS_WHIP_PORT || '1990'),
+      useHttps: process.env.SRS_WHIP_USE_HTTPS === 'true' || 
+                (process.env.SRS_WHIP_USE_HTTPS === undefined && legacyUseHttps),
     },
     whep: {
-      host: 'cdn1.obedtv.live',
-      port: 2022,
-      useHttps: false,
+      host: process.env.SRS_WHEP_HOST || legacyHost,
+      port: parseInt(process.env.SRS_WHEP_PORT || '8080'),
+      useHttps: process.env.SRS_WHEP_USE_HTTPS === 'true' || 
+                (process.env.SRS_WHEP_USE_HTTPS === undefined && legacyUseHttps),
     },
     api: {
-      host: 'cdn1.obedtv.live',
-      port: 1985,
-      useHttps: false,
+      host: process.env.SRS_API_HOST || legacyHost,
+      port: parseInt(process.env.SRS_API_PORT || '1985'),
+      useHttps: process.env.SRS_API_USE_HTTPS === 'true' || false,
     },
+    // Multiple API servers for your cdn1 and cdn2 setup
+    apiServers: [
+      {
+        name: 'CDN2 API',
+        host: 'cdn2.obedtv.live',
+        port: 1985,
+        useHttps: false,
+      },
+      {
+        name: 'CDN1 API', 
+        host: 'cdn1.obedtv.live',
+        port: 1985,
+        useHttps: false,
+      }
+    ],
   };
 }
 

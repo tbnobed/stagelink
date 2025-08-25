@@ -1238,19 +1238,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Fetch stats from all servers in parallel
-      const [whipStats, whepStats, apiStats] = await Promise.all([
+      const serverPromises = [
         fetchServerStats(config.whip, 'WHIP'),
-        fetchServerStats(config.whep, 'WHEP'), 
-        fetchServerStats(config.api, 'API')
-      ]);
+        fetchServerStats(config.whep, 'WHEP')
+      ];
+
+      // Add both API servers
+      config.apiServers.forEach((apiServer, index) => {
+        serverPromises.push(fetchServerStats(apiServer, apiServer.name));
+      });
+
+      const serverResults = await Promise.all(serverPromises);
+      const [whipStats, whepStats, ...apiServerStats] = serverResults;
+
+      // Build response with all API servers
+      const servers: any = {
+        whip: whipStats,
+        whep: whepStats
+      };
+
+      // Add each API server to the response
+      config.apiServers.forEach((apiServer, index) => {
+        const serverKey = `api${index + 1}`;
+        servers[serverKey] = apiServerStats[index];
+      });
 
       res.json({
         timestamp: Date.now(),
-        servers: {
-          whip: whipStats,
-          whep: whepStats,
-          api: apiStats
-        }
+        servers
       });
     } catch (error) {
       console.error('Error fetching SRS stats:', error);
