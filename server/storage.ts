@@ -1010,48 +1010,88 @@ export class DatabaseStorage implements IStorage {
 
   // Session Token Methods
   async validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }> {
+    // First, check the session_tokens table (new system)
     const [sessionToken] = await db
       .select()
       .from(sessionTokens)
       .where(eq(sessionTokens.id, token));
 
-    if (!sessionToken) {
-      return { valid: false };
-    }
+    if (sessionToken) {
+      // Check if token has expired
+      if (sessionToken.expiresAt <= new Date()) {
+        // Clean up expired token
+        await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
+        return { valid: false };
+      }
 
-    // Check if token has expired
-    if (sessionToken.expiresAt <= new Date()) {
-      // Clean up expired token
-      await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
-      return { valid: false };
-    }
-
-    // Check if the associated link still exists
-    if (sessionToken.linkId) {
-      if (sessionToken.linkType === 'guest') {
-        const [link] = await db.select().from(generatedLinks).where(eq(generatedLinks.id, sessionToken.linkId));
-        if (!link) {
-          // Link was deleted, invalidate token
-          await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
-          return { valid: false };
+      // Check if the associated link still exists
+      if (sessionToken.linkId) {
+        if (sessionToken.linkType === 'guest') {
+          const [link] = await db.select().from(generatedLinks).where(eq(generatedLinks.id, sessionToken.linkId));
+          if (!link) {
+            // Link was deleted, invalidate token
+            await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
+            return { valid: false };
+          }
+        }
+        if (sessionToken.linkType === 'viewer') {
+          const [viewerLink] = await db.select().from(viewerLinks).where(eq(viewerLinks.id, sessionToken.linkId));
+          if (!viewerLink) {
+            // Viewer link was deleted, invalidate token
+            await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
+            return { valid: false };
+          }
         }
       }
-      if (sessionToken.linkType === 'viewer') {
-        const [viewerLink] = await db.select().from(viewerLinks).where(eq(viewerLinks.id, sessionToken.linkId));
-        if (!viewerLink) {
-          // Viewer link was deleted, invalidate token
-          await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
-          return { valid: false };
-        }
-      }
+
+      return {
+        valid: true,
+        linkId: sessionToken.linkId || undefined,
+        linkType: sessionToken.linkType || undefined,
+      };
     }
 
-    // Token is valid and can be used multiple times until expiration or deletion
-    return {
-      valid: true,
-      linkId: sessionToken.linkId || undefined,
-      linkType: sessionToken.linkType || undefined,
-    };
+    // If not found in session_tokens, check the legacy system (tokens stored directly in links)
+    // Check generated_links table
+    const [generatedLink] = await db
+      .select()
+      .from(generatedLinks)
+      .where(eq(generatedLinks.sessionToken, token));
+
+    if (generatedLink) {
+      // Check if link has expired
+      if (generatedLink.expiresAt && generatedLink.expiresAt <= new Date()) {
+        return { valid: false };
+      }
+
+      return {
+        valid: true,
+        linkId: generatedLink.id,
+        linkType: 'guest',
+      };
+    }
+
+    // Check viewer_links table
+    const [viewerLink] = await db
+      .select()
+      .from(viewerLinks)
+      .where(eq(viewerLinks.sessionToken, token));
+
+    if (viewerLink) {
+      // Check if link has expired
+      if (viewerLink.expiresAt && viewerLink.expiresAt <= new Date()) {
+        return { valid: false };
+      }
+
+      return {
+        valid: true,
+        linkId: viewerLink.id,
+        linkType: 'viewer',
+      };
+    }
+
+    // Token not found in any table
+    return { valid: false };
   }
 
   async createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken> {

@@ -413,14 +413,13 @@ export default function Generator() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="va-bg-dark-surface-2 va-border-dark">
-                    <SelectItem value="livestream">Socal 1</SelectItem>
-                    <SelectItem value="livestream2">Socal 2</SelectItem>
-                    <SelectItem value="livestream3">Socal 3</SelectItem>
-                    <SelectItem value="livestream4">Socal 4</SelectItem>
-                    <SelectItem value="livestream5">Socal 5</SelectItem>
-                    <SelectItem value="livestream6">Socal 5</SelectItem>
-                    <SelectItem value="livestream7">Socal 5</SelectItem>
-                    <SelectItem value="livestream8">Socal 5</SelectItem>
+                    <SelectItem value="Socal1">Socal 1</SelectItem>
+                    <SelectItem value="Socal2">Socal 2</SelectItem>
+                    <SelectItem value="Socal3">Socal 3</SelectItem>
+                    <SelectItem value="Socal4">Socal 4</SelectItem>
+                    <SelectItem value="Socal5">Socal 5</SelectItem>
+                    <SelectItem value="Socal6">Socal 6</SelectItem>
+
                   </SelectContent>
                 </Select>
               </div>
