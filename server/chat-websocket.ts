@@ -37,7 +37,7 @@ interface ChatMessage {
 }
 
 const messageSchema = z.object({
-  type: z.enum(['join', 'leave', 'message']),
+  type: z.enum(['join', 'leave', 'message', 'notification_listener']),
   sessionId: z.string(),
   userId: z.union([z.number(), z.null()]).optional(),
   username: z.string().optional(),
@@ -51,6 +51,7 @@ class ChatWebSocketServer {
   private wss: WebSocketServer;
   private clients: Map<string, ChatClient> = new Map(); // key: userId-sessionId
   private sessionParticipants: Map<string, Set<string>> = new Map(); // sessionId -> Set of clientKeys
+  private notificationListeners: Map<string, ChatClient> = new Map(); // key: notification-userId
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 
@@ -127,6 +128,9 @@ class ChatWebSocketServer {
         break;
       case 'message':
         await this.handleChatMessage(ws, message);
+        break;
+      case 'notification_listener':
+        await this.handleNotificationListener(ws, message);
         break;
     }
   }
@@ -230,7 +234,17 @@ class ChatWebSocketServer {
 
   private async handleDisconnection(ws: WebSocket) {
     console.log(`handleDisconnection called - this method is definitely being executed`);
-    // Find and remove the client
+    
+    // Check if it's a notification listener
+    for (const [listenerKey, listener] of Array.from(this.notificationListeners.entries())) {
+      if (listener.ws === ws) {
+        console.log(`Notification listener disconnected: ${listener.username}`);
+        this.notificationListeners.delete(listenerKey);
+        return;
+      }
+    }
+    
+    // Find and remove the regular client
     for (const [clientKey, client] of Array.from(this.clients.entries())) {
       if (client.ws === ws) {
         console.log(`Found disconnecting client: ${client.username}, userId: ${client.userId}, sessionId: ${client.sessionId}`);
@@ -326,6 +340,45 @@ class ChatWebSocketServer {
     });
 
     console.log(`Message sent from ${senderClient.username} in session ${message.sessionId}`);
+    
+    // Also send notifications to notification listeners for all sessions
+    this.sendNotificationToListeners(message.sessionId, chatMessage);
+  }
+
+  private async handleNotificationListener(ws: WebSocket, message: ChatMessage) {
+    if (!message.username || !message.role || !message.userId) {
+      ws.send(JSON.stringify({ 
+        type: 'error', 
+        message: 'Missing required fields for notification listener' 
+      }));
+      return;
+    }
+
+    // Create a special notification listener client
+    const listenerKey = `notification-${message.userId}`;
+    
+    // Remove existing listener if reconnecting
+    if (this.notificationListeners.has(listenerKey)) {
+      const existingListener = this.notificationListeners.get(listenerKey)!;
+      existingListener.ws.close();
+      this.notificationListeners.delete(listenerKey);
+    }
+
+    const listener: ChatClient = {
+      ws,
+      userId: message.userId,
+      username: message.username,
+      role: message.role,
+      sessionId: 'notification-listener', // Special session ID for listeners
+    };
+
+    this.notificationListeners.set(listenerKey, listener);
+    console.log(`Notification listener registered for user ${message.username} (${message.userId})`);
+    
+    ws.send(JSON.stringify({ 
+      type: 'notification_listener_ready',
+      message: 'Notification listener established'
+    }));
   }
 
   private getMessageRecipients(sessionId: string, messageType: 'individual' | 'broadcast' | 'system', recipientId?: number): ChatClient[] {
@@ -364,6 +417,21 @@ class ChatWebSocketServer {
     sessionClients.forEach(client => {
       if (client.ws.readyState === WebSocket.OPEN) {
         client.ws.send(JSON.stringify(message));
+      }
+    });
+  }
+
+  private sendNotificationToListeners(sessionId: string, chatMessage: any) {
+    // Send notification to all notification listeners (admin/engineer users on the links page)
+    const notificationData = {
+      type: 'message',
+      sessionId: sessionId,
+      message: chatMessage
+    };
+
+    this.notificationListeners.forEach((listener) => {
+      if (listener.ws.readyState === WebSocket.OPEN && (listener.role === 'admin' || listener.role === 'engineer')) {
+        listener.ws.send(JSON.stringify(notificationData));
       }
     });
   }

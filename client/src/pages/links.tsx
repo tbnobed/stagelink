@@ -122,14 +122,17 @@ export default function Links() {
     refetchOnMount: true, // Always refresh on component mount
   });
 
-  // Polling-based notification system - checks for new messages every 15 seconds
+  // Real-time notification system using a single WebSocket connection
+  const notificationWsRef = useRef<WebSocket | null>(null);
+  
   useEffect(() => {
     if (!links || !user || (user.role !== 'admin' && user.role !== 'engineer')) {
       return;
     }
 
-    const checkForNewMessages = async () => {
-      const chatEnabledLinks = links.filter(link => link.chatEnabled && showChatForLink !== link.id);
+    // Initialize baseline message counts for all chat-enabled links
+    const initializeBaselines = async () => {
+      const chatEnabledLinks = links.filter(link => link.chatEnabled);
       
       for (const link of chatEnabledLinks) {
         try {
@@ -137,38 +140,91 @@ export default function Links() {
           if (response.ok) {
             const messages = await response.json();
             const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : 0;
-            const previousLastSeen = lastSeenMessageIds[link.id] || 0;
             
-            // Calculate unread count based on messages newer than last seen
-            const unreadMessages = messages.filter((msg: any) => msg.id > previousLastSeen);
-            const unreadCount = unreadMessages.length;
-            
-            setUnreadCounts(prev => ({
-              ...prev,
-              [link.id]: unreadCount
-            }));
-
-            // Initialize lastSeenMessageIds if not set and there are messages
-            if (!lastSeenMessageIds[link.id] && messages.length > 0) {
-              // Set to current latest message so we only count new ones from now on
+            // Only set baseline if not already set
+            if (!lastSeenMessageIds[link.id]) {
               setLastSeenMessageIds(prev => ({ ...prev, [link.id]: lastMessageId }));
-              setUnreadCounts(prev => ({ ...prev, [link.id]: 0 })); // Don't count existing messages as unread
+              setUnreadCounts(prev => ({ ...prev, [link.id]: 0 })); // Start with 0 unread
             }
           }
         } catch (error) {
-          console.error(`Error checking messages for ${link.id}:`, error);
+          console.error(`Error initializing baseline for ${link.id}:`, error);
         }
       }
     };
 
-    // Check immediately on mount
-    checkForNewMessages();
+    // Set up single WebSocket for all notifications
+    const setupNotificationWebSocket = () => {
+      if (notificationWsRef.current?.readyState === WebSocket.OPEN) {
+        return; // Already connected
+      }
 
-    // Set up interval to check every 15 seconds
-    const interval = setInterval(checkForNewMessages, 15000);
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/chat`;
+      const ws = new WebSocket(wsUrl);
 
-    return () => clearInterval(interval);
-  }, [links, user, showChatForLink, lastSeenMessageIds]);
+      ws.onopen = () => {
+        console.log('Notification WebSocket connected');
+        // Send a special notification listener message
+        ws.send(JSON.stringify({
+          type: 'notification_listener',
+          userId: user.id,
+          username: user.username,
+          role: user.role
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'message' && data.message && data.sessionId) {
+            // Only update notifications if we're not currently viewing this chat
+            if (showChatForLink !== data.sessionId) {
+              const messageId = data.message.id;
+              const lastSeen = lastSeenMessageIds[data.sessionId] || 0;
+              
+              if (messageId > lastSeen) {
+                setUnreadCounts(prev => ({
+                  ...prev,
+                  [data.sessionId]: (prev[data.sessionId] || 0) + 1
+                }));
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error processing notification:', error);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('Notification WebSocket disconnected');
+        notificationWsRef.current = null;
+        // Reconnect after delay if still mounted
+        setTimeout(() => {
+          if (links && user) {
+            setupNotificationWebSocket();
+          }
+        }, 5000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('Notification WebSocket error:', error);
+      };
+
+      notificationWsRef.current = ws;
+    };
+
+    initializeBaselines().then(() => {
+      setupNotificationWebSocket();
+    });
+
+    return () => {
+      if (notificationWsRef.current?.readyState === WebSocket.OPEN) {
+        notificationWsRef.current.close();
+      }
+      notificationWsRef.current = null;
+    };
+  }, [links, user]); // Removed showChatForLink dependency to prevent reconnections
 
   // Handle restart after chat closes (must be after links declaration)
   useEffect(() => {
@@ -637,7 +693,20 @@ export default function Links() {
       console.log(`Opening chat for ${linkId}`);
       setShowChatForLink(linkId);
       
-      // Chat functionality - notifications removed for stability
+      // Clear notifications for this session and update last seen
+      setUnreadCounts(prev => ({ ...prev, [linkId]: 0 }));
+      
+      // Update last seen message ID when opening chat
+      try {
+        const response = await fetch(`/api/chat/messages/${linkId}`);
+        if (response.ok) {
+          const messages = await response.json();
+          const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : 0;
+          setLastSeenMessageIds(prev => ({ ...prev, [linkId]: lastMessageId }));
+        }
+      } catch (error) {
+        console.error('Error updating last seen message:', error);
+      }
       
       // Load chat history and participants when opening chat
       await loadChatData(linkId);
@@ -1077,12 +1146,18 @@ export default function Links() {
                         onClick={() => toggleChatForLink(link.id)}
                         variant="outline"
                         size="sm"
-                        className={`px-2 py-1 h-7 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs ${
+                        className={`relative px-2 py-1 h-7 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs ${
                           showChatForLink === link.id ? 'bg-blue-500 text-white' : ''
                         }`}
                         data-testid={`button-chat-${link.id}`}
                       >
                         <i className="fas fa-comments"></i>
+                        {/* Notification Badge */}
+                        {unreadCounts[link.id] > 0 && showChatForLink !== link.id && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold border border-white">
+                            {unreadCounts[link.id] > 9 ? '9+' : unreadCounts[link.id]}
+                          </span>
+                        )}
                       </Button>
                     )}
                     <Button 
