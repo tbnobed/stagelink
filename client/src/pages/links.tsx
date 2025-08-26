@@ -37,10 +37,7 @@ export default function Links() {
   const [chatParticipants, setChatParticipants] = useState<{[sessionId: string]: any[]}>({});
   const [chatConnections, setChatConnections] = useState<{[sessionId: string]: WebSocket}>({});
   
-  // Notification system for new messages
-  const [unreadCounts, setUnreadCounts] = useState<{[sessionId: string]: number}>({});
-  const [lastSeenMessageIds, setLastSeenMessageIds] = useState<{[sessionId: string]: number}>({});
-  const [notificationConnections, setNotificationConnections] = useState<{[sessionId: string]: WebSocket}>({});
+  // Simple notification system - removed WebSocket to avoid loops
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [inviteDialog, setInviteDialog] = useState<{
@@ -86,13 +83,8 @@ export default function Links() {
           ws.close();
         }
       });
-      Object.values(notificationConnections).forEach(ws => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.close();
-        }
-      });
     };
-  }, [chatConnections, notificationConnections]);
+  }, [chatConnections]);
 
   // Fetch both guest session links and viewer links with automatic refresh
   const { data: links = [], isLoading, error, refetch } = useQuery({
@@ -128,104 +120,7 @@ export default function Links() {
     refetchOnMount: true, // Always refresh on component mount
   });
 
-  // Set up notification WebSocket connections for all chat-enabled links
-  useEffect(() => {
-    if (links && user && (user.role === 'admin' || user.role === 'engineer')) {
-      const chatEnabledLinks = links.filter(link => link.chatEnabled);
-      
-      chatEnabledLinks.forEach(link => {
-        // Skip if already connected or currently viewing chat
-        if (notificationConnections[link.id] || showChatForLink === link.id) {
-          return;
-        }
 
-        setupNotificationConnection(link.id);
-      });
-
-      // Clean up connections for links that are no longer available
-      Object.keys(notificationConnections).forEach(sessionId => {
-        const linkExists = chatEnabledLinks.some(link => link.id === sessionId);
-        if (!linkExists) {
-          const ws = notificationConnections[sessionId];
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.close();
-          }
-          setNotificationConnections(prev => {
-            const newConnections = { ...prev };
-            delete newConnections[sessionId];
-            return newConnections;
-          });
-        }
-      });
-    }
-  }, [links, user, showChatForLink, notificationConnections]);
-
-  // Setup notification WebSocket connection for a session
-  const setupNotificationConnection = async (sessionId: string) => {
-    try {
-      // Get current message count to establish baseline
-      const response = await fetch(`/api/chat/messages/${sessionId}`);
-      if (!response.ok) return;
-      
-      const messages = await response.json();
-      const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : 0;
-      setLastSeenMessageIds(prev => ({ ...prev, [sessionId]: lastMessageId }));
-
-      // Create WebSocket connection for real-time notifications
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/chat`;
-      const ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        console.log(`Notification WebSocket connected for session ${sessionId}`);
-        // Join session in notification mode
-        ws.send(JSON.stringify({
-          type: 'join',
-          sessionId: sessionId,
-          userId: user?.id || null,
-          username: user?.username || 'Anonymous',
-          role: user?.role || 'user',
-          notificationOnly: true // Flag to indicate this is for notifications only
-        }));
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'message' && data.message) {
-            // Only count messages that are newer than our last seen
-            const lastSeen = lastSeenMessageIds[sessionId] || 0;
-            if (data.message.id > lastSeen) {
-              setUnreadCounts(prev => ({
-                ...prev,
-                [sessionId]: (prev[sessionId] || 0) + 1
-              }));
-            }
-          }
-        } catch (error) {
-          console.error('Error parsing notification WebSocket message:', error);
-        }
-      };
-
-      ws.onclose = () => {
-        console.log(`Notification WebSocket disconnected for session ${sessionId}`);
-        // Auto-reconnect after a delay if the connection closes unexpectedly
-        setTimeout(() => {
-          if (!showChatForLink || showChatForLink !== sessionId) {
-            setupNotificationConnection(sessionId);
-          }
-        }, 5000);
-      };
-
-      ws.onerror = (error) => {
-        console.error(`Notification WebSocket error for session ${sessionId}:`, error);
-      };
-
-      setNotificationConnections(prev => ({ ...prev, [sessionId]: ws }));
-    } catch (error) {
-      console.error(`Failed to setup notification connection for ${sessionId}:`, error);
-    }
-  };
 
   // Handle restart after chat closes (must be after links declaration)
   useEffect(() => {
@@ -665,12 +560,6 @@ export default function Links() {
       setShowChatForLink(null);
       disconnectFromChatWebSocket(linkId);
       
-      // Re-establish notification connection for this link
-      const link = links?.find(l => l.id === linkId);
-      if (link && link.chatEnabled) {
-        setupNotificationConnection(linkId);
-      }
-      
       // Check if this link was being previewed before chat opened
       const wasPreviewingBeforeChat = previewingLinks.has(linkId);
       console.log(`Was previewing before chat: ${wasPreviewingBeforeChat}`);
@@ -700,19 +589,7 @@ export default function Links() {
       console.log(`Opening chat for ${linkId}`);
       setShowChatForLink(linkId);
       
-      // Clear notifications for this session
-      setUnreadCounts(prev => ({ ...prev, [linkId]: 0 }));
-      
-      // Close notification WebSocket connection
-      const notificationWs = notificationConnections[linkId];
-      if (notificationWs && notificationWs.readyState === WebSocket.OPEN) {
-        notificationWs.close();
-      }
-      setNotificationConnections(prev => {
-        const newConnections = { ...prev };
-        delete newConnections[linkId];
-        return newConnections;
-      });
+      // Chat functionality - notifications removed for stability
       
       // Load chat history and participants when opening chat
       await loadChatData(linkId);
@@ -728,10 +605,7 @@ export default function Links() {
       if (messagesResponse.ok) {
         const messages = await messagesResponse.json();
         setChatHistory(prev => ({ ...prev, [sessionId]: messages }));
-        
-        // Update last seen message ID when loading chat
-        const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : 0;
-        setLastSeenMessageIds(prev => ({ ...prev, [sessionId]: lastMessageId }));
+
       }
 
       // Load participants
@@ -1155,18 +1029,12 @@ export default function Links() {
                         onClick={() => toggleChatForLink(link.id)}
                         variant="outline"
                         size="sm"
-                        className={`relative px-2 py-1 h-7 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs ${
+                        className={`px-2 py-1 h-7 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white text-xs ${
                           showChatForLink === link.id ? 'bg-blue-500 text-white' : ''
                         }`}
                         data-testid={`button-chat-${link.id}`}
                       >
                         <i className="fas fa-comments"></i>
-                        {/* Notification Badge */}
-                        {unreadCounts[link.id] > 0 && showChatForLink !== link.id && (
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold border border-white">
-                            {unreadCounts[link.id] > 9 ? '9+' : unreadCounts[link.id]}
-                          </span>
-                        )}
                       </Button>
                     )}
                     <Button 
