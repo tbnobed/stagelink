@@ -37,7 +37,9 @@ export default function Links() {
   const [chatParticipants, setChatParticipants] = useState<{[sessionId: string]: any[]}>({});
   const [chatConnections, setChatConnections] = useState<{[sessionId: string]: WebSocket}>({});
   
-  // Simple notification system - removed WebSocket to avoid loops
+  // Simple polling-based notification system
+  const [unreadCounts, setUnreadCounts] = useState<{[sessionId: string]: number}>({});
+  const [lastSeenMessageIds, setLastSeenMessageIds] = useState<{[sessionId: string]: number}>({});
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [inviteDialog, setInviteDialog] = useState<{
@@ -120,7 +122,53 @@ export default function Links() {
     refetchOnMount: true, // Always refresh on component mount
   });
 
+  // Polling-based notification system - checks for new messages every 15 seconds
+  useEffect(() => {
+    if (!links || !user || (user.role !== 'admin' && user.role !== 'engineer')) {
+      return;
+    }
 
+    const checkForNewMessages = async () => {
+      const chatEnabledLinks = links.filter(link => link.chatEnabled && showChatForLink !== link.id);
+      
+      for (const link of chatEnabledLinks) {
+        try {
+          const response = await fetch(`/api/chat/messages/${link.id}`);
+          if (response.ok) {
+            const messages = await response.json();
+            const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : 0;
+            const previousLastSeen = lastSeenMessageIds[link.id] || 0;
+            
+            // Calculate unread count based on messages newer than last seen
+            const unreadMessages = messages.filter((msg: any) => msg.id > previousLastSeen);
+            const unreadCount = unreadMessages.length;
+            
+            setUnreadCounts(prev => ({
+              ...prev,
+              [link.id]: unreadCount
+            }));
+
+            // Initialize lastSeenMessageIds if not set and there are messages
+            if (!lastSeenMessageIds[link.id] && messages.length > 0) {
+              // Set to current latest message so we only count new ones from now on
+              setLastSeenMessageIds(prev => ({ ...prev, [link.id]: lastMessageId }));
+              setUnreadCounts(prev => ({ ...prev, [link.id]: 0 })); // Don't count existing messages as unread
+            }
+          }
+        } catch (error) {
+          console.error(`Error checking messages for ${link.id}:`, error);
+        }
+      }
+    };
+
+    // Check immediately on mount
+    checkForNewMessages();
+
+    // Set up interval to check every 15 seconds
+    const interval = setInterval(checkForNewMessages, 15000);
+
+    return () => clearInterval(interval);
+  }, [links, user, showChatForLink, lastSeenMessageIds]);
 
   // Handle restart after chat closes (must be after links declaration)
   useEffect(() => {
