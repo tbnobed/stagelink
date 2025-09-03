@@ -1379,10 +1379,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guestAssignments = assignments.filter(a => a.assignedGuestName === guestName);
       
       for (const assignment of guestAssignments) {
-        await storage.updateRoomStreamAssignment(assignment.id, {
-          ...assignment,
-          assignedGuestName: null
-        });
+        // Delete the entire assignment instead of just nullifying the guest name
+        await storage.deleteRoomStreamAssignment(assignment.id);
       }
 
       res.json({ success: true });
