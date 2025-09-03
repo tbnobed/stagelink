@@ -64,7 +64,7 @@ export function getSRSConfig(): SRSServerConfig {
                 (process.env.SRS_WHEP_USE_HTTPS === undefined),
       api: {
         host: process.env.SRS_WHEP_HOST || 'cdn2.obedtv.live',
-        port: parseInt(process.env.SRS_WHEP_API_PORT || '2022'),
+        port: parseInt(process.env.SRS_WHEP_API_PORT || '1985'),
         useHttps: process.env.SRS_WHEP_API_USE_HTTPS === 'true' || false,
       }
     },
