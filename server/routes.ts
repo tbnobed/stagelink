@@ -1462,26 +1462,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         position: req.body.position || 0,
       });
       
-      // If assigning a guest, first remove them from any other room assignments
-      if (assignmentData.assignedGuestName) {
+      // If assigning a stream, first remove it from any other room assignments
+      if (assignmentData.streamName) {
         const allRooms = await storage.getAllRooms();
         
         for (const room of allRooms) {
           if (room.id !== assignmentData.roomId) {
             const roomAssignments = await storage.getRoomStreamAssignments(room.id);
-            const guestAssignments = roomAssignments.filter(assignment => 
-              assignment.assignedGuestName === assignmentData.assignedGuestName
+            const streamAssignments = roomAssignments.filter(assignment => 
+              assignment.streamName === assignmentData.streamName
             );
             
-            for (const assignment of guestAssignments) {
-              await storage.updateRoomStreamAssignment(assignment.id, {
-                ...assignment,
-                assignedGuestName: null
-              });
+            // Remove the entire assignment if it's the same stream
+            for (const assignment of streamAssignments) {
+              await storage.deleteRoomStreamAssignment(assignment.id);
             }
             
             // Also remove the guest from room participants in other rooms
-            if (guestAssignments.length > 0) {
+            if (streamAssignments.length > 0 && assignmentData.assignedGuestName) {
               await storage.removeRoomParticipantByName(room.id, assignmentData.assignedGuestName);
             }
           }
@@ -1495,6 +1493,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to assign stream to room:', error);
       res.status(500).json({ error: 'Failed to assign stream to room' });
+    }
+  });
+
+  // Clean up duplicate stream assignments (temporary endpoint to fix existing issues)
+  app.post('/api/rooms/cleanup-assignments', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const allRooms = await storage.getAllRooms();
+      const streamAssignmentCounts = new Map<string, Array<{roomId: string, assignmentId: number}>>();
+      
+      // Collect all stream assignments
+      for (const room of allRooms) {
+        const assignments = await storage.getRoomStreamAssignments(room.id);
+        for (const assignment of assignments) {
+          if (!streamAssignmentCounts.has(assignment.streamName)) {
+            streamAssignmentCounts.set(assignment.streamName, []);
+          }
+          streamAssignmentCounts.get(assignment.streamName)!.push({
+            roomId: room.id,
+            assignmentId: assignment.id
+          });
+        }
+      }
+      
+      let cleanedCount = 0;
+      
+      // For each stream that appears in multiple rooms, keep only the most recent assignment
+      for (const [streamName, assignments] of Array.from(streamAssignmentCounts.entries())) {
+        if (assignments.length > 1) {
+          // Sort by assignment ID (newer assignments have higher IDs) and keep the last one
+          assignments.sort((a: any, b: any) => a.assignmentId - b.assignmentId);
+          const toKeep = assignments.pop()!; // Keep the most recent
+          
+          // Delete the older duplicates
+          for (const assignmentToDelete of assignments) {
+            await storage.deleteRoomStreamAssignment(assignmentToDelete.assignmentId);
+            cleanedCount++;
+          }
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        cleanedAssignments: cleanedCount,
+        message: `Cleaned up ${cleanedCount} duplicate stream assignments`
+      });
+    } catch (error) {
+      console.error('Failed to cleanup assignments:', error);
+      res.status(500).json({ error: 'Failed to cleanup assignments' });
     }
   });
 
