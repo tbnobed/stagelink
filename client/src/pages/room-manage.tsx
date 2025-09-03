@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, Edit, Save, Users, Video, MessageCircle, Plus, Trash2 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -59,7 +59,7 @@ function EditRoomDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<EditRoomData>({
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<EditRoomData>({
     resolver: zodResolver(editRoomSchema),
     defaultValues: {
       name: room.name,
@@ -137,19 +137,33 @@ function EditRoomDialog({
             </div>
             
             <div className="flex items-center space-x-2">
-              <Switch
-                id="chatEnabled"
-                {...register("chatEnabled")}
-                data-testid="edit-chat-enabled-switch"
+              <Controller
+                name="chatEnabled"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    id="chatEnabled"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    data-testid="edit-chat-enabled-switch"
+                  />
+                )}
               />
               <Label htmlFor="chatEnabled">Enable Chat</Label>
             </div>
             
             <div className="flex items-center space-x-2">
-              <Switch
-                id="isActive"
-                {...register("isActive")}
-                data-testid="edit-room-active-switch"
+              <Controller
+                name="isActive"
+                control={control}
+                render={({ field }) => (
+                  <Switch
+                    id="isActive"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    data-testid="edit-room-active-switch"
+                  />
+                )}
               />
               <Label htmlFor="isActive">Room Active</Label>
             </div>
