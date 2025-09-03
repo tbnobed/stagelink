@@ -1446,6 +1446,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public room view for sharing (no auth required)
+  app.get('/api/rooms/:id/public', async (req, res) => {
+    try {
+      const room = await storage.getRoom(req.params.id);
+      if (!room || !room.isActive) {
+        return res.status(404).json({ error: 'Room not found or inactive' });
+      }
+
+      const participants = await storage.getRoomParticipants(req.params.id);
+      const assignments = await storage.getRoomStreamAssignments(req.params.id);
+
+      res.json({
+        room,
+        participants,
+        assignments,
+        whepUrls: assignments.map(assignment => ({
+          streamName: assignment.streamName,
+          url: getSRSWhepUrl('live', assignment.streamName),
+          position: assignment.position,
+          assignedUser: assignment.assignedUserId,
+          assignedGuest: assignment.assignedGuestName,
+        })),
+      });
+    } catch (error) {
+      console.error('Failed to get public room:', error);
+      res.status(500).json({ error: 'Failed to get room data' });
+    }
+  });
+
   // Room access route for joining rooms
   app.get('/api/rooms/:id/join', requireAuth, async (req, res) => {
     try {

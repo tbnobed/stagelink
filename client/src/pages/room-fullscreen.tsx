@@ -190,7 +190,7 @@ export default function RoomFullscreen() {
   const [showChat, setShowChat] = useState(false);
 
   const { data: roomData, isLoading, error } = useQuery<RoomData>({
-    queryKey: [`/api/rooms/${id}/join`],
+    queryKey: [`/api/rooms/${id}/public`],
     enabled: !!id,
     refetchInterval: 5000, // Refetch every 5 seconds
     staleTime: 0, // Always consider data stale
