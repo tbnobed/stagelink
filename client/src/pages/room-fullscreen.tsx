@@ -197,6 +197,7 @@ export default function RoomFullscreen() {
   });
 
 
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -266,7 +267,7 @@ export default function RoomFullscreen() {
                     assignedUser={stream.assignedUser}
                     assignedGuest={stream.assignedGuest}
                   />
-                ))}
+                ))
             </div>
           )}
         </div>
