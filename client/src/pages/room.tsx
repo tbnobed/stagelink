@@ -177,7 +177,7 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, onRem
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="relative aspect-video bg-black rounded-b-lg overflow-hidden">
+        <div className="relative bg-black rounded-b-lg overflow-hidden" style={{ aspectRatio: '16/9', minHeight: '300px' }}>
           <video
             ref={videoRef}
             autoPlay
@@ -397,7 +397,7 @@ export default function Room() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-none mx-auto px-8 py-6">
         <div className="flex gap-6">
           {/* Main video grid */}
           <div className="flex-1">
