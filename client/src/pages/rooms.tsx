@@ -59,7 +59,7 @@ function CreateRoomDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
   });
 
   const createRoomMutation = useMutation({
-    mutationFn: (data: CreateRoomData) => apiRequest('/api/rooms', 'POST', data),
+    mutationFn: (data: CreateRoomData) => apiRequest('POST', '/api/rooms', data),
     onSuccess: () => {
       toast({ title: "Room created successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/rooms'] });
@@ -172,7 +172,7 @@ function RoomCard({ room }: { room: Room }) {
   });
 
   const deleteRoomMutation = useMutation({
-    mutationFn: () => apiRequest(`/api/rooms/${room.id}`, 'DELETE'),
+    mutationFn: () => apiRequest('DELETE', `/api/rooms/${room.id}`),
     onSuccess: () => {
       toast({ title: "Room deleted successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/rooms'] });
