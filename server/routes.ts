@@ -1462,6 +1462,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         position: req.body.position || 0,
       });
       
+      // If assigning a guest, first remove them from any other room assignments
+      if (assignmentData.assignedGuestName) {
+        const allRooms = await storage.getAllRooms();
+        
+        for (const room of allRooms) {
+          if (room.id !== assignmentData.roomId) {
+            const roomAssignments = await storage.getRoomStreamAssignments(room.id);
+            const guestAssignments = roomAssignments.filter(assignment => 
+              assignment.assignedGuestName === assignmentData.assignedGuestName
+            );
+            
+            for (const assignment of guestAssignments) {
+              await storage.updateRoomStreamAssignment(assignment.id, {
+                ...assignment,
+                assignedGuestName: null
+              });
+            }
+            
+            // Also remove the guest from room participants in other rooms
+            if (guestAssignments.length > 0) {
+              await storage.removeRoomParticipantByName(room.id, assignmentData.assignedGuestName);
+            }
+          }
+        }
+      }
+      
       const user = req.user as any;
       const assignment = await storage.createRoomStreamAssignment(assignmentData, user.id);
       

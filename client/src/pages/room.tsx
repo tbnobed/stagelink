@@ -236,7 +236,7 @@ export default function Room() {
 
   const removeGuestMutation = useMutation({
     mutationFn: async (guestName: string) => {
-      await apiRequest(`/api/rooms/${id}/participants/guest/${encodeURIComponent(guestName)}`, 'DELETE');
+      await apiRequest('DELETE', `/api/rooms/${id}/participants/guest/${encodeURIComponent(guestName)}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/rooms/${id}/join`] });
