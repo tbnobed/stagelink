@@ -238,8 +238,18 @@ export default function Room() {
   const queryClient = useQueryClient();
 
   const removeGuestMutation = useMutation({
-    mutationFn: async (guestName: string) => {
-      await apiRequest('DELETE', `/api/rooms/${id}/participants/guest/${encodeURIComponent(guestName)}`);
+    mutationFn: async (data: { guestName: string; streamName: string; hasGuestAssignment: boolean }) => {
+      if (data.hasGuestAssignment) {
+        // Remove guest participant (which will also remove stream assignment)
+        await apiRequest('DELETE', `/api/rooms/${id}/participants/guest/${encodeURIComponent(data.guestName)}`);
+      } else {
+        // Directly remove the stream assignment for streams without guest assignments
+        const assignments = await apiRequest('GET', `/api/rooms/${id}/streams`) as any[];
+        const assignment = assignments.find((a: any) => a.streamName === data.streamName);
+        if (assignment) {
+          await apiRequest('DELETE', `/api/rooms/${id}/streams/${assignment.id}`);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/rooms/${id}/join`] });
@@ -400,7 +410,11 @@ export default function Room() {
                         assignedUser={stream.assignedUser}
                         assignedGuest={stream.assignedGuest}
                         canRemove={canRemoveGuest}
-                        onRemove={canRemoveGuest && guestNameForRemoval ? () => removeGuestMutation.mutate(guestNameForRemoval) : undefined}
+                        onRemove={canRemoveGuest && guestNameForRemoval ? () => removeGuestMutation.mutate({
+                          guestName: guestNameForRemoval,
+                          streamName: stream.streamName,
+                          hasGuestAssignment: hasGuestAssignment
+                        }) : undefined}
                       />
                     );
                   })}
