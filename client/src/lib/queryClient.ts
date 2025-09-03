@@ -19,6 +19,18 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  // Handle authentication failures by redirecting to login
+  if (res.status === 401 || res.status === 403) {
+    const errorText = await res.text();
+    if (errorText.includes('required') || errorText.includes('Unauthorized')) {
+      // Show toast and redirect to login after a short delay
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 1500);
+      throw new Error(`${res.status}: Authentication required - redirecting to login...`);
+    }
+  }
+
   await throwIfResNotOk(res);
   return res;
 }
