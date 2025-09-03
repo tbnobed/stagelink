@@ -257,9 +257,14 @@ export default function Room() {
     },
     onError: (error) => {
       console.error('Failed to remove guest:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       
       // Check if it's an authentication error
-      if (error.message && error.message.includes('401')) {
+      if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
         toast({
           title: "Authentication required",
           description: "Your session has expired. Redirecting to login...",
@@ -273,7 +278,7 @@ export default function Room() {
       
       toast({
         title: "Failed to remove guest",
-        description: "There was an error removing the guest from the room.",
+        description: `Error: ${error.message || 'Unknown error removing guest'}`,
         variant: "destructive",
       });
     },
