@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { useMobile } from "@/hooks/use-mobile";
 import { InviteDialog } from "@/components/invite-dialog";
+import { apiRequest } from "@/lib/queryClient";
 
 interface GeneratedLink {
   id: string;
@@ -52,6 +53,14 @@ export default function Links() {
     open: false,
     type: 'streaming',
     linkDetails: {}
+  });
+  
+  const [roomAssignDialog, setRoomAssignDialog] = useState<{
+    open: boolean;
+    linkId?: string;
+    streamName?: string;
+  }>({
+    open: false
   });
   const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const chatScrollRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -120,6 +129,12 @@ export default function Links() {
     refetchInterval: 5000, // Automatically refresh every 5 seconds
     refetchOnWindowFocus: true, // Refresh when user returns to tab
     refetchOnMount: true, // Always refresh on component mount
+  });
+
+  // Fetch available rooms for assignment
+  const { data: rooms = [] } = useQuery<any[]>({
+    queryKey: ['/api/rooms'],
+    enabled: user?.role === 'admin' || user?.role === 'engineer', // Only fetch for admin/engineer
   });
 
   // Real-time notification system using a single WebSocket connection
@@ -776,6 +791,37 @@ export default function Links() {
     });
   };
 
+  const openRoomAssignDialog = (link: GeneratedLink) => {
+    setRoomAssignDialog({
+      open: true,
+      linkId: link.id,
+      streamName: link.streamName
+    });
+  };
+
+  const assignToRoom = useMutation({
+    mutationFn: async (data: { roomId: string; streamName: string; guestName?: string }) => {
+      return apiRequest('POST', `/api/rooms/${data.roomId}/assign`, {
+        streamName: data.streamName,
+        assignedGuestName: data.guestName || `Guest_${data.streamName}`
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Successfully assigned to room",
+        description: "Guest stream has been assigned to the room"
+      });
+      setRoomAssignDialog({ open: false });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to assign to room",
+        description: error.message || "Unknown error occurred",
+        variant: "destructive"
+      });
+    }
+  });
+
   return (
     <div className={`min-h-screen ${isMobile ? 'py-4 px-3' : 'py-6 px-6'}`}>
       <div className="w-full max-w-none">
@@ -1140,6 +1186,18 @@ export default function Links() {
                     >
                       <i className="fas fa-envelope"></i>
                     </Button>
+                    {/* Assign to Room Button - Only show for guest links and if user is admin/engineer */}
+                    {link.type === 'guest' && link.streamName && user && (user.role === 'admin' || user.role === 'engineer') && rooms.length > 0 && (
+                      <Button 
+                        onClick={() => openRoomAssignDialog(link)}
+                        variant="outline"
+                        size="sm"
+                        className="px-2 py-1 h-7 border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white text-xs"
+                        data-testid={`button-assign-room-${link.id}`}
+                      >
+                        <i className="fas fa-video"></i>
+                      </Button>
+                    )}
                     {/* Chat Button - Only show for chat-enabled links and if user is admin/engineer */}
                     {link.chatEnabled && user && (user.role === 'admin' || user.role === 'engineer') && (
                       <Button 
@@ -1232,6 +1290,58 @@ export default function Links() {
         shortCode={inviteDialog.shortCode}
         linkDetails={inviteDialog.linkDetails}
       />
+
+      {/* Room Assignment Dialog */}
+      <Dialog open={roomAssignDialog.open} onOpenChange={(open) => setRoomAssignDialog(prev => ({ ...prev, open }))}>
+        <DialogContent className="va-bg-dark-surface va-border-dark">
+          <DialogHeader>
+            <DialogTitle className="va-text-primary flex items-center">
+              <i className="fas fa-video mr-2 text-orange-400"></i>
+              Assign to Room
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-sm va-text-secondary">
+              Assign the stream "{roomAssignDialog.streamName}" to a room for multi-stream viewing.
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium va-text-primary">Select Room:</label>
+              <Select onValueChange={(roomId) => {
+                if (roomAssignDialog.streamName) {
+                  assignToRoom.mutate({
+                    roomId,
+                    streamName: roomAssignDialog.streamName,
+                    guestName: `Guest_${roomAssignDialog.streamName}`
+                  });
+                }
+              }}>
+                <SelectTrigger className="va-bg-dark-surface-2 va-border-dark va-text-primary">
+                  <SelectValue placeholder="Choose a room..." />
+                </SelectTrigger>
+                <SelectContent className="va-bg-dark-surface va-border-dark">
+                  {rooms.map((room: any) => (
+                    <SelectItem key={room.id} value={room.id} className="va-text-primary hover:va-bg-dark-surface-2">
+                      {room.name}
+                      {room.description && (
+                        <span className="text-xs va-text-secondary ml-2">- {room.description}</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setRoomAssignDialog({ open: false })}
+                data-testid="button-cancel-room-assign"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
