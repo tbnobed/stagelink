@@ -347,7 +347,7 @@ export default function Room() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-white dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="w-full px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold" data-testid="room-title">{room.name}</h1>
@@ -397,7 +397,7 @@ export default function Room() {
         </div>
       </div>
 
-      <div className="max-w-none mx-auto px-8 py-6">
+      <div className="w-full py-6 px-4">
         <div className="flex gap-6">
           {/* Main video grid */}
           <div className="flex-1">
