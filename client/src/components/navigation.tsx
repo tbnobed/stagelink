@@ -22,7 +22,8 @@ export default function Navigation() {
   const navItems = user ? [
     { path: "/", label: "Home", icon: "fas fa-home" },
     { path: "/generator", label: "Generator", icon: "fas fa-link" },
-    { path: "/links", label: "Links", icon: "fas fa-list" }
+    { path: "/links", label: "Links", icon: "fas fa-list" },
+    { path: "/rooms", label: "Rooms", icon: "fas fa-video" }
   ] : [];
 
   // Only show admin nav item for admin users

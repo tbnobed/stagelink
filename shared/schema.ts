@@ -200,3 +200,64 @@ export const insertRegistrationTokenSchema = createInsertSchema(registrationToke
 
 export type InsertRegistrationToken = z.infer<typeof insertRegistrationTokenSchema>;
 export type RegistrationToken = typeof registrationTokens.$inferSelect;
+
+// Room system tables
+export const rooms = pgTable("rooms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  maxParticipants: integer("max_participants").default(10),
+  chatEnabled: boolean("chat_enabled").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+export const roomParticipants = pgTable("room_participants", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  roomId: varchar("room_id").notNull().references(() => rooms.id, { onDelete: 'cascade' }),
+  userId: integer("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  guestName: text("guest_name"), // For non-registered participants
+  streamName: text("stream_name"), // The individual stream name for this participant
+  isStreaming: boolean("is_streaming").notNull().default(false),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at").notNull().defaultNow(),
+});
+
+export const roomStreamAssignments = pgTable("room_stream_assignments", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  roomId: varchar("room_id").notNull().references(() => rooms.id, { onDelete: 'cascade' }),
+  streamName: text("stream_name").notNull(),
+  assignedUserId: integer("assigned_user_id").references(() => users.id),
+  assignedGuestName: text("assigned_guest_name"),
+  position: integer("position").default(0), // For grid positioning
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+export const insertRoomSchema = createInsertSchema(rooms).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+});
+
+export const insertRoomParticipantSchema = createInsertSchema(roomParticipants).omit({
+  id: true,
+  joinedAt: true,
+  lastSeenAt: true,
+});
+
+export const insertRoomStreamAssignmentSchema = createInsertSchema(roomStreamAssignments).omit({
+  id: true,
+  createdAt: true,
+  createdBy: true,
+});
+
+export type InsertRoom = z.infer<typeof insertRoomSchema>;
+export type Room = typeof rooms.$inferSelect;
+export type InsertRoomParticipant = z.infer<typeof insertRoomParticipantSchema>;
+export type RoomParticipant = typeof roomParticipants.$inferSelect;
+export type InsertRoomStreamAssignment = z.infer<typeof insertRoomStreamAssignmentSchema>;
+export type RoomStreamAssignment = typeof roomStreamAssignments.$inferSelect;
