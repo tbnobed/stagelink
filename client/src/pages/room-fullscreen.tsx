@@ -239,43 +239,8 @@ export default function RoomFullscreen() {
 
   return (
     <div className="fixed inset-0 z-50 bg-black text-white">
-      {/* Overlay controls */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-white">{room.name}</h1>
-          <div className="flex items-center gap-2 text-sm text-white/70">
-            <Users className="w-4 h-4" />
-            <span>{participants.length}/{room.maxParticipants}</span>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {room.chatEnabled && (
-            <Button
-              variant={showChat ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowChat(!showChat)}
-              className="bg-black/50 text-white border-gray-600 hover:bg-black/70"
-              data-testid="toggle-chat-fullscreen-button"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Chat
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => window.close()}
-            className="bg-black/50 text-white border-gray-600 hover:bg-black/70"
-            data-testid="close-fullscreen-button"
-          >
-            <X className="w-4 h-4 mr-2" />
-            Close
-          </Button>
-        </div>
-      </div>
-
       {/* Main content */}
-      <div className="p-4 pt-16 h-full">
+      <div className="h-full">
         <div className="h-full">
           {whepUrls.length === 0 ? (
             <div className="h-full flex items-center justify-center">
@@ -304,19 +269,6 @@ export default function RoomFullscreen() {
         </div>
       </div>
 
-      {/* Chat overlay */}
-      {showChat && room.chatEnabled && (
-        <div className="absolute right-4 top-16 w-80 h-[calc(100vh-5rem)] z-20">
-          <Card className="h-full bg-black/90 border-gray-600">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-white">Room Chat</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 h-full">
-              <Chat sessionId={room.id} enabled={true} className="h-full" />
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
