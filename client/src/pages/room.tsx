@@ -239,13 +239,26 @@ export default function Room() {
 
   const removeGuestMutation = useMutation({
     mutationFn: async (data: { guestName: string; streamName: string; hasGuestAssignment: boolean }) => {
-      // Always just remove the stream assignment directly - this is simpler and more reliable
-      const assignments = await apiRequest('GET', `/api/rooms/${id}/streams`) as any[];
-      const assignment = assignments.find((a: any) => a.streamName === data.streamName);
-      if (assignment) {
-        await apiRequest('DELETE', `/api/rooms/${id}/streams/${assignment.id}`);
-      } else {
-        throw new Error(`No assignment found for stream ${data.streamName}`);
+      try {
+        // Get the current assignments
+        const response = await apiRequest('GET', `/api/rooms/${id}/streams`);
+        const assignments = await response.json();
+        
+        // Check if assignments is actually an array
+        if (!Array.isArray(assignments)) {
+          throw new Error(`API returned non-array response: ${JSON.stringify(assignments)}`);
+        }
+        
+        const assignment = assignments.find((a: any) => a.streamName === data.streamName);
+        if (assignment) {
+          await apiRequest('DELETE', `/api/rooms/${id}/streams/${assignment.id}`);
+        } else {
+          throw new Error(`No assignment found for stream ${data.streamName}`);
+        }
+      } catch (error: any) {
+        // Re-throw with more context
+        console.error('Guest removal error:', error);
+        throw new Error(`Failed to remove guest: ${error.message}`);
       }
     },
     onSuccess: () => {
