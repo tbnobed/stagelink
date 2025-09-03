@@ -377,7 +377,19 @@ export default function Room() {
                   .sort((a, b) => a.position - b.position)
                   .map((stream) => {
                     const participant = participants.find(p => p.streamName === stream.streamName);
-                    const canRemoveGuest = Boolean((user?.role === 'admin' || user?.role === 'engineer') && stream.assignedGuest);
+                    
+                    // Determine if this stream belongs to a guest
+                    const hasGuestAssignment = Boolean(stream.assignedGuest);
+                    const hasGuestParticipant = Boolean(participant?.guestName);
+                    const looksLikeGuest = stream.streamName.toLowerCase().includes('guest') || 
+                                          stream.streamName.toLowerCase().startsWith('obed') ||
+                                          /guest_/i.test(stream.streamName);
+                    const isGuestStream = hasGuestAssignment || hasGuestParticipant || looksLikeGuest;
+                    
+                    const canRemoveGuest = Boolean((user?.role === 'admin' || user?.role === 'engineer') && isGuestStream);
+                    
+                    // For removal, prefer assignedGuest, then participant guestName, then streamName if it looks like a guest
+                    const guestNameForRemoval = stream.assignedGuest || participant?.guestName || (isGuestStream ? stream.streamName : null);
                     
                     return (
                       <VideoPlayer
@@ -388,7 +400,7 @@ export default function Room() {
                         assignedUser={stream.assignedUser}
                         assignedGuest={stream.assignedGuest}
                         canRemove={canRemoveGuest}
-                        onRemove={canRemoveGuest ? () => removeGuestMutation.mutate(stream.assignedGuest!) : undefined}
+                        onRemove={canRemoveGuest && guestNameForRemoval ? () => removeGuestMutation.mutate(guestNameForRemoval) : undefined}
                       />
                     );
                   })}
