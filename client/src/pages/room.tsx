@@ -51,10 +51,9 @@ interface VideoPlayerProps {
   position: number;
   assignedUser?: number;
   assignedGuest?: string;
-  isStreaming?: boolean;
 }
 
-function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, isStreaming }: VideoPlayerProps) {
+function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const [connectionState, setConnectionState] = useState<string>('new');
@@ -159,7 +158,7 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, isStr
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium">{getDisplayName()}</CardTitle>
           <div className="flex items-center gap-2">
-            {isStreaming && <Badge variant="secondary" className="text-xs">Live</Badge>}
+            {connectionState === 'connected' && <Badge variant="secondary" className="text-xs">Live</Badge>}
             <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} title={connectionState} />
           </div>
         </div>
@@ -190,7 +189,7 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, isStr
               </div>
             </div>
           )}
-          {!isStreaming && connectionState !== 'connecting' && !error && (
+          {connectionState !== 'connected' && connectionState !== 'connecting' && !error && (
             <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-75">
               <div className="text-white text-center p-4">
                 <Video className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -247,9 +246,8 @@ export default function Room() {
   }
 
   const { room, participants, whepUrls } = roomData;
-  const activeStreams = whepUrls.filter(stream => 
-    participants.some(p => p.streamName === stream.streamName && p.isStreaming)
-  );
+  // Count streams that have assignments (these are potentially active)
+  const activeStreams = whepUrls;
 
   const getGridClass = () => {
     const streamCount = Math.max(whepUrls.length, 1);
@@ -329,7 +327,6 @@ export default function Room() {
                         position={stream.position}
                         assignedUser={stream.assignedUser}
                         assignedGuest={stream.assignedGuest}
-                        isStreaming={participant?.isStreaming}
                       />
                     );
                   })}
