@@ -188,6 +188,7 @@ function RoomCard({ room }: { room: Room }) {
 
   const participantCount = Array.isArray(participants) ? participants.length : 0;
   const streamCount = Array.isArray(assignments) ? assignments.length : 0;
+  const assignedSlots = Array.isArray(assignments) ? assignments.length : 0;
   const activeStreams = Array.isArray(participants) ? participants.filter((p: any) => p.isStreaming).length : 0;
 
   const canManage = user?.role === 'admin' || user?.role === 'engineer';
@@ -232,15 +233,15 @@ function RoomCard({ room }: { room: Room }) {
               <div className="flex items-center justify-center mb-1">
                 <Users className="w-4 h-4 text-blue-600" />
               </div>
-              <div className="text-lg font-semibold">{participantCount}</div>
-              <div className="text-xs text-muted-foreground">/{room.maxParticipants}</div>
+              <div className="text-lg font-semibold">{assignedSlots}</div>
+              <div className="text-xs text-muted-foreground">/{room.maxParticipants} slots</div>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center mb-1">
                 <Video className="w-4 h-4 text-green-600" />
               </div>
-              <div className="text-lg font-semibold">{activeStreams}</div>
-              <div className="text-xs text-muted-foreground">/{streamCount} slots</div>
+              <div className="text-lg font-semibold">{assignedSlots}</div>
+              <div className="text-xs text-muted-foreground">Assigned</div>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center mb-1">

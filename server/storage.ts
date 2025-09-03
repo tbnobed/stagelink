@@ -1517,22 +1517,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createRoomStreamAssignment(assignment: InsertRoomStreamAssignment, userId?: number): Promise<RoomStreamAssignment> {
-    console.log('Storage createRoomStreamAssignment called with:', assignment, 'userId:', userId);
-    try {
-      const [newAssignment] = await db
-        .insert(roomStreamAssignments)
-        .values({
-          ...assignment,
-          createdAt: new Date(),
-          createdBy: userId || null,
-        })
-        .returning();
-      console.log('Successfully created assignment:', newAssignment);
-      return newAssignment;
-    } catch (error) {
-      console.error('Database insert error:', error);
-      throw error;
-    }
+    const [newAssignment] = await db
+      .insert(roomStreamAssignments)
+      .values({
+        ...assignment,
+        createdAt: new Date(),
+        createdBy: userId || null,
+      })
+      .returning();
+    return newAssignment;
   }
 
   async updateRoomStreamAssignment(id: number, updates: Partial<InsertRoomStreamAssignment>): Promise<RoomStreamAssignment | undefined> {

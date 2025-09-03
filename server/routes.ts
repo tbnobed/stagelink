@@ -1425,22 +1425,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Quick assign route for convenience
   app.post('/api/rooms/:id/assign', requireAuth, async (req, res) => {
     try {
-      console.log('Assignment request body:', req.body);
-      console.log('Room ID:', req.params.id);
-      
       const assignmentData = insertRoomStreamAssignmentSchema.parse({
         roomId: req.params.id,
         streamName: req.body.streamName,
         assignedGuestName: req.body.assignedGuestName,
         position: req.body.position || 0,
       });
-      console.log('Parsed assignment data:', assignmentData);
       
       const user = req.user as any;
-      console.log('User ID:', user?.id);
-      
       const assignment = await storage.createRoomStreamAssignment(assignmentData, user.id);
-      console.log('Created assignment:', assignment);
       
       res.status(201).json(assignment);
     } catch (error) {
