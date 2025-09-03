@@ -1422,6 +1422,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Quick assign route for convenience
+  app.post('/api/rooms/:id/assign', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const assignmentData = insertRoomStreamAssignmentSchema.parse({
+        roomId: req.params.id,
+        streamName: req.body.streamName,
+        assignedGuestName: req.body.assignedGuestName,
+        position: req.body.position || 0,
+      });
+      const user = req.user as any;
+      
+      const assignment = await storage.createRoomStreamAssignment(assignmentData, user.id);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error('Failed to assign stream to room:', error);
+      res.status(500).json({ error: 'Failed to assign stream to room' });
+    }
+  });
+
   // Room access route for joining rooms
   app.get('/api/rooms/:id/join', requireAuth, async (req, res) => {
     try {
