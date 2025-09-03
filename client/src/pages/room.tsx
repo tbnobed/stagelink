@@ -154,8 +154,17 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
 
   return (
     <Card className="relative">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">{getDisplayName()}</CardTitle>
+          <div className="flex items-center gap-2">
+            {connectionState === 'connected' && <Badge variant="secondary" className="text-xs">Live</Badge>}
+            <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} title={connectionState} />
+          </div>
+        </div>
+      </CardHeader>
       <CardContent className="p-0">
-        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+        <div className="relative aspect-video bg-black rounded-b-lg overflow-hidden">
           <video
             ref={videoRef}
             autoPlay
