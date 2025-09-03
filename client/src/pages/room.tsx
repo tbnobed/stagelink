@@ -5,7 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Video, MessageCircle, Settings } from "lucide-react";
+import { Users, Video, MessageCircle, Settings, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Chat } from "@/components/chat";
 
@@ -51,9 +51,11 @@ interface VideoPlayerProps {
   position: number;
   assignedUser?: number;
   assignedGuest?: string;
+  onRemove?: () => void;
+  canRemove?: boolean;
 }
 
-function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: VideoPlayerProps) {
+function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, onRemove, canRemove }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const [connectionState, setConnectionState] = useState<string>('new');
@@ -160,6 +162,17 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
           <div className="flex items-center gap-2">
             {connectionState === 'connected' && <Badge variant="secondary" className="text-xs">Live</Badge>}
             <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} title={connectionState} />
+            {canRemove && onRemove && assignedGuest && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                onClick={onRemove}
+                title={`Remove ${assignedGuest} from room`}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -212,6 +225,34 @@ export default function Room() {
   const { data: roomData, isLoading, error } = useQuery<RoomData>({
     queryKey: [`/api/rooms/${id}/join`],
     enabled: !!id,
+  });
+
+  const { data: user } = useQuery<{ role: string }>({
+    queryKey: ["/api/user"],
+    retry: false,
+  });
+
+  const queryClient = useQueryClient();
+
+  const removeGuestMutation = useMutation({
+    mutationFn: async (guestName: string) => {
+      await apiRequest(`/api/rooms/${id}/participants/guest/${encodeURIComponent(guestName)}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/rooms/${id}/join`] });
+      toast({
+        title: "Guest removed",
+        description: "The guest has been successfully removed from the room.",
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to remove guest:', error);
+      toast({
+        title: "Failed to remove guest",
+        description: "There was an error removing the guest from the room.",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -333,6 +374,8 @@ export default function Room() {
                   .sort((a, b) => a.position - b.position)
                   .map((stream) => {
                     const participant = participants.find(p => p.streamName === stream.streamName);
+                    const canRemoveGuest = Boolean((user?.role === 'admin' || user?.role === 'engineer') && stream.assignedGuest);
+                    
                     return (
                       <VideoPlayer
                         key={stream.streamName}
@@ -341,6 +384,8 @@ export default function Room() {
                         position={stream.position}
                         assignedUser={stream.assignedUser}
                         assignedGuest={stream.assignedGuest}
+                        canRemove={canRemoveGuest}
+                        onRemove={canRemoveGuest ? () => removeGuestMutation.mutate(stream.assignedGuest!) : undefined}
                       />
                     );
                   })}

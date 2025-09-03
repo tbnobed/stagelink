@@ -1366,6 +1366,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Remove guest participant by name
+  app.delete('/api/rooms/:id/participants/guest/:guestName', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const { id: roomId, guestName } = req.params;
+      
+      // Remove guest from room participants
+      await storage.removeRoomParticipantByName(roomId, guestName);
+      
+      // Also remove any stream assignments for this guest
+      const assignments = await storage.getRoomStreamAssignments(roomId);
+      const guestAssignments = assignments.filter(a => a.assignedGuestName === guestName);
+      
+      for (const assignment of guestAssignments) {
+        await storage.updateRoomStreamAssignment(assignment.id, {
+          ...assignment,
+          assignedGuestName: null
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to remove guest participant:', error);
+      res.status(500).json({ error: 'Failed to remove guest participant' });
+    }
+  });
+
   // Room stream assignments routes
   app.get('/api/rooms/:id/streams', requireAuth, async (req, res) => {
     try {
