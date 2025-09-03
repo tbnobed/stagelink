@@ -147,7 +147,18 @@ export function setupAuth(app: Express) {
 
   // Get current user
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.isAuthenticated()) {
+      // Add debugging info to understand why authentication is failing
+      console.log('Authentication failed for /api/user:', {
+        isAuthenticated: req.isAuthenticated(),
+        hasSession: !!req.session,
+        sessionID: req.sessionID,
+        hasUser: !!req.user,
+        cookies: req.headers.cookie ? 'present' : 'missing',
+        userAgent: req.headers['user-agent']
+      });
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const user = req.user!;
     res.json({ 
       id: user.id, 
