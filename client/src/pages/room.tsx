@@ -388,18 +388,15 @@ export default function Room() {
                   .map((stream) => {
                     const participant = participants.find(p => p.streamName === stream.streamName);
                     
-                    // Determine if this stream belongs to a guest
+                    // Determine if this stream belongs to a guest (only check actual assignments/participants)
                     const hasGuestAssignment = Boolean(stream.assignedGuest);
                     const hasGuestParticipant = Boolean(participant?.guestName);
-                    const looksLikeGuest = stream.streamName.toLowerCase().includes('guest') || 
-                                          stream.streamName.toLowerCase().startsWith('obed') ||
-                                          /guest_/i.test(stream.streamName);
-                    const isGuestStream = hasGuestAssignment || hasGuestParticipant || looksLikeGuest;
+                    const isGuestStream = hasGuestAssignment || hasGuestParticipant;
                     
                     const canRemoveGuest = Boolean((user?.role === 'admin' || user?.role === 'engineer') && isGuestStream);
                     
-                    // For removal, prefer assignedGuest, then participant guestName, then streamName if it looks like a guest
-                    const guestNameForRemoval = stream.assignedGuest || participant?.guestName || (isGuestStream ? stream.streamName : null);
+                    // For removal, prefer assignedGuest, then participant guestName
+                    const guestNameForRemoval = stream.assignedGuest || participant?.guestName;
                     
                     return (
                       <VideoPlayer
