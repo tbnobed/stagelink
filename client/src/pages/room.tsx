@@ -337,8 +337,9 @@ export default function Room() {
     const streamCount = Math.max(whepUrls.length, 1);
     if (streamCount === 1) return "grid-cols-1";
     if (streamCount === 2) return "grid-cols-1 lg:grid-cols-2";
-    if (streamCount <= 4) return "grid-cols-1 md:grid-cols-2";
-    if (streamCount <= 6) return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+    if (streamCount === 3) return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
+    if (streamCount <= 4) return "grid-cols-1 md:grid-cols-2 lg:grid-cols-4";
+    if (streamCount <= 6) return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
     return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
   };
 
