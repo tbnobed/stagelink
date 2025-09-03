@@ -240,6 +240,7 @@ export default function Room() {
   // Count streams that have assignments (these are potentially active)
   const activeStreams = whepUrls;
 
+
   const getGridClass = () => {
     const streamCount = Math.max(whepUrls.length, 1);
     if (streamCount === 1) return "grid-cols-1";

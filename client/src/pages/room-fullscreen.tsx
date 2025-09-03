@@ -144,9 +144,8 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
   };
 
   return (
-    <Card className="relative h-full">
-      <CardContent className="p-0 h-full">
-        <div className="relative h-full bg-black rounded-lg overflow-hidden">
+    <div className="relative h-full w-full">
+      <div className="relative h-full w-full bg-black rounded-lg overflow-hidden">
           <video
             ref={videoRef}
             autoPlay
@@ -180,8 +179,7 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
@@ -194,6 +192,8 @@ export default function RoomFullscreen() {
   const { data: roomData, isLoading, error } = useQuery<RoomData>({
     queryKey: [`/api/rooms/${id}/join`],
     enabled: !!id,
+    refetchInterval: 5000, // Refetch every 5 seconds
+    staleTime: 0, // Always consider data stale
   });
 
   if (isLoading) {
@@ -226,15 +226,17 @@ export default function RoomFullscreen() {
 
   const { room, participants, whepUrls } = roomData;
 
+
   const getGridClass = () => {
     const streamCount = Math.max(whepUrls.length, 1);
-    // Full-screen optimized grid layouts
-    if (streamCount === 1) return "grid-cols-1";
-    if (streamCount === 2) return "grid-cols-2";
-    if (streamCount <= 4) return "grid-cols-2";
-    if (streamCount <= 6) return "grid-cols-3";
-    if (streamCount <= 9) return "grid-cols-3";
-    return "grid-cols-4";
+    // Full-screen optimized grid layouts with proper rows
+    if (streamCount === 1) return "grid-cols-1 grid-rows-1";
+    if (streamCount === 2) return "grid-cols-2 grid-rows-1";
+    if (streamCount === 3) return "grid-cols-3 grid-rows-1";
+    if (streamCount === 4) return "grid-cols-2 grid-rows-2";
+    if (streamCount <= 6) return "grid-cols-3 grid-rows-2";
+    if (streamCount <= 9) return "grid-cols-3 grid-rows-3";
+    return "grid-cols-4 grid-rows-3";
   };
 
   return (
@@ -251,7 +253,7 @@ export default function RoomFullscreen() {
               </div>
             </div>
           ) : (
-            <div className={`grid gap-2 h-full ${getGridClass()}`} data-testid="video-grid-fullscreen">
+            <div className={`grid gap-1 h-full w-full ${getGridClass()}`} data-testid="video-grid-fullscreen">
               {whepUrls
                 .sort((a, b) => a.position - b.position)
                 .map((stream) => (
