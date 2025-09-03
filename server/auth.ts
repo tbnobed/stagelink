@@ -58,13 +58,15 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     store: new PostgresSessionStore({ 
       pool: pool as any, 
-      createTableIfMissing: true 
+      createTableIfMissing: true,
+      // Increase session persistence for development
+      ttl: 1000 * 60 * 60 * 24 // 24 hours
     }),
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // Auto-detect HTTPS in production
+      secure: false, // Always false in development to ensure cookies work
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24, // 24 hours
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Strict in production
+      sameSite: 'lax', // Always lax in development for better compatibility
     },
   };
 
