@@ -390,10 +390,11 @@ export default function Room() {
                     const hasGuestParticipant = Boolean(participant?.guestName);
                     const isGuestStream = hasGuestAssignment || hasGuestParticipant;
                     
-                    const canRemoveGuest = Boolean((user?.role === 'admin' || user?.role === 'engineer') && isGuestStream);
+                    // Allow admins to remove ANY stream assignment (guest or otherwise)
+                    const canRemoveGuest = Boolean(user?.role === 'admin' || user?.role === 'engineer');
                     
-                    // For removal, prefer assignedGuest, then participant guestName
-                    const guestNameForRemoval = stream.assignedGuest || participant?.guestName;
+                    // For removal, prefer assignedGuest, then participant guestName, then stream name as fallback
+                    const guestNameForRemoval = stream.assignedGuest || participant?.guestName || stream.streamName;
                     
                     return (
                       <VideoPlayer
