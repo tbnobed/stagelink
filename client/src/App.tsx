@@ -14,6 +14,7 @@ import Viewer from "@/pages/viewer";
 import StudioViewer from "@/pages/studio-viewer";
 import Room from "@/pages/room";
 import RoomFullscreen from "@/pages/room-fullscreen";
+import RoomManage from "@/pages/room-manage";
 import Rooms from "@/pages/rooms";
 import MobileTest from "@/pages/mobile-test";
 import AuthPage from "@/pages/auth-page";
@@ -34,6 +35,7 @@ function Router() {
         <ProtectedRoute path="/rooms" component={Rooms} />
         <ProtectedRoute path="/room/:id" component={Room} />
         <ProtectedRoute path="/room/:id/fullscreen" component={RoomFullscreen} />
+        <ProtectedRoute path="/room/:id/manage" component={RoomManage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/admin" component={AdminPage} adminOnly />
         <Route path="/session" component={Session} />
