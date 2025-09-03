@@ -177,7 +177,7 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, onRem
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="relative bg-black rounded-b-lg overflow-hidden" style={{ aspectRatio: '16/9', minHeight: '300px' }}>
+        <div className="relative bg-black rounded-b-lg overflow-hidden h-80">
           <video
             ref={videoRef}
             autoPlay
