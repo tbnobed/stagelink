@@ -162,13 +162,13 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, onRem
           <div className="flex items-center gap-2">
             {connectionState === 'connected' && <Badge variant="secondary" className="text-xs">Live</Badge>}
             <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} title={connectionState} />
-            {canRemove && onRemove && assignedGuest && (
+            {canRemove && onRemove && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                 onClick={onRemove}
-                title={`Remove ${assignedGuest} from room`}
+                title={`Remove ${getDisplayName()} from room`}
               >
                 <X className="h-3 w-3" />
               </Button>
