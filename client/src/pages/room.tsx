@@ -208,7 +208,6 @@ export default function Room() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showChat, setShowChat] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const { data: roomData, isLoading, error } = useQuery<RoomData>({
     queryKey: [`/api/rooms/${id}/join`],
@@ -252,18 +251,6 @@ export default function Room() {
 
   const getGridClass = () => {
     const streamCount = Math.max(whepUrls.length, 1);
-    
-    if (isFullscreen) {
-      // Full-screen optimized grid layouts
-      if (streamCount === 1) return "grid-cols-1";
-      if (streamCount === 2) return "grid-cols-2";
-      if (streamCount <= 4) return "grid-cols-2";
-      if (streamCount <= 6) return "grid-cols-3";
-      if (streamCount <= 9) return "grid-cols-3";
-      return "grid-cols-4";
-    }
-    
-    // Regular responsive grid layouts
     if (streamCount === 1) return "grid-cols-1";
     if (streamCount === 2) return "grid-cols-1 lg:grid-cols-2";
     if (streamCount <= 4) return "grid-cols-1 md:grid-cols-2";
@@ -272,10 +259,9 @@ export default function Room() {
   };
 
   return (
-    <div className={`min-h-screen bg-background ${isFullscreen ? 'fixed inset-0 z-50 bg-black' : ''}`}>
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      {!isFullscreen && (
-        <div className="border-b bg-white dark:bg-gray-900">
+      <div className="border-b bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -303,11 +289,15 @@ export default function Room() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsFullscreen(!isFullscreen)}
+                onClick={() => {
+                  // Open full-screen room in new tab
+                  const fullscreenUrl = `${window.location.origin}/room/${id}/fullscreen`;
+                  window.open(fullscreenUrl, '_blank', 'noopener,noreferrer');
+                }}
                 data-testid="toggle-fullscreen-button"
               >
-                <i className={`fas ${isFullscreen ? 'fa-compress' : 'fa-expand'} mr-2`}></i>
-                {isFullscreen ? 'Exit' : 'Fullscreen'}
+                <i className="fas fa-external-link-alt mr-2"></i>
+                Open Fullscreen
               </Button>
               <Button
                 variant="outline"
@@ -320,39 +310,10 @@ export default function Room() {
             </div>
           </div>
         </div>
-        </div>
-      )}
+      </div>
 
-      {/* Full-screen overlay controls */}
-      {isFullscreen && (
-        <div className="absolute top-4 right-4 z-10 flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsFullscreen(false)}
-            className="bg-black/50 text-white border-gray-600 hover:bg-black/70"
-            data-testid="exit-fullscreen-button"
-          >
-            <i className="fas fa-times mr-2"></i>
-            Exit Fullscreen
-          </Button>
-          {room.chatEnabled && (
-            <Button
-              variant={showChat ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowChat(!showChat)}
-              className="bg-black/50 text-white border-gray-600 hover:bg-black/70"
-              data-testid="toggle-chat-fullscreen-button"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Chat
-            </Button>
-          )}
-        </div>
-      )}
-
-      <div className={`${isFullscreen ? 'p-4 h-full' : 'max-w-7xl mx-auto px-4 py-6'}`}>
-        <div className={`${isFullscreen ? '' : 'flex gap-6'}`}>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex gap-6">
           {/* Main video grid */}
           <div className="flex-1">
             {whepUrls.length === 0 ? (
@@ -366,7 +327,7 @@ export default function Room() {
                 </CardContent>
               </Card>
             ) : (
-              <div className={`grid gap-${isFullscreen ? '2' : '4'} ${getGridClass()} ${isFullscreen ? 'h-full' : ''}`} data-testid="video-grid">
+              <div className={`grid gap-4 ${getGridClass()}`} data-testid="video-grid">
                 {whepUrls
                   .sort((a, b) => a.position - b.position)
                   .map((stream) => {
@@ -386,8 +347,7 @@ export default function Room() {
             )}
 
             {/* Stream status summary */}
-            {!isFullscreen && (
-              <div className="mt-6">
+            <div className="mt-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Stream Status</CardTitle>
@@ -409,16 +369,15 @@ export default function Room() {
                   </div>
                 </CardContent>
               </Card>
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Chat sidebar */}
           {showChat && room.chatEnabled && (
-            <div className={`${isFullscreen ? 'absolute right-4 top-16 w-80 h-[calc(100vh-5rem)] z-10' : 'w-80 flex-shrink-0'}`}>
-              <Card className={`${isFullscreen ? 'h-full bg-black/80 border-gray-600' : 'h-[600px]'}`}>
+            <div className="w-80 flex-shrink-0">
+              <Card className="h-[600px]">
                 <CardHeader className="pb-2">
-                  <CardTitle className={`text-lg ${isFullscreen ? 'text-white' : ''}`}>Room Chat</CardTitle>
+                  <CardTitle className="text-lg">Room Chat</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 h-full">
                   <Chat sessionId={room.id} enabled={true} className="h-full" />
