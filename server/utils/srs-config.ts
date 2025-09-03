@@ -58,12 +58,13 @@ export function getSRSConfig(): SRSServerConfig {
       }
     },
     whep: {
-      host: process.env.SRS_WHEP_HOST || 'cdn1.obedtv.live',
-      port: parseInt(process.env.SRS_WHEP_PORT || '2022'),
-      useHttps: process.env.SRS_WHEP_USE_HTTPS === 'true' || false,
+      host: process.env.SRS_WHEP_HOST || 'cdn2.obedtv.live',
+      port: parseInt(process.env.SRS_WHEP_PORT || '1990'),
+      useHttps: process.env.SRS_WHEP_USE_HTTPS === 'true' || 
+                (process.env.SRS_WHEP_USE_HTTPS === undefined),
       api: {
-        host: process.env.SRS_WHEP_HOST || 'cdn1.obedtv.live',
-        port: parseInt(process.env.SRS_WHEP_API_PORT || '1985'),
+        host: process.env.SRS_WHEP_HOST || 'cdn2.obedtv.live',
+        port: parseInt(process.env.SRS_WHEP_API_PORT || '2022'),
         useHttps: process.env.SRS_WHEP_API_USE_HTTPS === 'true' || false,
       }
     },
