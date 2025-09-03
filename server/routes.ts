@@ -1370,19 +1370,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/rooms/:id/participants/guest/:guestName', requireAdminOrEngineer, async (req, res) => {
     try {
       const { id: roomId, guestName } = req.params;
+      console.log(`Attempting to remove guest "${guestName}" from room "${roomId}"`);
       
       // Remove guest from room participants
       await storage.removeRoomParticipantByName(roomId, guestName);
+      console.log(`Removed guest "${guestName}" from participants table`);
       
       // Also remove any stream assignments for this guest
       const assignments = await storage.getRoomStreamAssignments(roomId);
       const guestAssignments = assignments.filter(a => a.assignedGuestName === guestName);
+      console.log(`Found ${guestAssignments.length} assignments for guest "${guestName}"`);
       
       for (const assignment of guestAssignments) {
+        console.log(`Deleting assignment ${assignment.id} for stream "${assignment.streamName}"`);
         // Delete the entire assignment instead of just nullifying the guest name
         await storage.deleteRoomStreamAssignment(assignment.id);
       }
 
+      console.log(`Successfully removed guest "${guestName}" and ${guestAssignments.length} assignments`);
       res.json({ success: true });
     } catch (error) {
       console.error('Failed to remove guest participant:', error);
