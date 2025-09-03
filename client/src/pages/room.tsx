@@ -183,7 +183,7 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, onRem
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
             data-testid={`video-player-${streamName}`}
           />
           {error && (
