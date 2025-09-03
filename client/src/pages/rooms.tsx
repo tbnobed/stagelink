@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -165,10 +165,16 @@ function RoomCard({ room }: { room: Room }) {
 
   const { data: participants } = useQuery({
     queryKey: [`/api/rooms/${room.id}/participants`],
+    refetchInterval: 3000, // Refresh every 3 seconds
+    staleTime: 1000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: assignments } = useQuery({
     queryKey: [`/api/rooms/${room.id}/streams`],
+    refetchInterval: 3000, // Refresh every 3 seconds  
+    staleTime: 1000,
+    refetchOnWindowFocus: true,
   });
 
   const deleteRoomMutation = useMutation({
@@ -281,10 +287,32 @@ function RoomCard({ room }: { room: Room }) {
 export default function Rooms() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: rooms, isLoading, error } = useQuery<Room[]>({
     queryKey: ['/api/rooms'],
+    refetchInterval: 5000, // Refresh every 5 seconds
+    staleTime: 2000, // Consider data stale after 2 seconds
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
+
+  // Add visibility change listener for immediate updates when tab becomes active
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Invalidate all room-related queries when tab becomes visible
+        queryClient.invalidateQueries({ queryKey: ['/api/rooms'] });
+        rooms?.forEach(room => {
+          queryClient.invalidateQueries({ queryKey: [`/api/rooms/${room.id}/participants`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/rooms/${room.id}/streams`] });
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [queryClient, rooms]);
 
   const canCreateRooms = user?.role === 'admin' || user?.role === 'engineer';
 
