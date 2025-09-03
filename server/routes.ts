@@ -1423,7 +1423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Quick assign route for convenience
-  app.post('/api/rooms/:id/assign', requireAdminOrEngineer, async (req, res) => {
+  app.post('/api/rooms/:id/assign', requireAuth, async (req, res) => {
     try {
       console.log('Assignment request body:', req.body);
       console.log('Room ID:', req.params.id);
