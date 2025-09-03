@@ -1396,7 +1396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Room stream assignments routes
-  app.get('/api/rooms/:id/streams', requireAuth, async (req, res) => {
+  app.get('/api/rooms/:id/streams', requireAdminOrEngineer, async (req, res) => {
     try {
       const assignments = await storage.getRoomStreamAssignments(req.params.id);
       res.json(assignments);
