@@ -145,15 +145,6 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
 
   return (
     <Card className="relative h-full">
-      <CardHeader className="pb-2 absolute top-0 left-0 right-0 z-10 bg-black/50 text-white">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">{getDisplayName()}</CardTitle>
-          <div className="flex items-center gap-2">
-            {connectionState === 'connected' && <Badge variant="secondary" className="text-xs">Live</Badge>}
-            <div className={`w-2 h-2 rounded-full ${getStatusColor()}`} title={connectionState} />
-          </div>
-        </div>
-      </CardHeader>
       <CardContent className="p-0 h-full">
         <div className="relative h-full bg-black rounded-lg overflow-hidden">
           <video
@@ -161,7 +152,7 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
             data-testid={`video-player-${streamName}`}
           />
           {error && (
