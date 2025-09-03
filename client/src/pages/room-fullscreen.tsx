@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -188,13 +188,28 @@ export default function RoomFullscreen() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showChat, setShowChat] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: roomData, isLoading, error } = useQuery<RoomData>({
     queryKey: [`/api/rooms/${id}/public`],
     enabled: !!id,
-    refetchInterval: 5000, // Refetch every 5 seconds
+    refetchInterval: 2000, // Refetch every 2 seconds for more real-time updates
     staleTime: 0, // Always consider data stale
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnReconnect: true, // Refetch when connection is restored
   });
+
+  // Add visibility change listener to immediately refresh when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/rooms/${id}/public`] });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [id, queryClient]);
 
 
   if (isLoading) {

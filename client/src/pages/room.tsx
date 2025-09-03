@@ -225,6 +225,9 @@ export default function Room() {
   const { data: roomData, isLoading, error } = useQuery<RoomData>({
     queryKey: [`/api/rooms/${id}/join`],
     enabled: !!id,
+    refetchInterval: 3000, // Refetch every 3 seconds for real-time participant updates
+    staleTime: 1000, // Consider data stale after 1 second
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   const { data: user } = useQuery<{ role: string }>({
