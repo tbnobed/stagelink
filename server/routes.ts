@@ -325,8 +325,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Fetching all links...');
       const links = await storage.getAllLinks();
       
-      // For each link, try to find corresponding short link
-      const linksWithShortLinks = await Promise.all(
+      // For each link, try to find corresponding short link and room assignments
+      const linksWithEnrichments = await Promise.all(
         links.map(async (link) => {
           // Find short link with matching parameters
           const shortLink = await storage.getShortLinkByParams(
@@ -335,16 +335,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             link.chatEnabled
           );
           
+          // Find room assignments for this stream
+          const roomAssignments = await storage.getRoomAssignmentsByStreamName(link.streamName);
+          
           return {
             ...link,
             shortLink: shortLink ? `/s/${shortLink.id}` : null,
             shortCode: shortLink?.id || null,
+            roomAssignments: roomAssignments || [],
           };
         })
       );
       
       console.log('Links fetched successfully:', links.length, 'links');
-      res.json(linksWithShortLinks);
+      res.json(linksWithEnrichments);
     } catch (error) {
       console.error('Failed to fetch links:', error);
       res.status(500).json({ error: 'Failed to fetch links' });

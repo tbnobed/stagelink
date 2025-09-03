@@ -14,6 +14,18 @@ import { useMobile } from "@/hooks/use-mobile";
 import { InviteDialog } from "@/components/invite-dialog";
 import { apiRequest } from "@/lib/queryClient";
 
+interface RoomAssignment {
+  id: number;
+  roomId: string;
+  roomName: string;
+  streamName: string;
+  assignedUserId?: number;
+  assignedGuestName?: string;
+  position: number;
+  createdAt: string | Date;
+  createdBy?: number;
+}
+
 interface GeneratedLink {
   id: string;
   streamName?: string; // Only for guest session links
@@ -25,6 +37,7 @@ interface GeneratedLink {
   shortLink?: string | null;
   shortCode?: string | null;
   type: 'guest' | 'viewer'; // Add type to distinguish link types
+  roomAssignments?: RoomAssignment[];
 }
 
 export default function Links() {
@@ -1110,6 +1123,18 @@ export default function Links() {
                           <i className="fas fa-clock mr-1"></i>
                           {getTimeUntilExpiry(link)}
                         </Badge>
+                      )}
+                      {link.roomAssignments && link.roomAssignments.length > 0 && (
+                        link.roomAssignments.map(assignment => (
+                          <Badge 
+                            key={assignment.id}
+                            variant="outline" 
+                            className="bg-indigo-500/20 text-indigo-400 border-indigo-500/50 text-xs px-2 py-0.5"
+                          >
+                            <i className="fas fa-users mr-1"></i>
+                            {assignment.roomName}
+                          </Badge>
+                        ))
                       )}
                     </div>
                   </div>

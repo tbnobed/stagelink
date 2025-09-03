@@ -1554,6 +1554,24 @@ export class DatabaseStorage implements IStorage {
       );
     return assignment || undefined;
   }
+
+  async getRoomAssignmentsByStreamName(streamName: string): Promise<Array<RoomStreamAssignment & { roomName: string }>> {
+    return await db
+      .select({
+        id: roomStreamAssignments.id,
+        roomId: roomStreamAssignments.roomId,
+        streamName: roomStreamAssignments.streamName,
+        assignedUserId: roomStreamAssignments.assignedUserId,
+        assignedGuestName: roomStreamAssignments.assignedGuestName,
+        position: roomStreamAssignments.position,
+        createdAt: roomStreamAssignments.createdAt,
+        createdBy: roomStreamAssignments.createdBy,
+        roomName: rooms.name,
+      })
+      .from(roomStreamAssignments)
+      .leftJoin(rooms, eq(roomStreamAssignments.roomId, rooms.id))
+      .where(eq(roomStreamAssignments.streamName, streamName));
+  }
 }
 
 export const storage = new DatabaseStorage();
