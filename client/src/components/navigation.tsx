@@ -126,7 +126,7 @@ export default function Navigation() {
               alt="StageLinQ Logo" 
               className="h-8 w-auto mr-3 rounded"
             />
-            <span className="va-text-green font-bold text-lg">StageLinQ</span>
+            
           </div>
           
           <div className="flex items-center space-x-4">
