@@ -124,7 +124,7 @@ export default function Navigation() {
             <img 
               src={stagelinqLogo} 
               alt="StageLinQ Logo" 
-              className="h-8 w-auto mr-3 rounded"
+              className="h-10 w-auto mr-3 rounded"
             />
             
           </div>
