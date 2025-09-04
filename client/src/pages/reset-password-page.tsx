@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Lock, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMobile } from "@/hooks/use-mobile";
-import stagelinqLogo from "@assets/stagelinq_logo_touch_1755791562868.png";
+import stagelinqLogo from "@assets/stagelinq_logo.png";
 
 export default function ResetPasswordPage() {
   const [location] = useLocation();

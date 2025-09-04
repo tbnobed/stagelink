@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import stagelinqLogo from "@assets/stagelinq_logo_transparent_1755626228653.png";
+import stagelinqLogo from "@assets/stagelinq_logo.png";
 
 interface RegistrationToken {
   valid: boolean;

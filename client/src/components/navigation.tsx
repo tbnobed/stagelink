@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { User, LogOut, Settings, Menu, X } from "lucide-react";
 import { useState } from "react";
+import stagelinqLogo from "@assets/stagelinq_logo.png";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -47,13 +48,9 @@ export default function Navigation() {
         <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center">
             <img 
-              src="https://cdn2.obedtv.live:8088/obedtv.png" 
-              alt="OBTV Logo" 
+              src={stagelinqLogo} 
+              alt="StageLinQ Logo" 
               className="h-6 w-auto mr-2 rounded"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=52";
-              }}
             />
             <span className="va-text-green font-bold text-base">StageLinQ</span>
           </div>
@@ -125,13 +122,9 @@ export default function Navigation() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <img 
-              src="https://cdn2.obedtv.live:8088/obedtv.png" 
-              alt="OBTV Logo" 
+              src={stagelinqLogo} 
+              alt="StageLinQ Logo" 
               className="h-8 w-auto mr-3 rounded"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&h=52";
-              }}
             />
             <span className="va-text-green font-bold text-lg">StageLinQ</span>
           </div>
