@@ -34,8 +34,6 @@ export function ConsentDialog({
       const consentTypes = ['camera_microphone', 'recording', 'broadcast', 'privacy_policy'];
 
       await apiRequest("POST", "/api/consent", {
-        sessionId,
-        userId,
         guestIdentifier,
         consentTypes,
         streamName,
