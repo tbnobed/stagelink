@@ -261,3 +261,29 @@ export type InsertRoomParticipant = z.infer<typeof insertRoomParticipantSchema>;
 export type RoomParticipant = typeof roomParticipants.$inferSelect;
 export type InsertRoomStreamAssignment = z.infer<typeof insertRoomStreamAssignmentSchema>;
 export type RoomStreamAssignment = typeof roomStreamAssignments.$inferSelect;
+
+export const consentTypeEnum = pgEnum('consent_type', ['camera_microphone', 'recording', 'broadcast', 'privacy_policy']);
+
+export const consentRecords = pgTable("consent_records", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  sessionId: text("session_id"),
+  userId: integer("user_id").references(() => users.id),
+  guestIdentifier: text("guest_identifier"),
+  consentType: consentTypeEnum("consent_type").notNull(),
+  consentText: text("consent_text").notNull(),
+  granted: boolean("granted").notNull().default(false),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  streamName: text("stream_name"),
+  grantedAt: timestamp("granted_at").notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at"),
+});
+
+export const insertConsentRecordSchema = createInsertSchema(consentRecords).omit({
+  id: true,
+  grantedAt: true,
+  revokedAt: true,
+});
+
+export type InsertConsentRecord = z.infer<typeof insertConsentRecordSchema>;
+export type ConsentRecord = typeof consentRecords.$inferSelect;

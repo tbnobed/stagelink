@@ -22,6 +22,7 @@ import RegisterPage from "@/pages/register-page";
 import AdminPage from "@/pages/admin-page";
 import ProfilePage from "@/pages/profile-page";
 import ResetPasswordPage from "@/pages/reset-password-page";
+import PrivacyPolicy from "@/pages/privacy-policy";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
         <Route path="/auth" component={AuthPage} />
         <Route path="/register" component={RegisterPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
+        <Route path="/privacy" component={PrivacyPolicy} />
         <Route component={NotFound} />
       </Switch>
     </div>

@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
@@ -92,6 +92,12 @@ export interface IStorage {
   updateRoomStreamAssignment(id: number, updates: Partial<InsertRoomStreamAssignment>): Promise<RoomStreamAssignment | undefined>;
   deleteRoomStreamAssignment(id: number): Promise<boolean>;
   getStreamAssignmentByName(roomId: string, streamName: string): Promise<RoomStreamAssignment | undefined>;
+
+  // Consent Records
+  createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord>;
+  getConsentRecords(filters?: { sessionId?: string; userId?: number; guestIdentifier?: string }): Promise<ConsentRecord[]>;
+  getConsentRecordsByStream(streamName: string): Promise<ConsentRecord[]>;
+  getAllConsentRecords(limit?: number, offset?: number): Promise<ConsentRecord[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -593,6 +599,19 @@ export class MemStorage implements IStorage {
 
   async removeParticipantByUsername(sessionId: string, username: string): Promise<void> {
     console.warn('removeParticipantByUsername not implemented in MemStorage');
+  }
+
+  async createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord> {
+    throw new Error('createConsentRecord not implemented in MemStorage');
+  }
+  async getConsentRecords(filters?: { sessionId?: string; userId?: number; guestIdentifier?: string }): Promise<ConsentRecord[]> {
+    return [];
+  }
+  async getConsentRecordsByStream(streamName: string): Promise<ConsentRecord[]> {
+    return [];
+  }
+  async getAllConsentRecords(limit?: number, offset?: number): Promise<ConsentRecord[]> {
+    return [];
   }
 }
 
@@ -1571,6 +1590,39 @@ export class DatabaseStorage implements IStorage {
       .from(roomStreamAssignments)
       .leftJoin(rooms, eq(roomStreamAssignments.roomId, rooms.id))
       .where(eq(roomStreamAssignments.streamName, streamName));
+  }
+
+  async createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord> {
+    const [consentRecord] = await db.insert(consentRecords).values(record).returning();
+    return consentRecord;
+  }
+
+  async getConsentRecords(filters?: { sessionId?: string; userId?: number; guestIdentifier?: string }): Promise<ConsentRecord[]> {
+    if (!filters) {
+      return await db.select().from(consentRecords).orderBy(desc(consentRecords.grantedAt));
+    }
+    const conditions = [];
+    if (filters.sessionId) conditions.push(eq(consentRecords.sessionId, filters.sessionId));
+    if (filters.userId) conditions.push(eq(consentRecords.userId, filters.userId));
+    if (filters.guestIdentifier) conditions.push(eq(consentRecords.guestIdentifier, filters.guestIdentifier));
+    
+    if (conditions.length === 0) {
+      return await db.select().from(consentRecords).orderBy(desc(consentRecords.grantedAt));
+    }
+    return await db.select().from(consentRecords).where(and(...conditions)).orderBy(desc(consentRecords.grantedAt));
+  }
+
+  async getConsentRecordsByStream(streamName: string): Promise<ConsentRecord[]> {
+    return await db.select().from(consentRecords)
+      .where(eq(consentRecords.streamName, streamName))
+      .orderBy(desc(consentRecords.grantedAt));
+  }
+
+  async getAllConsentRecords(limit: number = 100, offset: number = 0): Promise<ConsentRecord[]> {
+    return await db.select().from(consentRecords)
+      .orderBy(desc(consentRecords.grantedAt))
+      .limit(limit)
+      .offset(offset);
   }
 }
 

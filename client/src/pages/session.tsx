@@ -7,6 +7,7 @@ import { Chat } from "@/components/chat";
 import { GuestChat } from "@/components/guest-chat";
 import { MobileNav } from "@/components/mobile-nav";
 import { MobileVideoControls } from "@/components/mobile-video-controls";
+import { ConsentDialog } from "@/components/consent-dialog";
 import { useMobile, useSwipeGestures } from "@/hooks/use-mobile";
 
 export default function Session() {
@@ -25,6 +26,8 @@ export default function Session() {
   const [linkId, setLinkId] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showConsentDialog, setShowConsentDialog] = useState(false);
+  const [consentGranted, setConsentGranted] = useState(false);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -176,8 +179,44 @@ export default function Session() {
     });
   };
 
+  const handleConsentGranted = async () => {
+    setConsentGranted(true);
+    setShowConsentDialog(false);
+    try {
+      const result = await startPublishing(publisherVideoRef.current);
+      setIsPublishing(true);
+      setSessionId(result.sessionId || 'Connected');
+      setAudioCodec('opus/48000/2');
+      setVideoCodec('h264/720p@30fps');
+      
+      toast({
+        title: "Success",
+        description: "Stream started successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Publishing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConsentDenied = () => {
+    setShowConsentDialog(false);
+    toast({
+      title: "Consent Required",
+      description: "You must accept all consent terms before streaming can begin.",
+      variant: "destructive",
+    });
+  };
+
   const togglePublishing = async () => {
     if (!isPublishing) {
+      if (!consentGranted) {
+        setShowConsentDialog(true);
+        return;
+      }
       try {
         const result = await startPublishing(publisherVideoRef.current);
         setIsPublishing(true);
@@ -307,6 +346,15 @@ export default function Session() {
   return (
     <div ref={containerRef} className={`h-screen va-bg-dark flex flex-col swipe-container ${isMobile ? 'mobile-layout' : ''}`}>
       
+      {showConsentDialog && (
+        <ConsentDialog
+          streamName={streamName || 'unknown'}
+          guestIdentifier={guestUser?.username || undefined}
+          onConsentGranted={handleConsentGranted}
+          onConsentDenied={handleConsentDenied}
+        />
+      )}
+
       {/* Mobile Navigation */}
       <MobileNav
         title={`Live Session - ${streamName || 'Stream'}`}

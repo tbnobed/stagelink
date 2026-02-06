@@ -1118,6 +1118,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Consent Recording API
+  const VALID_CONSENT_TYPES = ['camera_microphone', 'recording', 'broadcast', 'privacy_policy'] as const;
+  
+  app.post('/api/consent', async (req, res) => {
+    try {
+      const { consentTypes, streamName, guestIdentifier } = req.body;
+
+      if (!consentTypes || !Array.isArray(consentTypes) || consentTypes.length === 0) {
+        return res.status(400).json({ error: 'At least one consent type is required' });
+      }
+
+      const invalidTypes = consentTypes.filter((t: string) => !VALID_CONSENT_TYPES.includes(t as any));
+      if (invalidTypes.length > 0) {
+        return res.status(400).json({ error: `Invalid consent types: ${invalidTypes.join(', ')}` });
+      }
+
+      if (!streamName || typeof streamName !== 'string') {
+        return res.status(400).json({ error: 'streamName is required' });
+      }
+
+      const authenticatedUser = req.isAuthenticated?.() ? req.user as any : null;
+      const resolvedUserId = authenticatedUser?.id || null;
+      const resolvedGuestIdentifier = !resolvedUserId ? (guestIdentifier || null) : null;
+
+      const ipAddress = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+
+      const consentTexts: Record<string, string> = {
+        camera_microphone: 'I consent to the use of my camera and microphone for live video and audio streaming. I understand my video and audio will be captured and transmitted in real-time.',
+        recording: 'I consent to the recording of my video and audio during this streaming session. I understand this recording may be stored and used for broadcast purposes.',
+        broadcast: 'I consent to my video and audio being broadcast on live television, streaming platforms, and related media in the United States. I understand this broadcast may reach a public audience.',
+        privacy_policy: 'I have read and agree to the Privacy Policy. I understand how my personal data, video, and audio will be collected, used, and stored.',
+      };
+
+      const records = [];
+      for (const consentType of consentTypes) {
+        const record = await storage.createConsentRecord({
+          sessionId: null,
+          userId: resolvedUserId,
+          guestIdentifier: resolvedGuestIdentifier,
+          consentType,
+          consentText: consentTexts[consentType] || `Consent granted for: ${consentType}`,
+          granted: true,
+          ipAddress,
+          userAgent,
+          streamName,
+        });
+        records.push(record);
+      }
+
+      res.status(201).json({ 
+        success: true, 
+        records,
+        message: 'Consent recorded successfully' 
+      });
+    } catch (error) {
+      console.error('Failed to record consent:', error);
+      res.status(500).json({ error: 'Failed to record consent' });
+    }
+  });
+
+  app.get('/api/consent/records', requireAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const records = await storage.getAllConsentRecords(limit, offset);
+      res.json(records);
+    } catch (error) {
+      console.error('Failed to fetch consent records:', error);
+      res.status(500).json({ error: 'Failed to fetch consent records' });
+    }
+  });
+
+  app.get('/api/consent/records/:streamName', requireAdmin, async (req, res) => {
+    try {
+      const records = await storage.getConsentRecordsByStream(req.params.streamName);
+      res.json(records);
+    } catch (error) {
+      console.error('Failed to fetch consent records:', error);
+      res.status(500).json({ error: 'Failed to fetch consent records' });
+    }
+  });
+
   // SRS Server Configuration API
   app.get('/api/srs/config', (req, res) => {
     try {

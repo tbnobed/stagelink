@@ -60,6 +60,8 @@ Preferred communication style: Simple, everyday language.
 - **Email Invites**: Professional email invitation system using SendGrid integration with clean short links (yourapp.com/s/ABC123) for better appearance and trustworthiness.
 - **Screen Optimization**: Enhanced layouts with max-width-7xl containers and better space utilization on Home and Generator pages, including responsive 3-column layouts on large screens.
 - **Responsive Design**: Mobile-first approach with progressive web app features.
+- **Consent System**: Verifiable consent recording for US broadcast compliance. ConsentDialog gates streaming with mandatory acceptance of camera/microphone, recording, broadcast, and privacy policy terms. Consent records include timestamp, IP address, user agent, and full consent text. Admin audit log available in Admin Panel.
+- **Privacy Policy**: Comprehensive privacy policy page (/privacy) addressing CCPA, BIPA, FCC regulations for US broadcast streaming.
 - **Error Handling**: Comprehensive error boundaries and toast notifications.
 
 # External Dependencies

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2, Users, Settings, Mail } from "lucide-react";
+import { Loader2, Plus, Trash2, Users, Settings, Mail, Shield, Clock, Globe, Monitor } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMobile } from "@/hooks/use-mobile";
 import { InviteDialog } from "@/components/invite-dialog";
@@ -53,6 +53,10 @@ export default function AdminPage() {
 
   const { data: users, isLoading: usersLoading } = useQuery<SafeUser[]>({
     queryKey: ["/api/users"],
+  });
+
+  const { data: consentRecords, isLoading: consentLoading } = useQuery<any[]>({
+    queryKey: ["/api/consent/records"],
   });
 
   const createUserMutation = useMutation({
@@ -484,6 +488,95 @@ export default function AdminPage() {
               <div>✓ Support for custom messages</div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Consent Audit Log */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-[hsl(159,100%,41%)]" />
+            <div>
+              <CardTitle>Consent Audit Log</CardTitle>
+              <CardDescription>Verifiable consent records for broadcast compliance</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {consentLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : !consentRecords || consentRecords.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Shield className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p>No consent records yet</p>
+              <p className="text-sm">Records will appear here when users consent to streaming</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date/Time</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Consent Type</TableHead>
+                    <TableHead>Stream</TableHead>
+                    <TableHead>IP Address</TableHead>
+                    <TableHead className={isMobile ? 'hidden' : ''}>Device</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {consentRecords.map((record: any) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          {new Date(record.grantedAt).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {record.guestIdentifier || (record.userId ? `User #${record.userId}` : 'Unknown')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {record.consentType.replace(/_/g, ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs font-mono">
+                        {record.streamName || '-'}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        <div className="flex items-center gap-1">
+                          <Globe className="h-3 w-3 text-muted-foreground" />
+                          {record.ipAddress}
+                        </div>
+                      </TableCell>
+                      <TableCell className={`text-xs ${isMobile ? 'hidden' : ''}`}>
+                        <div className="flex items-center gap-1 max-w-[200px] truncate" title={record.userAgent}>
+                          <Monitor className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="truncate">{record.userAgent}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={record.granted ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}>
+                          {record.granted ? 'Granted' : 'Revoked'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
