@@ -1,0 +1,71 @@
+Failed to fetch rooms: error: relation "rooms" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getAllRooms (/home/runner/workspace/server/storage.ts:1390:12)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:1269:21) {
+  length: 105,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '132',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+2:41:54 AM [express] GET /api/rooms 500 in 428ms :: {"error":"Failed to fetch rooms"}
+New WebSocket connection
+WebSocket message received: {
+  type: 'notification_listener',
+  userId: 2,
+  username: 'admin',
+  role: 'admin'
+}
+Notification listener registered for user admin (2)
+WebSocket closed: 1005 
+handleDisconnection called - this method is definitely being executed
+Failed to fetch rooms: error: relation "rooms" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getAllRooms (/home/runner/workspace/server/storage.ts:1390:12)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:1269:21) {
+  length: 105,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '132',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+2:42:00 AM [express] GET /api/rooms 500 in 412ms :: {"error":"Failed to fetch rooms"}
+New WebSocket connection
+WebSocket message received: {
+  type: 'notification_listener',
+  userId: 2,
+  username: 'admin',
+  role: 'admin'
+}
+Notification listener registered for user admin (2)
+WebSocket closed: 1005 
+handleDisconnection called - this method is definitely being executed
+Failed to fetch rooms: error: relation "rooms" does not 
