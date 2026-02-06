@@ -2,13 +2,11 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Redirect } from "wouter";
-import { Loader2, Monitor, Users, Zap, ArrowLeft, Mail } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, Eye, EyeOff } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,6 +17,7 @@ export default function AuthPage() {
   const { isMobile } = useMobile();
   const { toast } = useToast();
   const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [formData, setFormData] = useState({
     username: "",
@@ -47,14 +46,12 @@ export default function AuthPage() {
     },
   });
 
-  // Redirect if already logged in
   if (!isLoading && user) {
     return <Redirect to="/" />;
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     loginMutation.mutate({
       username: formData.username,
       password: formData.password,
@@ -62,10 +59,7 @@ export default function AuthPage() {
   };
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handlePasswordReset = (e: React.FormEvent) => {
@@ -83,224 +77,131 @@ export default function AuthPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-border" />
+      <div className="flex items-center justify-center min-h-screen bg-[hsl(0,0%,5%)]">
+        <Loader2 className="h-8 w-8 animate-spin text-[hsl(159,100%,41%)]" />
       </div>
     );
   }
+
+  const passwordResetModal = showPasswordReset && (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="w-full max-w-sm bg-[hsl(0,0%,10%)] border border-white/10 rounded-2xl p-6 shadow-2xl">
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            type="button"
+            onClick={() => setShowPasswordReset(false)}
+            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+            data-testid="button-close-password-reset"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <h2 className="text-lg font-semibold text-white">Reset Password</h2>
+        </div>
+        <p className="text-sm text-white/50 mb-5">
+          Enter your email to receive a password reset link.
+        </p>
+        <form onSubmit={handlePasswordReset} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="reset-email" className="text-xs font-medium text-white/60 uppercase tracking-wider">
+              Email Address
+            </Label>
+            <Input
+              id="reset-email"
+              type="email"
+              placeholder="you@company.com"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              required
+              className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-[hsl(159,100%,41%)] focus:ring-1 focus:ring-[hsl(159,100%,41%)]/20 rounded-xl"
+              data-testid="input-reset-email"
+            />
+          </div>
+          <Button
+            type="submit"
+            className="w-full h-11 bg-[hsl(159,100%,41%)] hover:bg-[hsl(159,100%,35%)] text-black font-semibold rounded-xl transition-all"
+            disabled={passwordResetMutation.isPending}
+            data-testid="button-send-reset-email"
+          >
+            {passwordResetMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="mr-2 h-4 w-4" />
+            )}
+            Send Reset Link
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
 
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        {/* Mobile Header with Logo */}
-        <div className="bg-gradient-to-br from-primary/10 to-primary/5 px-4 py-4 text-center">
-          <div className="flex justify-center mb-2">
-            <img 
-              src={stagelinq_logo} 
-              alt="StageLinq Logo" 
-              className="h-[300px] w-auto mt-[-46px] mb-[-46px] ml-[-5px] mr-[-5px] pl-[19px] pr-[19px] pt-[70px] pb-[70px]"
-              data-testid="stagelinq-logo-mobile"
-            />
-          </div>
-          <h1 className="text-2xl font-bold text-primary mb-1">
-            StageLinq Platform
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Professional live streaming solution
-          </p>
-        </div>
-        {/* Mobile Form */}
-        <div className="flex-1 flex items-center justify-center px-4 py-8">
-          <Card className="w-full max-w-sm">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-xl font-bold">
-                Welcome Back
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Sign in to continue
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm">Username</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Enter username"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange("username", e.target.value)}
-                    required
-                    className="h-12 text-base"
-                    data-testid="input-username"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    required
-                    className="h-12 text-base"
-                    data-testid="input-password"
-                  />
-                </div>
-
-
-
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-base font-medium"
-                  disabled={loginMutation.isPending}
-                  data-testid="button-submit"
-                >
-                  {loginMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Sign In
-                </Button>
-              </form>
-
-              <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => setShowPasswordReset(true)}
-                  className="text-sm text-muted-foreground hover:text-foreground touch-target"
-                  data-testid="button-forgot-password"
-                >
-                  Forgot your password?
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Password Reset Modal for Mobile */}
-          {showPasswordReset && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-              <Card className="w-full max-w-sm">
-                <CardHeader className="text-center">
-                  <div className="flex items-center justify-between">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPasswordReset(false)}
-                      className="p-2"
-                      data-testid="button-close-password-reset"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <CardTitle className="text-lg">Reset Password</CardTitle>
-                    <div className="w-8" />
-                  </div>
-                  <CardDescription className="text-sm">
-                    Enter your email to receive a password reset link
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handlePasswordReset} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="reset-email" className="text-sm">Email Address</Label>
-                      <Input
-                        id="reset-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        required
-                        className="h-12 text-base"
-                        data-testid="input-reset-email"
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full h-12 text-base font-medium"
-                      disabled={passwordResetMutation.isPending}
-                      data-testid="button-send-reset-email"
-                    >
-                      {passwordResetMutation.isPending && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      <Mail className="mr-2 h-4 w-4" />
-                      Send Reset Link
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+      <div className="min-h-screen bg-[hsl(0,0%,5%)] flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+          <div className="w-full max-w-sm">
+            <div className="flex justify-center mb-8">
+              <img
+                src={stagelinq_logo}
+                alt="StageLinq Logo"
+                className="h-20 w-auto object-contain"
+                data-testid="stagelinq-logo-mobile"
+              />
             </div>
-          )}
-        </div>
-        {/* Mobile Feature List */}
-        <div className="px-4 pb-8">
-          <div className="max-w-sm mx-auto space-y-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Monitor className="w-3 h-3 text-primary flex-shrink-0" />
-              <span>WHIP/WHEP Protocol Support</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-3 h-3 text-primary flex-shrink-0" />
-              <span>Live Chat Integration</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Zap className="w-3 h-3 text-primary flex-shrink-0" />
-              <span>QR Code Link Generation</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">
-              Welcome Back
-            </CardTitle>
-            <CardDescription>
-              Sign in to your Virtual Audience account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold text-white mb-1">
+                Welcome back
+              </h1>
+              <p className="text-sm text-white/40">
+                Sign in to your account
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="username" className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                  Username
+                </Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="Enter your username"
+                  placeholder="Enter username"
                   value={formData.username}
                   onChange={(e) => handleInputChange("username", e.target.value)}
                   required
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-[hsl(159,100%,41%)] focus:ring-1 focus:ring-[hsl(159,100%,41%)]/20 rounded-xl text-base"
                   data-testid="input-username"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  required
-                  data-testid="input-password"
-                />
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    required
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-[hsl(159,100%,41%)] focus:ring-1 focus:ring-[hsl(159,100%,41%)]/20 rounded-xl pr-10 text-base"
+                    data-testid="input-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
-
-
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-12 bg-[hsl(159,100%,41%)] hover:bg-[hsl(159,100%,35%)] text-black font-semibold text-base rounded-xl transition-all"
                 disabled={loginMutation.isPending}
                 data-testid="button-submit"
               >
@@ -311,88 +212,124 @@ export default function AuthPage() {
               </Button>
             </form>
 
-            <div className="mt-4 text-center">
+            <div className="mt-6 text-center">
               <button
                 type="button"
                 onClick={() => setShowPasswordReset(true)}
-                className="text-sm text-muted-foreground hover:text-foreground"
-                data-testid="button-forgot-password-desktop"
+                className="text-sm text-white/30 hover:text-[hsl(159,100%,41%)] transition-colors"
+                data-testid="button-forgot-password"
               >
                 Forgot your password?
               </button>
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Password Reset Modal for Desktop */}
-        {showPasswordReset && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-md">
-              <CardHeader className="text-center">
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPasswordReset(false)}
-                    className="p-2"
-                    data-testid="button-close-password-reset-desktop"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <CardTitle className="text-xl">Reset Password</CardTitle>
-                  <div className="w-8" />
-                </div>
-                <CardDescription>
-                  Enter your email to receive a password reset link
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handlePasswordReset} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reset-email-desktop">Email Address</Label>
-                    <Input
-                      id="reset-email-desktop"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      required
-                      data-testid="input-reset-email-desktop"
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={passwordResetMutation.isPending}
-                    data-testid="button-send-reset-email-desktop"
-                  >
-                    {passwordResetMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    <Mail className="mr-2 h-4 w-4" />
-                    Send Reset Link
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
           </div>
-        )}
+        </div>
+        {passwordResetModal}
       </div>
-      {/* Right side - Hero */}
-      <div className="flex-1 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center p-8">
-        <div className="max-w-md text-center">
-          <div className="flex justify-center mb-6">
-            <img 
-              src={stagelinq_logo} 
-              alt="StageLinq Logo" 
-              className="h-48 max-w-[280px] object-contain"
-              data-testid="stagelinq-logo"
-            />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[hsl(0,0%,5%)] flex">
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-sm">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="username" className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                Username
+              </Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="Enter your username"
+                value={formData.username}
+                onChange={(e) => handleInputChange("username", e.target.value)}
+                required
+                className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-[hsl(159,100%,41%)] focus:ring-1 focus:ring-[hsl(159,100%,41%)]/20 rounded-xl"
+                data-testid="input-username"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  required
+                  className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/25 focus:border-[hsl(159,100%,41%)] focus:ring-1 focus:ring-[hsl(159,100%,41%)]/20 rounded-xl pr-10"
+                  data-testid="input-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-11 bg-[hsl(159,100%,41%)] hover:bg-[hsl(159,100%,35%)] text-black font-semibold rounded-xl transition-all"
+              disabled={loginMutation.isPending}
+              data-testid="button-submit"
+            >
+              {loginMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Sign In
+            </Button>
+          </form>
+
+          <div className="mt-5 text-center">
+            <button
+              type="button"
+              onClick={() => setShowPasswordReset(true)}
+              className="text-sm text-white/30 hover:text-[hsl(159,100%,41%)] transition-colors"
+              data-testid="button-forgot-password-desktop"
+            >
+              Forgot your password?
+            </button>
           </div>
-          <h1 className="text-3xl font-bold text-primary mb-4">
-            Virtual Audience Platform
+        </div>
+
+        {passwordResetModal}
+      </div>
+
+      <div className="flex-1 relative overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(0,0%,8%) 0%, hsl(159,30%,8%) 50%, hsl(0,0%,5%) 100%)' }}>
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
+        <div className="relative text-center px-12">
+          <div className="flex justify-center mb-10">
+            <div className="relative">
+              <div className="absolute -inset-6 bg-[hsl(159,100%,41%)]/10 rounded-full blur-2xl" />
+              <img
+                src={stagelinq_logo}
+                alt="StageLinq Logo"
+                className="relative h-28 w-auto object-contain"
+                data-testid="stagelinq-logo"
+              />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">
+            StageLinq
           </h1>
+          <p className="text-white/30 text-sm max-w-xs mx-auto leading-relaxed">
+            Virtual Audience Platform
+          </p>
+          <div className="mt-10 flex items-center justify-center gap-8 text-white/20 text-xs uppercase tracking-widest">
+            <span>Live</span>
+            <span className="w-1 h-1 rounded-full bg-[hsl(159,100%,41%)]" />
+            <span>Stream</span>
+            <span className="w-1 h-1 rounded-full bg-[hsl(159,100%,41%)]" />
+            <span>Connect</span>
+          </div>
         </div>
       </div>
     </div>
