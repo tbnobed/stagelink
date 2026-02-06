@@ -1,0 +1,26 @@
+virtual-audience-db-v2-2-2   | 2026-02-06 05:22:45.568 UTC [76] STATEMENT:  insert into "consent_records" ("id", "session_id", "user_id", "guest_identifier", "consent_type", "consent_text", "granted", "ip_address", "user_agent", "stream_name", "granted_at", "revoked_at") values (default, $1, $2, $3, $4, $5, $6, $7, $8, $9, default, default) returning "id", "session_id", "user_id", "guest_identifier", "consent_type", "consent_text", "granted", "ip_address", "user_agent", "stream_name", "granted_at", "revoked_at"
+virtual-audience-app-v2-2-2  | Failed to record consent: error: relation "consent_records" does not exist
+virtual-audience-app-v2-2-2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2-2-2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2-2-2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2-2-2  |     at async DatabaseStorage.createConsentRecord (file:///app/dist/production.js:963:33)
+virtual-audience-app-v2-2-2  |     at async file:///app/dist/production.js:2953:24 {
+virtual-audience-app-v2-2-2  |   length: 114,
+virtual-audience-app-v2-2-2  |   severity: 'ERROR',
+virtual-audience-app-v2-2-2  |   code: '42P01',
+virtual-audience-app-v2-2-2  |   detail: undefined,
+virtual-audience-app-v2-2-2  |   hint: undefined,
+virtual-audience-app-v2-2-2  |   position: '13',
+virtual-audience-app-v2-2-2  |   internalPosition: undefined,
+virtual-audience-app-v2-2-2  |   internalQuery: undefined,
+virtual-audience-app-v2-2-2  |   where: undefined,
+virtual-audience-app-v2-2-2  |   schema: undefined,
+virtual-audience-app-v2-2-2  |   table: undefined,
+virtual-audience-app-v2-2-2  |   column: undefined,
+virtual-audience-app-v2-2-2  |   dataType: undefined,
+virtual-audience-app-v2-2-2  |   constraint: undefined,
+virtual-audience-app-v2-2-2  |   file: 'parse_relation.c',
+virtual-audience-app-v2-2-2  |   line: '1392',
+virtual-audience-app-v2-2-2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2-2-2  | }
+virtual-audience-app-v2-2-2  | 5:22:45 AM [express] POST /api/consent 500 in 17ms :: {"error":"Failed to record consent"}
