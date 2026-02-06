@@ -1,4 +1,4 @@
-import { buildWhipUrl, buildWhepUrl } from "@/lib/srs-config";
+import { buildWhipUrl, buildWhepUrl, buildWhipUrlForServer } from "@/lib/srs-config";
 
 // Global variables for SRS SDK and QR Code library
 declare global {
@@ -17,6 +17,7 @@ interface StreamingConfig {
   stream: string;
   returnStream: string;
   app: string;
+  assignedServer?: string;
 }
 
 let config: StreamingConfig = {
@@ -53,7 +54,9 @@ export async function startPublishing(videoElement: HTMLVideoElement | null): Pr
   };
 
   try {
-    const url = await buildWhipUrl(config.app, config.stream);
+    const url = config.assignedServer 
+      ? await buildWhipUrlForServer(config.assignedServer, config.app, config.stream)
+      : await buildWhipUrl(config.app, config.stream);
     await sdk.publish(url, {
       camera: true,
       screen: false,

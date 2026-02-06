@@ -5,7 +5,7 @@ import { setupAuth, requireAuth, requireAdmin, requireAdminOrEngineer } from "./
 import { ChatWebSocketServer } from "./chat-websocket";
 import { insertUserSchema, insertShortLinkSchema, insertRoomSchema, insertRoomParticipantSchema, insertRoomStreamAssignmentSchema } from "@shared/schema";
 import { generateUniqueShortCode } from "./utils/shortCode";
-import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl } from "./utils/srs-config";
+import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl, getNextWhipServer, formatServerAddress, getWhipServerList } from "./utils/srs-config";
 import { sendStreamingInvite, sendViewerInvite } from "./email-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -364,11 +364,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const linkExpiry = req.body.expiresAt ? new Date(req.body.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours default
       const sessionToken = await storage.createSessionToken(req.body.id, 'guest', linkExpiry, userId);
       
-      // Add session token to the link data and URL
+      const assignedWhipServer = getNextWhipServer();
+      const assignedServerAddr = formatServerAddress(assignedWhipServer);
+
+      const isAbsoluteUrl = req.body.url.startsWith('http');
+      const parsedUrl = new URL(req.body.url, isAbsoluteUrl ? undefined : 'http://placeholder');
+      parsedUrl.searchParams.set('token', sessionToken.id);
+      parsedUrl.searchParams.set('server', assignedServerAddr);
+      const finalUrl = isAbsoluteUrl ? parsedUrl.toString() : `${parsedUrl.pathname}${parsedUrl.search}`;
+
       const linkData = {
         ...req.body,
         sessionToken: sessionToken.id,
-        url: `${req.body.url}&token=${sessionToken.id}` // Add token to URL
+        assignedServer: assignedServerAddr,
+        url: finalUrl
       };
       
       const link = await storage.createLink(linkData, userId);
@@ -643,11 +652,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return !!existing;
       });
 
+      const assignedWhipServer = getNextWhipServer();
+      const assignedServerAddr = formatServerAddress(assignedWhipServer);
+
       const shortLink = await storage.createShortLink({
         id: shortCode,
         streamName,
         returnFeed,
         chatEnabled: chatEnabled ?? false,
+        assignedServer: assignedServerAddr,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
       }, userId);
 
@@ -758,10 +771,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
       }
 
-      // Redirect to session page with original parameters including session token
       const chatParam = shortLink.chatEnabled ? '&chat=true' : '';
       const tokenParam = originalLink.sessionToken ? `&token=${originalLink.sessionToken}` : '';
-      const redirectUrl = `/session?stream=${encodeURIComponent(shortLink.streamName)}&return=${encodeURIComponent(shortLink.returnFeed)}${chatParam}${tokenParam}`;
+      const serverParam = (shortLink.assignedServer || originalLink.assignedServer) ? `&server=${encodeURIComponent(shortLink.assignedServer || originalLink.assignedServer || '')}` : '';
+      const redirectUrl = `/session?stream=${encodeURIComponent(shortLink.streamName)}&return=${encodeURIComponent(shortLink.returnFeed)}${chatParam}${tokenParam}${serverParam}`;
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Failed to resolve short link:', error);
@@ -1218,11 +1231,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         studio: config.studio,
         api: config.api,
         
-        // Helper URLs for frontend
         whipBaseUrl: `${config.whip.useHttps ? 'https' : 'http'}://${config.whip.host}:${config.whip.port}/rtc/v1/whip/`,
         whepBaseUrl: `${config.whep.useHttps ? 'https' : 'http'}://${config.whep.host}:${config.whep.port}/rtc/v1/whep/`,
         studioWhepBaseUrl: `${config.studio.useHttps ? 'https' : 'http'}://${config.studio.host}:${config.studio.port}/rtc/v1/whep/`,
-        apiBaseUrl: `${config.api.useHttps ? 'https' : 'http'}://${config.api.host}:${config.api.port}/api/v1/`
+        apiBaseUrl: `${config.api.useHttps ? 'https' : 'http'}://${config.api.host}:${config.api.port}/api/v1/`,
+        
+        whipServers: getWhipServerList().map(s => ({
+          host: s.host,
+          port: s.port,
+          useHttps: s.useHttps,
+          address: formatServerAddress(s),
+        })),
       });
     } catch (error) {
       console.error('Error getting SRS config:', error);

@@ -64,7 +64,22 @@ export function buildStudioWhepUrl(app: string, stream: string): Promise<string>
   );
 }
 
-// Clear cache when needed (e.g., when server config changes)
+export async function buildWhipUrlForServer(serverAddress: string, app: string, stream: string): Promise<string> {
+  const config = await getSRSConfig();
+  const [host, portStr] = serverAddress.split(':');
+  const port = portStr || config.whipPort;
+  const protocol = config.useHttps ? 'https' : 'http';
+  return `${protocol}://${host}:${port}/rtc/v1/whip/?app=${app}&stream=${stream}`;
+}
+
+export async function buildWhepUrlForServer(serverAddress: string, app: string, stream: string): Promise<string> {
+  const config = await getSRSConfig();
+  const [host, portStr] = serverAddress.split(':');
+  const port = portStr || config.whipPort;
+  const protocol = config.useHttps ? 'https' : 'http';
+  return `${protocol}://${host}:${port}/rtc/v1/whep/?app=${app}&stream=${stream}`;
+}
+
 export function clearSRSConfigCache(): void {
   cachedConfig = null;
 }

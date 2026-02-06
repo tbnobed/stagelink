@@ -36,7 +36,8 @@ export const generatedLinks = pgTable("generated_links", {
   returnFeed: text("return_feed").notNull(),
   chatEnabled: boolean("chat_enabled").notNull().default(false),
   url: text("url").notNull(),
-  sessionToken: text("session_token").unique(), // One-time use token
+  sessionToken: text("session_token").unique(),
+  assignedServer: text("assigned_server"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),
@@ -51,11 +52,12 @@ export type GeneratedLink = typeof generatedLinks.$inferSelect;
 
 // Short links table for URL shortening
 export const shortLinks = pgTable("short_links", {
-  id: text("id").primaryKey(), // Short code like "a1b2c3"
+  id: text("id").primaryKey(),
   streamName: text("stream_name").notNull(),
   returnFeed: text("return_feed").notNull(),
   chatEnabled: boolean("chat_enabled").notNull().default(false),
-  sessionToken: text("session_token").unique(), // One-time use token
+  sessionToken: text("session_token").unique(),
+  assignedServer: text("assigned_server"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),

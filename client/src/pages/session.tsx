@@ -47,12 +47,15 @@ export default function Session() {
       const stream = urlParams.get('stream');
       const returnStream = urlParams.get('return');
       const chatEnabledParam = urlParams.get('chat') === 'true';
+      const assignedServer = urlParams.get('server');
 
-      // Store stream name and chat enabled state
       setStreamName(stream);
       setChatEnabled(chatEnabledParam);
       console.log('Stream name from URL:', stream);
       console.log('Chat enabled from URL:', chatEnabledParam);
+      if (assignedServer) {
+        console.log('Assigned WHIP server from URL:', assignedServer);
+      }
       
       // Show chat by default if enabled
       if (chatEnabledParam) {
@@ -118,11 +121,11 @@ export default function Session() {
         setShowChat(true);
       }
 
-      // Initialize streaming
       initializeStreaming({
         stream: stream || 'obed2',
         returnStream: returnStream || stream || 'obed2',
-        app: 'live'
+        app: 'live',
+        ...(assignedServer ? { assignedServer } : {}),
       });
 
       // Don't auto-start return feed, let user start it manually
