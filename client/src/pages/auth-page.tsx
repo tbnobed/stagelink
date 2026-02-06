@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 
 import stagelinq_logo from "@assets/stagelinq_logo.png";
 
+import stagelinq_logo_touch_1755791562868 from "@assets/stagelinq_logo_touch_1755791562868.png";
+
 export default function AuthPage() {
   const { user, isLoading, loginMutation } = useAuth();
   const { isMobile } = useMobile();
@@ -302,7 +304,6 @@ export default function AuthPage() {
 
         {passwordResetModal}
       </div>
-
       <div className="flex-1 relative overflow-hidden flex items-center justify-center" style={{ background: 'linear-gradient(135deg, hsl(0,0%,8%) 0%, hsl(159,30%,8%) 50%, hsl(0,0%,5%) 100%)' }}>
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
         <div className="relative text-center px-12">
@@ -310,7 +311,7 @@ export default function AuthPage() {
             <div className="relative">
               <div className="absolute -inset-6 bg-[hsl(159,100%,41%)]/10 rounded-full blur-2xl" />
               <img
-                src={stagelinq_logo}
+                src={stagelinq_logo_touch_1755791562868}
                 alt="StageLinq Logo"
                 className="relative h-28 w-auto object-contain"
                 data-testid="stagelinq-logo"
