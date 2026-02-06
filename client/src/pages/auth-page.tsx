@@ -393,10 +393,6 @@ export default function AuthPage() {
           <h1 className="text-3xl font-bold text-primary mb-4">
             Virtual Audience Platform
           </h1>
-          <p className="text-muted-foreground mb-6">
-            Professional live streaming solution with real-time video publishing, 
-            audience interaction, and comprehensive stream management capabilities.
-          </p>
           <div className="space-y-3 text-sm text-muted-foreground">
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-primary rounded-full"></div>
