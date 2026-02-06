@@ -212,15 +212,6 @@ export default function PrivacyPolicy() {
               production team managing your streaming session.
             </p>
           </section>
-
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6 mt-8">
-            <p className="text-white/50 text-sm">
-              This Privacy Policy is provided for informational purposes and is designed to comply with 
-              applicable US federal and state privacy laws. It does not constitute legal advice. Platform 
-              operators should consult with legal counsel to ensure full compliance with all applicable 
-              laws and regulations for their specific use case.
-            </p>
-          </div>
         </div>
       </div>
     </div>
