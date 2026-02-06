@@ -43,7 +43,7 @@ Preferred communication style: Simple, everyday language.
 - **External SDK**: SRS (Simple Realtime Server) SDK integration
 - **Video Processing**: Real-time codec information and session statistics
 - **Media Constraints**: 1280x720 resolution at 30fps with audio
-- **SRS Server Configuration**: Supports separate WHIP and WHEP server addresses via environment variables (SRS_WHIP_HOST/PORT, SRS_WHEP_HOST/PORT, SRS_API_HOST/PORT) with individual HTTPS settings. Maintains backward compatibility with legacy SRS_HOST configuration. Dynamic `/api/srs/config` endpoint provides all configurations to frontend.
+- **SRS Server Configuration**: Supports separate WHIP, WHEP, and Studio server addresses via environment variables (SRS_WHIP_HOST/PORT, SRS_WHEP_HOST/PORT, SRS_STUDIO_HOST/PORT, SRS_API_HOST/PORT) with individual HTTPS settings. Studio server is dedicated to return feed playback for load balancing; falls back to WHEP settings if not configured. Maintains backward compatibility with legacy SRS_HOST configuration. Dynamic `/api/srs/config` endpoint provides all configurations to frontend.
 - **Reconnection Handling**: Robust video stream reconnection after chat-to-preview transitions using a React state-based restart system.
 
 ## Application Structure

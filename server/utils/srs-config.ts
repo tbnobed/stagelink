@@ -1,3 +1,14 @@
+interface SRSServerEndpoint {
+  host: string;
+  port: number;
+  useHttps: boolean;
+  api: {
+    host: string;
+    port: number;
+    useHttps: boolean;
+  };
+}
+
 export interface SRSServerConfig {
   // Legacy properties for backward compatibility
   host: string;
@@ -5,27 +16,9 @@ export interface SRSServerConfig {
   apiPort: number;
   useHttps: boolean;
   
-  // New separate server configurations
-  whip: {
-    host: string;
-    port: number;
-    useHttps: boolean;
-    api: {
-      host: string;
-      port: number;
-      useHttps: boolean;
-    };
-  };
-  whep: {
-    host: string;
-    port: number;
-    useHttps: boolean;
-    api: {
-      host: string;
-      port: number;
-      useHttps: boolean;
-    };
-  };
+  whip: SRSServerEndpoint;
+  whep: SRSServerEndpoint;
+  studio: SRSServerEndpoint;
   api: {
     host: string;
     port: number;
@@ -68,6 +61,18 @@ export function getSRSConfig(): SRSServerConfig {
         useHttps: process.env.SRS_WHEP_API_USE_HTTPS === 'true' || false,
       }
     },
+    studio: {
+      host: process.env.SRS_STUDIO_HOST || process.env.SRS_WHEP_HOST || 'cdn2.obedtv.live',
+      port: parseInt(process.env.SRS_STUDIO_PORT || process.env.SRS_WHEP_PORT || '1990'),
+      useHttps: process.env.SRS_STUDIO_USE_HTTPS !== undefined
+        ? process.env.SRS_STUDIO_USE_HTTPS === 'true'
+        : (process.env.SRS_WHEP_USE_HTTPS === 'true' || process.env.SRS_WHEP_USE_HTTPS === undefined),
+      api: {
+        host: process.env.SRS_STUDIO_HOST || process.env.SRS_WHEP_HOST || 'cdn2.obedtv.live',
+        port: parseInt(process.env.SRS_STUDIO_API_PORT || process.env.SRS_WHEP_API_PORT || '1985'),
+        useHttps: process.env.SRS_STUDIO_API_USE_HTTPS === 'true' || false,
+      }
+    },
     api: {
       host: process.env.SRS_API_HOST || 'cdn2.obedtv.live',
       port: parseInt(process.env.SRS_API_PORT || '1985'),
@@ -92,4 +97,10 @@ export function getSRSWhepUrl(app: string, stream: string): string {
   const config = getSRSConfig();
   const protocol = config.whep.useHttps ? 'https' : 'http';
   return `${protocol}://${config.whep.host}:${config.whep.port}/rtc/v1/whep/?app=${app}&stream=${stream}`;
+}
+
+export function getSRSStudioWhepUrl(app: string, stream: string): string {
+  const config = getSRSConfig();
+  const protocol = config.studio.useHttps ? 'https' : 'http';
+  return `${protocol}://${config.studio.host}:${config.studio.port}/rtc/v1/whep/?app=${app}&stream=${stream}`;
 }

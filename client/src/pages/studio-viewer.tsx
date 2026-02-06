@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { startPlayback, initializeStreaming } from "@/lib/streaming";
+import { initializeStreaming } from "@/lib/streaming";
+import { buildStudioWhepUrl } from "@/lib/srs-config";
 import { GuestChat } from "@/components/guest-chat";
 
 // Global variables for SRS SDK
@@ -151,8 +152,50 @@ export default function StudioViewer() {
         playerRef.current = null;
       }
       
-      // Use the improved startPlayback function with retry logic
-      await startPlayback(videoRef.current, returnFeed);
+      const studioUrl = await buildStudioWhepUrl('live', returnFeed);
+      const maxRetries = 5;
+      const retryDelay = 2000;
+      let lastError: any = null;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          if (playerRef.current) {
+            playerRef.current.close();
+            playerRef.current = null;
+          }
+
+          console.log(`Studio WHEP: Connecting to ${returnFeed} at ${studioUrl} (attempt ${attempt + 1}/${maxRetries + 1})`);
+
+          const player = new window.SrsRtcWhipWhepAsync();
+          playerRef.current = player;
+
+          await player.play(studioUrl);
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = player.stream;
+            try {
+              await videoRef.current.play();
+            } catch (playErr) {
+              videoRef.current.muted = true;
+              await videoRef.current.play().catch(() => {});
+            }
+          }
+
+          console.log(`Studio WHEP: Connected to ${returnFeed}`);
+          lastError = null;
+          break;
+        } catch (err) {
+          lastError = err;
+          console.error(`Studio WHEP attempt ${attempt + 1} failed:`, err);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+          }
+        }
+      }
+
+      if (lastError) {
+        throw lastError;
+      }
       
       toast({
         title: "Success",

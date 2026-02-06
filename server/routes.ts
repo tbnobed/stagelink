@@ -1215,11 +1215,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // New separate server configurations
         whip: config.whip,
         whep: config.whep,
+        studio: config.studio,
         api: config.api,
         
         // Helper URLs for frontend
         whipBaseUrl: `${config.whip.useHttps ? 'https' : 'http'}://${config.whip.host}:${config.whip.port}/rtc/v1/whip/`,
         whepBaseUrl: `${config.whep.useHttps ? 'https' : 'http'}://${config.whep.host}:${config.whep.port}/rtc/v1/whep/`,
+        studioWhepBaseUrl: `${config.studio.useHttps ? 'https' : 'http'}://${config.studio.host}:${config.studio.port}/rtc/v1/whep/`,
         apiBaseUrl: `${config.api.useHttps ? 'https' : 'http'}://${config.api.host}:${config.api.port}/api/v1/`
       });
     } catch (error) {

@@ -5,6 +5,7 @@ interface SRSServerConfig {
   useHttps: boolean;
   whipBaseUrl: string;
   whepBaseUrl: string;
+  studioWhepBaseUrl: string;
 }
 
 let cachedConfig: SRSServerConfig | null = null;
@@ -20,7 +21,11 @@ export async function getSRSConfig(): Promise<SRSServerConfig> {
       throw new Error(`Failed to fetch SRS config: ${response.status}`);
     }
     
-    cachedConfig = await response.json();
+    const data = await response.json();
+    if (!data.studioWhepBaseUrl) {
+      data.studioWhepBaseUrl = data.whepBaseUrl;
+    }
+    cachedConfig = data;
     return cachedConfig!;
   } catch (error) {
     console.warn('Failed to fetch SRS config, using defaults:', error);
@@ -32,7 +37,8 @@ export async function getSRSConfig(): Promise<SRSServerConfig> {
       apiPort: 1985,
       useHttps: true,
       whipBaseUrl: 'https://cdn2.obedtv.live:1990/rtc/v1/whip/',
-      whepBaseUrl: 'https://cdn2.obedtv.live:1990/rtc/v1/whep/'
+      whepBaseUrl: 'https://cdn2.obedtv.live:1990/rtc/v1/whep/',
+      studioWhepBaseUrl: 'https://cdn2.obedtv.live:1990/rtc/v1/whep/'
     };
     
     cachedConfig = fallbackConfig;
@@ -49,6 +55,12 @@ export function buildWhipUrl(app: string, stream: string): Promise<string> {
 export function buildWhepUrl(app: string, stream: string): Promise<string> {
   return getSRSConfig().then(config => 
     `${config.whepBaseUrl}?app=${app}&stream=${stream}`
+  );
+}
+
+export function buildStudioWhepUrl(app: string, stream: string): Promise<string> {
+  return getSRSConfig().then(config => 
+    `${config.studioWhepBaseUrl}?app=${app}&stream=${stream}`
   );
 }
 
