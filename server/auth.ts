@@ -58,13 +58,15 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     store: new PostgresSessionStore({ 
       pool: pool as any, 
-      createTableIfMissing: false 
+      createTableIfMissing: true,
+      // Increase session persistence for development
+      ttl: 1000 * 60 * 60 * 24 // 24 hours
     }),
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // Auto-detect HTTPS in production
+      secure: false, // Always false in development to ensure cookies work
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24, // 24 hours
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Strict in production
+      sameSite: 'lax', // Always lax in development for better compatibility
     },
   };
 
@@ -153,7 +155,18 @@ export function setupAuth(app: Express) {
 
   // Get current user
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.isAuthenticated()) {
+      // Add debugging info to understand why authentication is failing
+      console.log('Authentication failed for /api/user:', {
+        isAuthenticated: req.isAuthenticated(),
+        hasSession: !!req.session,
+        sessionID: req.sessionID,
+        hasUser: !!req.user,
+        cookies: req.headers.cookie ? 'present' : 'missing',
+        userAgent: req.headers['user-agent']
+      });
+      return res.status(401).json({ error: "Unauthorized" });
+    }
     const user = req.user!;
     res.json({ 
       id: user.id, 

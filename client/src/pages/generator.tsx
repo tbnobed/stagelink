@@ -419,7 +419,14 @@ export default function Generator() {
                     <SelectItem value="Socal4">Socal 4</SelectItem>
                     <SelectItem value="Socal5">Socal 5</SelectItem>
                     <SelectItem value="Socal6">Socal 6</SelectItem>
-
+                    <SelectItem value="livestream">Plex 1</SelectItem>
+                    <SelectItem value="livestream2">Plex 2</SelectItem>
+                    <SelectItem value="livestream3">Plex 3</SelectItem>
+                    <SelectItem value="livestream4">Plex 4</SelectItem>
+                    <SelectItem value="livestream5">Plex 5</SelectItem>
+                    <SelectItem value="livestream6">Plex 6</SelectItem>
+                    <SelectItem value="livestream7">Plex 7</SelectItem>
+                    <SelectItem value="livestream8">Plex 8</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

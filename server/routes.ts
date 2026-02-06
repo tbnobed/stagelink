@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireAdmin, requireAdminOrEngineer } from "./auth";
 import { ChatWebSocketServer } from "./chat-websocket";
-import { insertUserSchema, insertShortLinkSchema } from "@shared/schema";
+import { insertUserSchema, insertShortLinkSchema, insertRoomSchema, insertRoomParticipantSchema, insertRoomStreamAssignmentSchema } from "@shared/schema";
 import { generateUniqueShortCode } from "./utils/shortCode";
 import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl } from "./utils/srs-config";
 import { sendStreamingInvite, sendViewerInvite } from "./email-service";
@@ -325,8 +325,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Fetching all links...');
       const links = await storage.getAllLinks();
       
-      // For each link, try to find corresponding short link
-      const linksWithShortLinks = await Promise.all(
+      // For each link, try to find corresponding short link and room assignments
+      const linksWithEnrichments = await Promise.all(
         links.map(async (link) => {
           // Find short link with matching parameters
           const shortLink = await storage.getShortLinkByParams(
@@ -335,16 +335,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             link.chatEnabled
           );
           
+          // Find room assignments for this stream
+          const roomAssignments = await storage.getRoomAssignmentsByStreamName(link.streamName);
+          
           return {
             ...link,
             shortLink: shortLink ? `/s/${shortLink.id}` : null,
             shortCode: shortLink?.id || null,
+            roomAssignments: roomAssignments || [],
           };
         })
       );
       
       console.log('Links fetched successfully:', links.length, 'links');
-      res.json(linksWithShortLinks);
+      res.json(linksWithEnrichments);
     } catch (error) {
       console.error('Failed to fetch links:', error);
       res.status(500).json({ error: 'Failed to fetch links' });
@@ -1256,6 +1260,348 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Failed to fetch SRS server statistics',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // Room management routes
+  app.get('/api/rooms', requireAuth, async (req, res) => {
+    try {
+      const rooms = await storage.getAllRooms();
+      res.json(rooms);
+    } catch (error) {
+      console.error('Failed to fetch rooms:', error);
+      res.status(500).json({ error: 'Failed to fetch rooms' });
+    }
+  });
+
+  app.get('/api/rooms/:id', requireAuth, async (req, res) => {
+    try {
+      const room = await storage.getRoom(req.params.id);
+      if (!room) {
+        return res.status(404).json({ error: 'Room not found' });
+      }
+      res.json(room);
+    } catch (error) {
+      console.error('Failed to fetch room:', error);
+      res.status(500).json({ error: 'Failed to fetch room' });
+    }
+  });
+
+  app.post('/api/rooms', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const roomData = insertRoomSchema.parse(req.body);
+      const user = req.user as any;
+      
+      const room = await storage.createRoom(roomData, user.id);
+      res.status(201).json(room);
+    } catch (error) {
+      console.error('Failed to create room:', error);
+      res.status(500).json({ error: 'Failed to create room' });
+    }
+  });
+
+  app.put('/api/rooms/:id', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const roomData = insertRoomSchema.partial().parse(req.body);
+      const room = await storage.updateRoom(req.params.id, roomData);
+      
+      if (!room) {
+        return res.status(404).json({ error: 'Room not found' });
+      }
+      
+      res.json(room);
+    } catch (error) {
+      console.error('Failed to update room:', error);
+      res.status(500).json({ error: 'Failed to update room' });
+    }
+  });
+
+  app.delete('/api/rooms/:id', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const success = await storage.deleteRoom(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Room not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete room:', error);
+      res.status(500).json({ error: 'Failed to delete room' });
+    }
+  });
+
+  // Room participants routes
+  app.get('/api/rooms/:id/participants', requireAuth, async (req, res) => {
+    try {
+      const participants = await storage.getRoomParticipants(req.params.id);
+      res.json(participants);
+    } catch (error) {
+      console.error('Failed to fetch room participants:', error);
+      res.status(500).json({ error: 'Failed to fetch room participants' });
+    }
+  });
+
+  app.post('/api/rooms/:id/participants', requireAuth, async (req, res) => {
+    try {
+      const participantData = insertRoomParticipantSchema.parse({
+        ...req.body,
+        roomId: req.params.id,
+      });
+      
+      const participant = await storage.addRoomParticipant(participantData);
+      res.status(201).json(participant);
+    } catch (error) {
+      console.error('Failed to add room participant:', error);
+      res.status(500).json({ error: 'Failed to add room participant' });
+    }
+  });
+
+  app.delete('/api/rooms/:id/participants/:userId', requireAuth, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      await storage.removeRoomParticipant(req.params.id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to remove room participant:', error);
+      res.status(500).json({ error: 'Failed to remove room participant' });
+    }
+  });
+
+  // Remove guest participant by name
+  app.delete('/api/rooms/:id/participants/guest/:guestName', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const { id: roomId, guestName } = req.params;
+      console.log(`Attempting to remove guest "${guestName}" from room "${roomId}"`);
+      
+      // Remove guest from room participants
+      await storage.removeRoomParticipantByName(roomId, guestName);
+      console.log(`Removed guest "${guestName}" from participants table`);
+      
+      // Also remove any stream assignments for this guest
+      const assignments = await storage.getRoomStreamAssignments(roomId);
+      const guestAssignments = assignments.filter(a => a.assignedGuestName === guestName);
+      console.log(`Found ${guestAssignments.length} assignments for guest "${guestName}"`);
+      
+      for (const assignment of guestAssignments) {
+        console.log(`Deleting assignment ${assignment.id} for stream "${assignment.streamName}"`);
+        // Delete the entire assignment instead of just nullifying the guest name
+        await storage.deleteRoomStreamAssignment(assignment.id);
+      }
+
+      console.log(`Successfully removed guest "${guestName}" and ${guestAssignments.length} assignments`);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to remove guest participant:', error);
+      res.status(500).json({ error: 'Failed to remove guest participant' });
+    }
+  });
+
+  // Room stream assignments routes
+  app.get('/api/rooms/:id/streams', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const assignments = await storage.getRoomStreamAssignments(req.params.id);
+      res.json(assignments);
+    } catch (error) {
+      console.error('Failed to fetch room stream assignments:', error);
+      res.status(500).json({ error: 'Failed to fetch room stream assignments' });
+    }
+  });
+
+  app.post('/api/rooms/:id/streams', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const assignmentData = insertRoomStreamAssignmentSchema.parse({
+        ...req.body,
+        roomId: req.params.id,
+      });
+      const user = req.user as any;
+      
+      const assignment = await storage.createRoomStreamAssignment(assignmentData, user.id);
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error('Failed to create room stream assignment:', error);
+      res.status(500).json({ error: 'Failed to create room stream assignment' });
+    }
+  });
+
+  app.put('/api/rooms/:id/streams/:assignmentId', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const assignmentId = parseInt(req.params.assignmentId);
+      const assignmentData = insertRoomStreamAssignmentSchema.partial().parse(req.body);
+      
+      const assignment = await storage.updateRoomStreamAssignment(assignmentId, assignmentData);
+      if (!assignment) {
+        return res.status(404).json({ error: 'Stream assignment not found' });
+      }
+      
+      res.json(assignment);
+    } catch (error) {
+      console.error('Failed to update room stream assignment:', error);
+      res.status(500).json({ error: 'Failed to update room stream assignment' });
+    }
+  });
+
+  app.delete('/api/rooms/:id/streams/:assignmentId', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const assignmentId = parseInt(req.params.assignmentId);
+      const success = await storage.deleteRoomStreamAssignment(assignmentId);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Stream assignment not found' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete room stream assignment:', error);
+      res.status(500).json({ error: 'Failed to delete room stream assignment' });
+    }
+  });
+
+  // Quick assign route for convenience
+  app.post('/api/rooms/:id/assign', requireAuth, async (req, res) => {
+    try {
+      const assignmentData = insertRoomStreamAssignmentSchema.parse({
+        roomId: req.params.id,
+        streamName: req.body.streamName,
+        assignedGuestName: req.body.assignedGuestName,
+        position: req.body.position || 0,
+      });
+      
+      // If assigning a stream, first remove it from any other room assignments
+      if (assignmentData.streamName) {
+        const allRooms = await storage.getAllRooms();
+        
+        for (const room of allRooms) {
+          if (room.id !== assignmentData.roomId) {
+            const roomAssignments = await storage.getRoomStreamAssignments(room.id);
+            const streamAssignments = roomAssignments.filter(assignment => 
+              assignment.streamName === assignmentData.streamName
+            );
+            
+            // Remove the entire assignment if it's the same stream
+            for (const assignment of streamAssignments) {
+              await storage.deleteRoomStreamAssignment(assignment.id);
+            }
+            
+            // Also remove the guest from room participants in other rooms
+            if (streamAssignments.length > 0 && assignmentData.assignedGuestName) {
+              await storage.removeRoomParticipantByName(room.id, assignmentData.assignedGuestName);
+            }
+          }
+        }
+      }
+      
+      const user = req.user as any;
+      const assignment = await storage.createRoomStreamAssignment(assignmentData, user.id);
+      
+      res.status(201).json(assignment);
+    } catch (error) {
+      console.error('Failed to assign stream to room:', error);
+      res.status(500).json({ error: 'Failed to assign stream to room' });
+    }
+  });
+
+  // Clean up duplicate stream assignments (temporary endpoint to fix existing issues)
+  app.post('/api/rooms/cleanup-assignments', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const allRooms = await storage.getAllRooms();
+      const streamAssignmentCounts = new Map<string, Array<{roomId: string, assignmentId: number}>>();
+      
+      // Collect all stream assignments
+      for (const room of allRooms) {
+        const assignments = await storage.getRoomStreamAssignments(room.id);
+        for (const assignment of assignments) {
+          if (!streamAssignmentCounts.has(assignment.streamName)) {
+            streamAssignmentCounts.set(assignment.streamName, []);
+          }
+          streamAssignmentCounts.get(assignment.streamName)!.push({
+            roomId: room.id,
+            assignmentId: assignment.id
+          });
+        }
+      }
+      
+      let cleanedCount = 0;
+      
+      // For each stream that appears in multiple rooms, keep only the most recent assignment
+      for (const [streamName, assignments] of Array.from(streamAssignmentCounts.entries())) {
+        if (assignments.length > 1) {
+          // Sort by assignment ID (newer assignments have higher IDs) and keep the last one
+          assignments.sort((a: any, b: any) => a.assignmentId - b.assignmentId);
+          const toKeep = assignments.pop()!; // Keep the most recent
+          
+          // Delete the older duplicates
+          for (const assignmentToDelete of assignments) {
+            await storage.deleteRoomStreamAssignment(assignmentToDelete.assignmentId);
+            cleanedCount++;
+          }
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        cleanedAssignments: cleanedCount,
+        message: `Cleaned up ${cleanedCount} duplicate stream assignments`
+      });
+    } catch (error) {
+      console.error('Failed to cleanup assignments:', error);
+      res.status(500).json({ error: 'Failed to cleanup assignments' });
+    }
+  });
+
+  // Public room view for sharing (no auth required)
+  app.get('/api/rooms/:id/public', async (req, res) => {
+    try {
+      const room = await storage.getRoom(req.params.id);
+      if (!room || !room.isActive) {
+        return res.status(404).json({ error: 'Room not found or inactive' });
+      }
+
+      const participants = await storage.getRoomParticipants(req.params.id);
+      const assignments = await storage.getRoomStreamAssignments(req.params.id);
+
+      res.json({
+        room,
+        participants,
+        assignments,
+        whepUrls: assignments.map(assignment => ({
+          streamName: assignment.streamName,
+          url: getSRSWhepUrl('live', assignment.streamName),
+          position: assignment.position,
+          assignedUser: assignment.assignedUserId,
+          assignedGuest: assignment.assignedGuestName,
+        })),
+      });
+    } catch (error) {
+      console.error('Failed to get public room:', error);
+      res.status(500).json({ error: 'Failed to get room data' });
+    }
+  });
+
+  // Room access route for joining rooms
+  app.get('/api/rooms/:id/join', requireAuth, async (req, res) => {
+    try {
+      const room = await storage.getRoom(req.params.id);
+      if (!room || !room.isActive) {
+        return res.status(404).json({ error: 'Room not found or inactive' });
+      }
+
+      const participants = await storage.getRoomParticipants(req.params.id);
+      const assignments = await storage.getRoomStreamAssignments(req.params.id);
+
+      res.json({
+        room,
+        participants,
+        assignments,
+        whepUrls: assignments.map(assignment => ({
+          streamName: assignment.streamName,
+          url: getSRSWhepUrl('live', assignment.streamName),
+          position: assignment.position,
+          assignedUser: assignment.assignedUserId,
+          assignedGuest: assignment.assignedGuestName,
+        })),
+      });
+    } catch (error) {
+      console.error('Failed to join room:', error);
+      res.status(500).json({ error: 'Failed to join room' });
     }
   });
 

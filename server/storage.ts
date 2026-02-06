@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
@@ -70,6 +70,28 @@ export interface IStorage {
   updateParticipantStatusByUsername(sessionId: string, username: string, isOnline: boolean): Promise<void>;
   removeParticipant(sessionId: string, userId: number): Promise<void>;
   removeParticipantByUsername(sessionId: string, username: string): Promise<void>;
+  
+  // Room System
+  getAllRooms(): Promise<Room[]>;
+  getRoom(id: string): Promise<Room | undefined>;
+  createRoom(room: InsertRoom, userId?: number): Promise<Room>;
+  updateRoom(id: string, updates: Partial<InsertRoom>): Promise<Room | undefined>;
+  deleteRoom(id: string): Promise<boolean>;
+  
+  // Room Participants
+  getRoomParticipants(roomId: string): Promise<RoomParticipant[]>;
+  addRoomParticipant(participant: InsertRoomParticipant): Promise<RoomParticipant>;
+  updateRoomParticipantStreaming(roomId: string, userId: number, isStreaming: boolean): Promise<void>;
+  updateRoomParticipantStreamingByName(roomId: string, guestName: string, isStreaming: boolean): Promise<void>;
+  removeRoomParticipant(roomId: string, userId: number): Promise<void>;
+  removeRoomParticipantByName(roomId: string, guestName: string): Promise<void>;
+  
+  // Room Stream Assignments
+  getRoomStreamAssignments(roomId: string): Promise<RoomStreamAssignment[]>;
+  createRoomStreamAssignment(assignment: InsertRoomStreamAssignment, userId?: number): Promise<RoomStreamAssignment>;
+  updateRoomStreamAssignment(id: number, updates: Partial<InsertRoomStreamAssignment>): Promise<RoomStreamAssignment | undefined>;
+  deleteRoomStreamAssignment(id: number): Promise<boolean>;
+  getStreamAssignmentByName(roomId: string, streamName: string): Promise<RoomStreamAssignment | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -1361,6 +1383,194 @@ export class DatabaseStorage implements IStorage {
         }
       }
     }
+  }
+
+  // Room System Methods
+  async getAllRooms(): Promise<Room[]> {
+    return await db.select().from(rooms).orderBy(desc(rooms.createdAt));
+  }
+
+  async getRoom(id: string): Promise<Room | undefined> {
+    const [room] = await db.select().from(rooms).where(eq(rooms.id, id));
+    return room || undefined;
+  }
+
+  async createRoom(insertRoom: InsertRoom, userId?: number): Promise<Room> {
+    const [room] = await db
+      .insert(rooms)
+      .values({
+        ...insertRoom,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: userId || null,
+      })
+      .returning();
+    return room;
+  }
+
+  async updateRoom(id: string, updates: Partial<InsertRoom>): Promise<Room | undefined> {
+    const [room] = await db
+      .update(rooms)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(rooms.id, id))
+      .returning();
+    return room || undefined;
+  }
+
+  async deleteRoom(id: string): Promise<boolean> {
+    // Delete room participants first (cascade delete handled by FK constraint)
+    await db.delete(roomParticipants).where(eq(roomParticipants.roomId, id));
+    
+    // Delete room stream assignments
+    await db.delete(roomStreamAssignments).where(eq(roomStreamAssignments.roomId, id));
+    
+    // Delete the room
+    const result = await db.delete(rooms).where(eq(rooms.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Room Participant Methods
+  async getRoomParticipants(roomId: string): Promise<RoomParticipant[]> {
+    return await db
+      .select()
+      .from(roomParticipants)
+      .where(eq(roomParticipants.roomId, roomId))
+      .orderBy(roomParticipants.joinedAt);
+  }
+
+  async addRoomParticipant(participant: InsertRoomParticipant): Promise<RoomParticipant> {
+    const [newParticipant] = await db
+      .insert(roomParticipants)
+      .values({
+        ...participant,
+        joinedAt: new Date(),
+        lastSeenAt: new Date(),
+      })
+      .returning();
+    return newParticipant;
+  }
+
+  async updateRoomParticipantStreaming(roomId: string, userId: number, isStreaming: boolean): Promise<void> {
+    await db
+      .update(roomParticipants)
+      .set({
+        isStreaming,
+        lastSeenAt: new Date(),
+      })
+      .where(
+        and(
+          eq(roomParticipants.roomId, roomId),
+          eq(roomParticipants.userId, userId)
+        )
+      );
+  }
+
+  async updateRoomParticipantStreamingByName(roomId: string, guestName: string, isStreaming: boolean): Promise<void> {
+    await db
+      .update(roomParticipants)
+      .set({
+        isStreaming,
+        lastSeenAt: new Date(),
+      })
+      .where(
+        and(
+          eq(roomParticipants.roomId, roomId),
+          eq(roomParticipants.guestName, guestName),
+          isNull(roomParticipants.userId) // Only update guest participants
+        )
+      );
+  }
+
+  async removeRoomParticipant(roomId: string, userId: number): Promise<void> {
+    await db
+      .delete(roomParticipants)
+      .where(
+        and(
+          eq(roomParticipants.roomId, roomId),
+          eq(roomParticipants.userId, userId)
+        )
+      );
+  }
+
+  async removeRoomParticipantByName(roomId: string, guestName: string): Promise<void> {
+    await db
+      .delete(roomParticipants)
+      .where(
+        and(
+          eq(roomParticipants.roomId, roomId),
+          eq(roomParticipants.guestName, guestName),
+          isNull(roomParticipants.userId) // Only remove guest participants
+        )
+      );
+  }
+
+  // Room Stream Assignment Methods
+  async getRoomStreamAssignments(roomId: string): Promise<RoomStreamAssignment[]> {
+    return await db
+      .select()
+      .from(roomStreamAssignments)
+      .where(eq(roomStreamAssignments.roomId, roomId))
+      .orderBy(roomStreamAssignments.position);
+  }
+
+  async createRoomStreamAssignment(assignment: InsertRoomStreamAssignment, userId?: number): Promise<RoomStreamAssignment> {
+    const [newAssignment] = await db
+      .insert(roomStreamAssignments)
+      .values({
+        ...assignment,
+        createdAt: new Date(),
+        createdBy: userId || null,
+      })
+      .returning();
+    return newAssignment;
+  }
+
+  async updateRoomStreamAssignment(id: number, updates: Partial<InsertRoomStreamAssignment>): Promise<RoomStreamAssignment | undefined> {
+    const [assignment] = await db
+      .update(roomStreamAssignments)
+      .set(updates)
+      .where(eq(roomStreamAssignments.id, id))
+      .returning();
+    return assignment || undefined;
+  }
+
+  async deleteRoomStreamAssignment(id: number): Promise<boolean> {
+    const result = await db.delete(roomStreamAssignments).where(eq(roomStreamAssignments.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getStreamAssignmentByName(roomId: string, streamName: string): Promise<RoomStreamAssignment | undefined> {
+    const [assignment] = await db
+      .select()
+      .from(roomStreamAssignments)
+      .where(
+        and(
+          eq(roomStreamAssignments.roomId, roomId),
+          eq(roomStreamAssignments.streamName, streamName)
+        )
+      );
+    return assignment || undefined;
+  }
+
+  async getRoomAssignmentsByStreamName(streamName: string): Promise<Array<RoomStreamAssignment & { roomName: string }>> {
+    return await db
+      .select({
+        id: roomStreamAssignments.id,
+        roomId: roomStreamAssignments.roomId,
+        streamName: roomStreamAssignments.streamName,
+        assignedUserId: roomStreamAssignments.assignedUserId,
+        assignedGuestName: roomStreamAssignments.assignedGuestName,
+        position: roomStreamAssignments.position,
+        createdAt: roomStreamAssignments.createdAt,
+        createdBy: roomStreamAssignments.createdBy,
+        roomName: rooms.name,
+      })
+      .from(roomStreamAssignments)
+      .leftJoin(rooms, eq(roomStreamAssignments.roomId, rooms.id))
+      .where(eq(roomStreamAssignments.streamName, streamName));
   }
 }
 

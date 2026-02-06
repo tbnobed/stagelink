@@ -386,31 +386,13 @@ export default function AuthPage() {
             <img 
               src={stagelinq_logo} 
               alt="StageLinq Logo" 
-              className="h-48 w-auto object-contain"
+              className="h-48 max-w-[280px] object-contain"
               data-testid="stagelinq-logo"
             />
           </div>
           <h1 className="text-3xl font-bold text-primary mb-4">
             Virtual Audience Platform
           </h1>
-          <p className="text-muted-foreground mb-6">
-            Professional live streaming solution with real-time video publishing, 
-            audience interaction, and comprehensive stream management capabilities.
-          </p>
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>WHIP/WHEP Protocol Support</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>Live Chat Integration</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>QR Code Link Generation</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

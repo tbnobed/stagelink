@@ -8,7 +8,7 @@ services:
     container_name: virtual-audience-app-v2-2-2
     restart: unless-stopped
     ports:
-      - "80:5000"
+      - "5000:5000"
     env_file:
       - .env
     environment:

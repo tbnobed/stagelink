@@ -1,0 +1,292 @@
+virtual-audience-app-v2-2-2  | Starting Virtual Audience Platform v2.2.2...
+virtual-audience-db-v2-2-2   | The files belonging to this database system will be owned by user "postgres".
+virtual-audience-db-v2-2-2   | This user must also own the server process.
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | The database cluster will be initialized with locale "en_US.utf8".
+virtual-audience-db-v2-2-2   | The default database encoding has accordingly been set to "UTF8".
+virtual-audience-db-v2-2-2   | The default text search configuration will be set to "english".
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | Data page checksums are disabled.
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+virtual-audience-db-v2-2-2   | creating subdirectories ... ok
+virtual-audience-db-v2-2-2   | selecting dynamic shared memory implementation ... posix
+virtual-audience-db-v2-2-2   | selecting default max_connections ... 100
+virtual-audience-db-v2-2-2   | selecting default shared_buffers ... 128MB
+virtual-audience-db-v2-2-2   | selecting default time zone ... UTC
+virtual-audience-db-v2-2-2   | creating configuration files ... ok
+virtual-audience-db-v2-2-2   | running bootstrap script ... ok
+virtual-audience-db-v2-2-2   | sh: locale: not found
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:35.100 UTC [36] WARNING:  no usable system locales were found
+virtual-audience-db-v2-2-2   | performing post-bootstrap initialization ... ok
+virtual-audience-db-v2-2-2   | initdb: warning: enabling "trust" authentication for local connections
+virtual-audience-db-v2-2-2   | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+virtual-audience-db-v2-2-2   | syncing data to disk ... ok
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | Success. You can now start the database server using:
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | waiting for server to start....2025-09-03 19:49:35.679 UTC [42] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:35.680 UTC [42] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:35.686 UTC [45] LOG:  database system was shut down at 2025-09-03 19:49:35 UTC
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:35.695 UTC [42] LOG:  database system is ready to accept connections
+virtual-audience-db-v2-2-2   |  done
+virtual-audience-db-v2-2-2   | server started
+virtual-audience-db-v2-2-2   | CREATE DATABASE
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/init.sql
+virtual-audience-db-v2-2-2   |  ?column? 
+virtual-audience-db-v2-2-2   | ----------
+virtual-audience-db-v2-2-2   | (0 rows)
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | You are now connected to database "virtual_audience" as user "postgres".
+virtual-audience-db-v2-2-2   | DROP SCHEMA
+virtual-audience-db-v2-2-2   | CREATE SCHEMA
+virtual-audience-db-v2-2-2   | GRANT
+virtual-audience-db-v2-2-2   | GRANT
+virtual-audience-db-v2-2-2   | GRANT
+virtual-audience-db-v2-2-2   | GRANT
+virtual-audience-db-v2-2-2   | ALTER DEFAULT PRIVILEGES
+virtual-audience-db-v2-2-2   | ALTER DEFAULT PRIVILEGES
+virtual-audience-db-v2-2-2   | DO
+virtual-audience-db-v2-2-2   | DO
+virtual-audience-db-v2-2-2   | CREATE TABLE
+virtual-audience-db-v2-2-2   | CREATE TABLE
+virtual-audience-db-v2-2-2   | CREATE TABLE
+virtual-audience-db-v2-2-2   | CREATE TABLE
+virtual-audience-db-v2-2-2   | CREATE TABLE
+virtual-audience-db-v2-2-2   | CREATE TABLE
+virtual-audience-db-v2-2-2   | CREATE TABLE
+virtual-audience-db-v2-2-2   | CREATE TABLE
+virtual-audience-db-v2-2-2   | CREATE TABLE
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | CREATE INDEX
+virtual-audience-db-v2-2-2   | INSERT 0 1
+virtual-audience-db-v2-2-2   | Virtual Audience Platform v2.0 database schema initialized successfully with session token support;
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:35.986 UTC [42] LOG:  received fast shutdown request
+virtual-audience-db-v2-2-2   | waiting for server to shut down....2025-09-03 19:49:35.987 UTC [42] LOG:  aborting any active transactions
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:35.993 UTC [42] LOG:  background worker "logical replication launcher" (PID 48) exited with exit code 1
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:35.993 UTC [43] LOG:  shutting down
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:35.995 UTC [43] LOG:  checkpoint starting: shutdown immediate
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:36.036 UTC [43] LOG:  checkpoint complete: wrote 957 buffers (5.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.023 s, sync=0.016 s, total=0.043 s; sync files=363, longest=0.001 s, average=0.001 s; distance=4505 kB, estimate=4505 kB
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:36.046 UTC [42] LOG:  database system is shut down
+virtual-audience-db-v2-2-2   |  done
+virtual-audience-db-v2-2-2   | server stopped
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | PostgreSQL init process complete; ready for start up.
+virtual-audience-db-v2-2-2   | 
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:36.119 UTC [1] LOG:  starting PostgreSQL 15.14 on x86_64-pc-linux-musl, compiled by gcc (Alpine 14.2.0) 14.2.0, 64-bit
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:36.119 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:36.119 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:36.121 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:36.125 UTC [61] LOG:  database system was shut down at 2025-09-03 19:49:36 UTC
+virtual-audience-db-v2-2-2   | 2025-09-03 19:49:36.134 UTC [1] LOG:  database system is ready to accept connections
+virtual-audience-app-v2-2-2  | DO
+virtual-audience-app-v2-2-2  | DO
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | NOTICE:  relation "session" already exists, skipping
+virtual-audience-app-v2-2-2  | NOTICE:  relation "users" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | NOTICE:  relation "generated_links" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | NOTICE:  relation "viewer_links" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | NOTICE:  relation "short_links" already exists, skipping
+virtual-audience-app-v2-2-2  | NOTICE:  relation "short_viewer_links" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | NOTICE:  relation "session_tokens" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | NOTICE:  relation "chat_messages" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | CREATE TABLE
+virtual-audience-app-v2-2-2  | NOTICE:  relation "chat_participants" already exists, skipping
+virtual-audience-app-v2-2-2  | NOTICE:  relation "IDX_session_expire" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | NOTICE:  relation "session_tokens_link_id_idx" already exists, skipping
+virtual-audience-app-v2-2-2  | NOTICE:  relation "session_tokens_expires_at_idx" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | NOTICE:  relation "chat_messages_session_id_idx" already exists, skipping
+virtual-audience-app-v2-2-2  | NOTICE:  relation "chat_messages_created_at_idx" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | NOTICE:  relation "chat_participants_session_id_idx" already exists, skipping
+virtual-audience-app-v2-2-2  | CREATE INDEX
+virtual-audience-app-v2-2-2  | NOTICE:  relation "chat_participants_is_online_idx" already exists, skipping
+virtual-audience-app-v2-2-2  | INSERT 0 0
+virtual-audience-app-v2-2-2  | Virtual Audience Platform v2.2.2 database schema ready
+virtual-audience-app-v2-2-2  | User registration system enabled - email invitations with custom credentials
+virtual-audience-app-v2-2-2  | Password reset functionality enabled - secure token-based flow
+virtual-audience-app-v2-2-2  | SendGrid email integration active - professional email templates
+virtual-audience-app-v2-2-2  | Complete user deletion fix applied - handles ALL foreign key constraints
+virtual-audience-app-v2-2-2  | Guest user fixes applied - using null user_id for guests
+virtual-audience-app-v2-2-2  | Starting application server...
+virtual-audience-app-v2-2-2  | Using PostgreSQL driver for database connection
+virtual-audience-app-v2-2-2  | Chat WebSocket server initialized with keepalive
+virtual-audience-app-v2-2-2  | Chat WebSocket server initialized on /chat
+virtual-audience-app-v2-2-2  | Default admin user already exists
+virtual-audience-app-v2-2-2  | 7:49:55 PM [express] serving on port 5000
+virtual-audience-db-v2-2-2   | 2025-09-03 19:54:36.225 UTC [59] LOG:  checkpoint starting: time
+virtual-audience-db-v2-2-2   | 2025-09-03 19:54:49.185 UTC [59] LOG:  checkpoint complete: wrote 132 buffers (0.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=12.949 s, sync=0.008 s, total=12.961 s; sync files=69, longest=0.001 s, average=0.001 s; distance=640 kB, estimate=640 kB
+virtual-audience-app-v2-2-2  | Authentication failed for /api/user: {
+virtual-audience-app-v2-2-2  |   isAuthenticated: false,
+virtual-audience-app-v2-2-2  |   hasSession: true,
+virtual-audience-app-v2-2-2  |   sessionID: 'QKrgxwggEkpDA1tleH_L85U3QkYWFZTe',
+virtual-audience-app-v2-2-2  |   hasUser: false,
+virtual-audience-app-v2-2-2  |   cookies: 'missing',
+virtual-audience-app-v2-2-2  |   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
+virtual-audience-app-v2-2-2  | }
+virtual-audience-app-v2-2-2  | 7:58:55 PM [express] GET /api/user 401 in 11ms :: {"error":"Unauthorized"}
+virtual-audience-app-v2-2-2  | Authentication failed for /api/user: {
+virtual-audience-app-v2-2-2  |   isAuthenticated: false,
+virtual-audience-app-v2-2-2  |   hasSession: true,
+virtual-audience-app-v2-2-2  |   sessionID: 'hExLFI-4C239Tt_-knDaOQmRQodybFwB',
+virtual-audience-app-v2-2-2  |   hasUser: false,
+virtual-audience-app-v2-2-2  |   cookies: 'missing',
+virtual-audience-app-v2-2-2  |   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
+virtual-audience-app-v2-2-2  | }
+virtual-audience-app-v2-2-2  | 8:02:10 PM [express] GET /api/user 401 in 3ms :: {"error":"Unauthorized"}
+virtual-audience-app-v2-2-2  | 8:02:24 PM [express] POST /api/login 200 in 112ms :: {"id":1,"username":"admin","email":"admin@stage…
+virtual-audience-app-v2-2-2  | 8:02:24 PM [express] GET /api/srs/config 200 in 13ms :: {"host":"cdn2.obedtv.live","whipPort":1990,"…
+virtual-audience-app-v2-2-2  | 8:02:24 PM [express] GET /api/srs/stats 200 in 330ms :: {"timestamp":1756929744801,"servers":{"whip"…
+virtual-audience-app-v2-2-2  | 8:02:24 PM [express] GET /api/srs/health 200 in 354ms :: {"timestamp":1756929744923,"services":{"whi…
+virtual-audience-app-v2-2-2  | 8:02:29 PM [express] GET /api/srs/stats 200 in 61ms :: {"timestamp":1756929749946,"servers":{"whip":…
+virtual-audience-db-v2-2-2   | 2025-09-03 20:02:34.342 UTC [638] ERROR:  relation "rooms" does not exist at character 132
+virtual-audience-db-v2-2-2   | 2025-09-03 20:02:34.342 UTC [638] STATEMENT:  select "id", "name", "description", "max_participants", "chat_enabled", "is_active", "created_at", "updated_at", "created_by" from "rooms" order by "rooms"."created_at" desc
+virtual-audience-app-v2-2-2  | Failed to fetch rooms: error: relation "rooms" does not exist
+virtual-audience-app-v2-2-2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2-2-2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2-2-2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2-2-2  |     at async DatabaseStorage.getAllRooms (file:///app/dist/production.js:815:16)
+virtual-audience-app-v2-2-2  |     at async file:///app/dist/production.js:2996:22 {
+virtual-audience-app-v2-2-2  |   length: 105,
+virtual-audience-app-v2-2-2  |   severity: 'ERROR',
+virtual-audience-app-v2-2-2  |   code: '42P01',
+virtual-audience-app-v2-2-2  |   detail: undefined,
+virtual-audience-app-v2-2-2  |   hint: undefined,
+virtual-audience-app-v2-2-2  |   position: '132',
+virtual-audience-app-v2-2-2  |   internalPosition: undefined,
+virtual-audience-app-v2-2-2  |   internalQuery: undefined,
+virtual-audience-app-v2-2-2  |   where: undefined,
+virtual-audience-app-v2-2-2  |   schema: undefined,
+virtual-audience-app-v2-2-2  |   table: undefined,
+virtual-audience-app-v2-2-2  |   column: undefined,
+virtual-audience-app-v2-2-2  |   dataType: undefined,
+virtual-audience-app-v2-2-2  |   constraint: undefined,
+virtual-audience-app-v2-2-2  |   file: 'parse_relation.c',
+virtual-audience-app-v2-2-2  |   line: '1392',
+virtual-audience-app-v2-2-2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2-2-2  | }
+virtual-audience-app-v2-2-2  | 8:02:34 PM [express] GET /api/rooms 500 in 17ms :: {"error":"Failed to fetch rooms"}
+virtual-audience-db-v2-2-2   | 2025-09-03 20:02:39.445 UTC [639] ERROR:  relation "rooms" does not exist at character 132
+virtual-audience-db-v2-2-2   | 2025-09-03 20:02:39.445 UTC [639] STATEMENT:  select "id", "name", "description", "max_participants", "chat_enabled", "is_active", "created_at", "updated_at", "created_by" from "rooms" order by "rooms"."created_at" desc
+virtual-audience-app-v2-2-2  | Failed to fetch rooms: error: relation "rooms" does not exist
+virtual-audience-app-v2-2-2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2-2-2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2-2-2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2-2-2  |     at async DatabaseStorage.getAllRooms (file:///app/dist/production.js:815:16)
+virtual-audience-app-v2-2-2  |     at async file:///app/dist/production.js:2996:22 {
+virtual-audience-app-v2-2-2  |   length: 105,
+virtual-audience-app-v2-2-2  |   severity: 'ERROR',
+virtual-audience-app-v2-2-2  |   code: '42P01',
+virtual-audience-app-v2-2-2  |   detail: undefined,
+virtual-audience-app-v2-2-2  |   hint: undefined,
+virtual-audience-app-v2-2-2  |   position: '132',
+virtual-audience-app-v2-2-2  |   internalPosition: undefined,
+virtual-audience-app-v2-2-2  |   internalQuery: undefined,
+virtual-audience-app-v2-2-2  |   where: undefined,
+virtual-audience-app-v2-2-2  |   schema: undefined,
+virtual-audience-app-v2-2-2  |   table: undefined,
+virtual-audience-app-v2-2-2  |   column: undefined,
+virtual-audience-app-v2-2-2  |   dataType: undefined,
+virtual-audience-app-v2-2-2  |   constraint: undefined,
+virtual-audience-app-v2-2-2  |   file: 'parse_relation.c',
+virtual-audience-app-v2-2-2  |   line: '1392',
+virtual-audience-app-v2-2-2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2-2-2  | }
+virtual-audience-app-v2-2-2  | 8:02:39 PM [express] GET /api/rooms 500 in 44ms :: {"error":"Failed to fetch rooms"}
+virtual-audience-db-v2-2-2   | 2025-09-03 20:02:44.563 UTC [648] ERROR:  relation "rooms" does not exist at character 132
+virtual-audience-db-v2-2-2   | 2025-09-03 20:02:44.563 UTC [648] STATEMENT:  select "id", "name", "description", "max_participants", "chat_enabled", "is_active", "created_at", "updated_at", "created_by" from "rooms" order by "rooms"."created_at" desc
+virtual-audience-app-v2-2-2  | Failed to fetch rooms: error: relation "rooms" does not exist
+virtual-audience-app-v2-2-2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2-2-2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2-2-2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2-2-2  |     at async DatabaseStorage.getAllRooms (file:///app/dist/production.js:815:16)
+virtual-audience-app-v2-2-2  |     at async file:///app/dist/production.js:2996:22 {
+virtual-audience-app-v2-2-2  |   length: 105,
+virtual-audience-app-v2-2-2  |   severity: 'ERROR',
+virtual-audience-app-v2-2-2  |   code: '42P01',
+virtual-audience-app-v2-2-2  |   detail: undefined,
+virtual-audience-app-v2-2-2  |   hint: undefined,
+virtual-audience-app-v2-2-2  |   position: '132',
+virtual-audience-app-v2-2-2  |   internalPosition: undefined,
+virtual-audience-app-v2-2-2  |   internalQuery: undefined,
+virtual-audience-app-v2-2-2  |   where: undefined,
+virtual-audience-app-v2-2-2  |   schema: undefined,
+virtual-audience-app-v2-2-2  |   table: undefined,
+virtual-audience-app-v2-2-2  |   column: undefined,
+virtual-audience-app-v2-2-2  |   dataType: undefined,
+virtual-audience-app-v2-2-2  |   constraint: undefined,
+virtual-audience-app-v2-2-2  |   file: 'parse_relation.c',
+virtual-audience-app-v2-2-2  |   line: '1392',
+virtual-audience-app-v2-2-2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2-2-2  | }
+virtual-audience-app-v2-2-2  | 8:02:44 PM [express] GET /api/rooms 500 in 39ms :: {"error":"Failed to fetch rooms"}
+virtual-audience-db-v2-2-2   | 2025-09-03 20:02:49.685 UTC [656] ERROR:  relation "rooms" does not exist at character 132
+virtual-audience-db-v2-2-2   | 2025-09-03 20:02:49.685 UTC [656] STATEMENT:  select "id", "name", "description", "max_participants", "chat_enabled", "is_active", "created_at", "updated_at", "created_by" from "rooms" order by "rooms"."created_at" desc
+virtual-audience-app-v2-2-2  | Failed to fetch rooms: error: relation "rooms" does not exist
+virtual-audience-app-v2-2-2  |     at /app/node_modules/pg-pool/index.js:45:11
+virtual-audience-app-v2-2-2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+virtual-audience-app-v2-2-2  |     at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+virtual-audience-app-v2-2-2  |     at async DatabaseStorage.getAllRooms (file:///app/dist/production.js:815:16)
+virtual-audience-app-v2-2-2  |     at async file:///app/dist/production.js:2996:22 {
+virtual-audience-app-v2-2-2  |   length: 105,
+virtual-audience-app-v2-2-2  |   severity: 'ERROR',
+virtual-audience-app-v2-2-2  |   code: '42P01',
+virtual-audience-app-v2-2-2  |   detail: undefined,
+virtual-audience-app-v2-2-2  |   hint: undefined,
+virtual-audience-app-v2-2-2  |   position: '132',
+virtual-audience-app-v2-2-2  |   internalPosition: undefined,
+virtual-audience-app-v2-2-2  |   internalQuery: undefined,
+virtual-audience-app-v2-2-2  |   where: undefined,
+virtual-audience-app-v2-2-2  |   schema: undefined,
+virtual-audience-app-v2-2-2  |   table: undefined,
+virtual-audience-app-v2-2-2  |   column: undefined,
+virtual-audience-app-v2-2-2  |   dataType: undefined,
+virtual-audience-app-v2-2-2  |   constraint: undefined,
+virtual-audience-app-v2-2-2  |   file: 'parse_relation.c',
+virtual-audience-app-v2-2-2  |   line: '1392',
+virtual-audience-app-v2-2-2  |   routine: 'parserOpenTable'
+virtual-audience-app-v2-2-2  | }
+virtual-audience-app-v2-2-2  | 8:02:49 PM [express] GET /api/rooms 500 in 48ms :: {"error":"Failed to fetch rooms"}
