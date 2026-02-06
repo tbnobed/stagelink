@@ -393,20 +393,6 @@ export default function AuthPage() {
           <h1 className="text-3xl font-bold text-primary mb-4">
             Virtual Audience Platform
           </h1>
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>WHIP/WHEP Protocol Support</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>Live Chat Integration</span>
-            </div>
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-primary rounded-full"></div>
-              <span>QR Code Link Generation</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
