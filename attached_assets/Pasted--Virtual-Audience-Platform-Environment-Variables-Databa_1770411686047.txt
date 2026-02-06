@@ -1,0 +1,64 @@
+# Virtual Audience Platform Environment Variables
+
+# Database Configuration
+DATABASE_URL=postgresql://postgres:password@db:5432/virtual_audience
+POSTGRES_PASSWORD=password
+PGHOST=db
+PGPORT=5432
+PGUSER=postgres
+PGDATABASE=virtual_audience
+
+# Application Configuration
+NODE_ENV=production
+PORT=5000
+
+# Authentication Configuration
+# IMPORTANT: Change this to a strong, unique secret in production!
+SESSION_SECRET=virtual-audience-production-secret-change-in-production
+
+# Optional: Custom domain configuration
+# DOMAIN=yourdomain.com
+
+# SRS Server Configuration (Required for streaming functionality)
+# WHIP Server Configuration (for publishing streams)
+SRS_WHIP_HOST=slq1.obtv.io
+SRS_WHIP_PORT=1990
+SRS_WHIP_USE_HTTPS=true
+
+# WHEP Server Configuration (for viewing streams)
+SRS_WHEP_HOST=slq1.obtv.io
+SRS_WHEP_PORT=1990
+SRS_WHEP_USE_HTTPS=true
+
+# SRS API Configuration (for server statistics)
+# Each streaming server has its own API endpoint on the same host with separate ports
+
+# WHIP Server API Configuration
+SRS_WHIP_API_PORT=1985
+SRS_WHIP_API_USE_HTTPS=false
+
+# WHEP Server API Configuration  
+SRS_WHEP_API_PORT=1985
+SRS_WHEP_API_USE_HTTPS=false
+
+# Legacy configuration (still supported for backward compatibility)
+# If the new WHIP/WHEP specific configs are not set, these will be used as fallbacks
+SRS_HOST=slq1.obtv.io
+SRS_USE_HTTPS=true
+
+# Authentication Features:
+# - User accounts with admin/user roles
+# - Secure password hashing with scrypt
+# - Session-based authentication
+# - Default admin account: admin/password (change after first login!)
+# - Password change functionality via profile page
+# - PostgreSQL session storage for scalability
+
+# Email Configuration (Required for invite functionality)
+# Get your SendGrid API key from https://app.sendgrid.com/settings/api_keys
+SENDGRID_API_KEY=your-sendgrid-api-key-here
+# Must be a verified sender email in your SendGrid account
+SENDGRID_FROM_EMAIL=alerts@yourdomain.com
+
+# Note: All data persists in PostgreSQL database
+# No more data loss on application restart!
