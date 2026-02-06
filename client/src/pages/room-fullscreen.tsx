@@ -44,7 +44,7 @@ interface VideoPlayerProps {
 
 function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const playerRef = useRef<any>(null);
   const [connectionState, setConnectionState] = useState<string>('new');
   const [error, setError] = useState<string | null>(null);
 
@@ -52,64 +52,51 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
     let mounted = true;
 
     const initializeStream = async () => {
+      if (!videoRef.current || !streamUrl) return;
+
+      if (!window.SrsRtcWhipWhepAsync) {
+        console.error('SRS SDK not loaded, cannot initialize room WHEP stream');
+        if (mounted) {
+          setError('Streaming SDK not loaded');
+          setConnectionState('failed');
+        }
+        return;
+      }
+
       try {
-        if (pcRef.current) {
-          pcRef.current.close();
-          pcRef.current = null;
+        if (playerRef.current) {
+          playerRef.current.close();
+          playerRef.current = null;
         }
 
         setError(null);
         setConnectionState('connecting');
 
-        const pc = new RTCPeerConnection({
-          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
+        const player = new window.SrsRtcWhipWhepAsync();
+        playerRef.current = player;
 
-        pcRef.current = pc;
-
-        // Set up connection state monitoring
-        pc.onconnectionstatechange = () => {
+        player.pc.addEventListener('connectionstatechange', () => {
           if (mounted) {
-            setConnectionState(pc.connectionState);
+            setConnectionState(player.pc.connectionState);
           }
-        };
-
-        // Set up remote stream handling
-        pc.ontrack = (event) => {
-          if (mounted && videoRef.current && event.streams[0]) {
-            videoRef.current.srcObject = event.streams[0];
-          }
-        };
-
-        // Add transceiver for receiving video
-        pc.addTransceiver('video', { direction: 'recvonly' });
-        pc.addTransceiver('audio', { direction: 'recvonly' });
-
-        // Create offer and set local description
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        // Send WHEP request
-        const response = await fetch(streamUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/sdp',
-          },
-          body: offer.sdp,
         });
 
-        if (!response.ok) {
-          throw new Error(`WHEP request failed: ${response.status}`);
+        console.log(`Room Fullscreen WHEP: Connecting to stream ${streamName} at ${streamUrl}`);
+        await player.play(streamUrl);
+
+        if (mounted && videoRef.current) {
+          videoRef.current.srcObject = player.stream;
+          try {
+            await videoRef.current.play();
+          } catch (playErr) {
+            videoRef.current.muted = true;
+            await videoRef.current.play().catch(() => {});
+          }
         }
 
-        const answerSdp = await response.text();
-        await pc.setRemoteDescription(new RTCSessionDescription({
-          type: 'answer',
-          sdp: answerSdp,
-        }));
-
+        console.log(`Room Fullscreen WHEP: Connected to stream ${streamName}`);
       } catch (err) {
-        console.error('Failed to initialize WHEP stream:', err);
+        console.error(`Room Fullscreen WHEP: Failed to connect to stream ${streamName}:`, err);
         if (mounted) {
           setError(err instanceof Error ? err.message : 'Failed to connect to stream');
           setConnectionState('failed');
@@ -121,9 +108,9 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
 
     return () => {
       mounted = false;
-      if (pcRef.current) {
-        pcRef.current.close();
-        pcRef.current = null;
+      if (playerRef.current) {
+        playerRef.current.close();
+        playerRef.current = null;
       }
     };
   }, [streamUrl]);
