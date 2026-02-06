@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Apply Virtual Audience Platform v2.0 migration to existing Docker production database
-echo "Applying Virtual Audience Platform v2.0 migration (includes session tokens, chat system, and schema updates)..."
+# Apply Virtual Audience Platform v2.3 migration to existing Docker production database
+echo "Applying Virtual Audience Platform v2.3 migration (includes session tokens, chat system, rooms, consent system, and schema updates)..."
 
 # Check if Docker containers are running
 if ! docker-compose ps | grep -q "virtual-audience-db-v2.*Up"; then
@@ -17,22 +17,28 @@ echo "Executing migration script..."
 docker exec virtual-audience-db-v2 psql -U postgres -d virtual_audience -f /tmp/migrate-session-tokens.sql
 
 if [ $? -eq 0 ]; then
-    echo "✅ Virtual Audience Platform v2.0 migration completed successfully!"
+    echo "✅ Virtual Audience Platform v2.3 migration completed successfully!"
     echo "   - Session token security system ✅"
     echo "   - Chat system with messages and participants ✅"
+    echo "   - Password reset and registration tokens ✅"
+    echo "   - Room system for multi-participant streaming ✅"
+    echo "   - Consent recording system (US broadcast compliance) ✅"
     echo "   - Updated database schema with proper types and indexes ✅"
     echo ""
     echo "Restarting application container to pick up schema changes..."
     docker-compose restart virtual-audience-app-v2
     echo "✅ Application container restarted"
     echo ""
-    echo "The Virtual Audience Platform v2.0 is now ready with full feature support:"
+    echo "The Virtual Audience Platform v2.3 is now ready with full feature support:"
     echo "   - User authentication with roles (admin, engineer, user)"
     echo "   - Streaming link generation with expiration management"
     echo "   - Session token security for single-use links"
     echo "   - Integrated chat system for guest communication"
     echo "   - Viewer-only links for studio return feed monitoring"
     echo "   - URL shortening functionality"
+    echo "   - Multi-participant rooms with stream assignments"
+    echo "   - Verifiable consent recording (CCPA, BIPA, FCC compliance)"
+    echo "   - Privacy policy and admin consent audit log"
     echo ""
     echo "You can now test all features through the web interface."
 else
