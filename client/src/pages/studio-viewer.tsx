@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { initializeStreaming } from "@/lib/streaming";
-import { buildStudioWhepUrl } from "@/lib/srs-config";
+import { buildStudioWhepUrl, buildWhepUrlForServer } from "@/lib/srs-config";
 import { GuestChat } from "@/components/guest-chat";
 
 // Global variables for SRS SDK
@@ -152,7 +152,11 @@ export default function StudioViewer() {
         playerRef.current = null;
       }
       
-      const studioUrl = await buildStudioWhepUrl('live', returnFeed);
+      const urlParams = new URLSearchParams(window.location.search);
+      const serverParam = urlParams.get('server');
+      const studioUrl = serverParam
+        ? await buildWhepUrlForServer(serverParam, 'live', returnFeed)
+        : await buildStudioWhepUrl('live', returnFeed);
       const maxRetries = 5;
       const retryDelay = 2000;
       let lastError: any = null;

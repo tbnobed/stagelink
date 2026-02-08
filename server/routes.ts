@@ -5,7 +5,7 @@ import { setupAuth, requireAuth, requireAdmin, requireAdminOrEngineer } from "./
 import { ChatWebSocketServer } from "./chat-websocket";
 import { insertUserSchema, insertShortLinkSchema, insertRoomSchema, insertRoomParticipantSchema, insertRoomStreamAssignmentSchema } from "@shared/schema";
 import { generateUniqueShortCode } from "./utils/shortCode";
-import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl, getNextWhipServer, formatServerAddress, getWhipServerList } from "./utils/srs-config";
+import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl, getNextWhipServer, formatServerAddress, getWhipServerList, buildServerWhepUrl, parseServerAddress } from "./utils/srs-config";
 import { sendStreamingInvite, sendViewerInvite } from "./email-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1662,17 +1662,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const participants = await storage.getRoomParticipants(req.params.id);
       const assignments = await storage.getRoomStreamAssignments(req.params.id);
 
+      const allLinks = await storage.getAllLinks();
+      const whepUrls = assignments.map(assignment => {
+        const link = allLinks.find(l => l.streamName === assignment.streamName);
+        const server = link?.assignedServer ? parseServerAddress(link.assignedServer) : null;
+        return {
+          streamName: assignment.streamName,
+          url: server ? buildServerWhepUrl(server, 'live', assignment.streamName) : getSRSWhepUrl('live', assignment.streamName),
+          position: assignment.position,
+          assignedUser: assignment.assignedUserId,
+          assignedGuest: assignment.assignedGuestName,
+        };
+      });
+
       res.json({
         room,
         participants,
         assignments,
-        whepUrls: assignments.map(assignment => ({
-          streamName: assignment.streamName,
-          url: getSRSWhepUrl('live', assignment.streamName),
-          position: assignment.position,
-          assignedUser: assignment.assignedUserId,
-          assignedGuest: assignment.assignedGuestName,
-        })),
+        whepUrls,
       });
     } catch (error) {
       console.error('Failed to get public room:', error);
@@ -1691,17 +1698,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const participants = await storage.getRoomParticipants(req.params.id);
       const assignments = await storage.getRoomStreamAssignments(req.params.id);
 
+      const allLinks = await storage.getAllLinks();
+      const whepUrls = assignments.map(assignment => {
+        const link = allLinks.find(l => l.streamName === assignment.streamName);
+        const server = link?.assignedServer ? parseServerAddress(link.assignedServer) : null;
+        return {
+          streamName: assignment.streamName,
+          url: server ? buildServerWhepUrl(server, 'live', assignment.streamName) : getSRSWhepUrl('live', assignment.streamName),
+          position: assignment.position,
+          assignedUser: assignment.assignedUserId,
+          assignedGuest: assignment.assignedGuestName,
+        };
+      });
+
       res.json({
         room,
         participants,
         assignments,
-        whepUrls: assignments.map(assignment => ({
-          streamName: assignment.streamName,
-          url: getSRSWhepUrl('live', assignment.streamName),
-          position: assignment.position,
-          assignedUser: assignment.assignedUserId,
-          assignedGuest: assignment.assignedGuestName,
-        })),
+        whepUrls,
       });
     } catch (error) {
       console.error('Failed to join room:', error);
