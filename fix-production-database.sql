@@ -1,5 +1,6 @@
--- Virtual Audience Platform v2.0 Production Database Fix
--- This script fixes existing Docker production databases that are missing v2.0 schema
+-- Virtual Audience Platform v2.4 Production Database Fix
+-- This script fixes existing Docker production databases that are missing v2.4 schema
+-- Includes: assigned_server columns for multi-server WHIP load balancing
 
 -- Create missing enum types if they don't exist
 DO $$ BEGIN
@@ -84,9 +85,19 @@ DO $$ BEGIN
         ALTER TABLE "generated_links" ADD COLUMN "session_token" text UNIQUE;
     END IF;
     
+    -- Add assigned_server to generated_links if missing (multi-server load balancing)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='generated_links' AND column_name='assigned_server') THEN
+        ALTER TABLE "generated_links" ADD COLUMN "assigned_server" text;
+    END IF;
+    
     -- Add session_token to short_links if missing
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='short_links' AND column_name='session_token') THEN
         ALTER TABLE "short_links" ADD COLUMN "session_token" text UNIQUE;
+    END IF;
+    
+    -- Add assigned_server to short_links if missing (multi-server load balancing)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='short_links' AND column_name='assigned_server') THEN
+        ALTER TABLE "short_links" ADD COLUMN "assigned_server" text;
     END IF;
     
     -- Add updated_at to users if missing
@@ -106,9 +117,9 @@ CREATE INDEX IF NOT EXISTS "chat_participants_is_online_idx" ON "chat_participan
 
 -- Verify schema is complete
 SELECT 
-    'Production Database v2.0 Fix Complete' as status,
+    'Production Database v2.4 Fix Complete' as status,
     COUNT(*) as total_tables
 FROM information_schema.tables 
 WHERE table_schema = 'public';
 
-\echo 'Production database successfully updated to Virtual Audience Platform v2.0 schema';
+\echo 'Production database successfully updated to Virtual Audience Platform v2.4 schema';

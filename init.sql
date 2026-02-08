@@ -1,6 +1,6 @@
--- Virtual Audience Platform v2.0 with Authentication and Session Token Support
--- Clean initialization for Docker deployment - UPDATED with session token fixes
--- Fixed: Added session_token columns to short_links and short_viewer_links tables
+-- Virtual Audience Platform v2.4 with Authentication, Session Tokens, and Multi-Server Load Balancing
+-- Clean initialization for Docker deployment
+-- Includes: assigned_server columns for WHIP server load balancing
 
 -- Create database if not exists
 SELECT 'CREATE DATABASE virtual_audience'
@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS "generated_links" (
         "chat_enabled" boolean DEFAULT false NOT NULL,
         "url" text NOT NULL,
         "session_token" text UNIQUE,
+        "assigned_server" text,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "expires_at" timestamp,
         "created_by" integer REFERENCES "users"("id")
@@ -77,6 +78,7 @@ CREATE TABLE IF NOT EXISTS "short_links" (
         "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
         "session_token" text UNIQUE,
+        "assigned_server" text,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "expires_at" timestamp,
         "created_by" integer REFERENCES "users"("id")
@@ -269,4 +271,4 @@ VALUES ('admin', 'admin@stagelinq.com', 'd50f2345138be5a9d2e393d0d35bc3e79b6e0de
 ON CONFLICT ("username") DO NOTHING;
 
 -- Notify successful initialization
-\echo 'Virtual Audience Platform v2.3 database schema initialized successfully with rooms, consent system, and US broadcast compliance support';
+\echo 'Virtual Audience Platform v2.4 database schema initialized successfully with rooms, consent system, multi-server load balancing, and US broadcast compliance support';

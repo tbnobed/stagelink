@@ -1,5 +1,6 @@
--- Migration script to update existing Virtual Audience database to v2.0
+-- Migration script to update existing Virtual Audience database to v2.4
 -- Run this on production database to add missing tables, columns, and chat system
+-- Includes: assigned_server columns for multi-server WHIP load balancing
 
 -- Create enums if they don't exist
 DO $$ BEGIN
@@ -288,9 +289,22 @@ CREATE INDEX IF NOT EXISTS "consent_records_stream_name_idx" ON "consent_records
 CREATE INDEX IF NOT EXISTS "consent_records_consent_type_idx" ON "consent_records" ("consent_type");
 CREATE INDEX IF NOT EXISTS "consent_records_granted_at_idx" ON "consent_records" ("granted_at");
 
+-- Add assigned_server column for multi-server WHIP load balancing
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='generated_links' AND column_name='assigned_server') THEN
+        ALTER TABLE "generated_links" ADD COLUMN "assigned_server" text;
+        RAISE NOTICE 'Added assigned_server column to generated_links table';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='short_links' AND column_name='assigned_server') THEN
+        ALTER TABLE "short_links" ADD COLUMN "assigned_server" text;
+        RAISE NOTICE 'Added assigned_server column to short_links table';
+    END IF;
+END $$;
+
 -- Verify all required tables exist
 SELECT 
-    'Database Migration v2.3 Verification' as status,
+    'Database Migration v2.4 Verification' as status,
     CASE 
         WHEN (SELECT COUNT(*) FROM information_schema.tables WHERE table_name IN (
             'users', 'generated_links', 'short_links', 'viewer_links', 'short_viewer_links',
@@ -325,4 +339,4 @@ FROM information_schema.tables
 WHERE table_name IN ('users', 'generated_links', 'short_links', 'viewer_links', 'short_viewer_links', 'session_tokens', 'chat_messages', 'chat_participants', 'session', 'password_reset_tokens', 'registration_tokens', 'rooms', 'room_participants', 'room_stream_assignments', 'consent_records')
 ORDER BY table_name;
 
-\echo 'Virtual Audience Platform v2.3 migration completed successfully with rooms, consent system, and US broadcast compliance support';
+\echo 'Virtual Audience Platform v2.4 migration completed successfully with rooms, consent system, multi-server load balancing, and US broadcast compliance support';
