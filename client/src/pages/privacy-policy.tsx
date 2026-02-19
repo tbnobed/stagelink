@@ -111,7 +111,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-xl font-semibold text-white mb-3">3. How TBN Uses Your Information</h2>
             <ul className="list-disc list-inside space-y-2 ml-2">
               <li><strong className="text-white">Live Streaming & Broadcast:</strong> To transmit your video and audio feed to TBN's production team and broadcast systems using WebRTC WHIP/WHEP protocols for live television broadcast, internet streaming, and related media distribution.</li>
-              <li><strong className="text-white">Recording & Reproduction:</strong> TBN may record, store, reproduce, distribute, and create derivative works from your video, audio, likeness, and voice for use in TBN's programming, promotional materials, replays, archived content, and any other purpose.</li>
+              <li><strong className="text-white">Recording & Reproduction:</strong> TBN may record (on film, tape, digital, electronic or otherwise) your Likeness; edit your Likeness at TBN's sole discretion and include it with the performance and/or likeness of others and with special effects, sound effects and music; and make multiple recordings for use and re-use in any traditional and non-traditional broadcast formats, worldwide, as well as TBN's print and electronic publications and/or on any of TBN's websites. This use is strictly limited to broadcast transmission platforms; TBN shall not make, use, and/or distribute any ancillary products including physical (other than archival) or electronic or digital copies of the Likeness or Recording embodying the Likeness.</li>
               <li><strong className="text-white">Communication:</strong> To facilitate real-time chat between participants, production staff, and engineers during streaming sessions.</li>
               <li><strong className="text-white">Account Management:</strong> To authenticate users, manage roles and permissions, and provide account recovery services.</li>
               <li><strong className="text-white">Session Management:</strong> To create and validate access tokens, manage streaming links, and control session expiration.</li>
@@ -131,7 +131,7 @@ export default function PrivacyPolicy() {
             <ul className="list-disc list-inside space-y-2 ml-2 mt-3">
               <li>Live broadcasts cannot be retracted once transmitted</li>
               <li>TBN may retain recordings of broadcasts indefinitely for archival, rebroadcast, and promotional purposes</li>
-              <li>Your likeness, voice, and name may appear in TBN programming, promotional materials, replays, social media, and archived content</li>
+              <li>Your likeness, voice, and name may appear in TBN programming on traditional and non-traditional broadcast transmission platforms, TBN's print and electronic publications, and TBN's websites</li>
               <li>FCC regulations apply to all broadcast content</li>
               <li>You will receive no compensation for your participation unless otherwise agreed in writing by TBN</li>
             </ul>
@@ -143,7 +143,7 @@ export default function PrivacyPolicy() {
             <ul className="list-disc list-inside space-y-2 ml-2 mt-3">
               <li><strong className="text-white">TBN Affiliates:</strong> Video, audio, and related data may be shared with TBN's affiliated entities, networks, and production partners.</li>
               <li><strong className="text-white">Production Teams:</strong> Video, audio, and chat data are shared with authorized TBN production staff and engineers managing the broadcast.</li>
-              <li><strong className="text-white">Broadcast Partners & Licensees:</strong> Video and audio streams are transmitted to television networks, streaming platforms, and TBN's licensees for broadcast and distribution.</li>
+              <li><strong className="text-white">Affiliated Companies, Licensees & Assignees:</strong> Video and audio streams may be shared with TBN's affiliated companies, licensees, assignees, and other successors-in-interest for use solely on traditional and non-traditional broadcast transmission platforms.</li>
               <li><strong className="text-white">Service Providers:</strong> TBN uses third-party services including SRS (Simple Realtime Server) for stream processing, PostgreSQL for data storage, and SendGrid for email communications.</li>
               <li><strong className="text-white">Legal Obligations:</strong> TBN may disclose your information if required by law, subpoena, court order, or regulatory request.</li>
             </ul>
@@ -153,7 +153,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-xl font-semibold text-white mb-3">6. Data Retention</h2>
             <ul className="list-disc list-inside space-y-2 ml-2">
               <li><strong className="text-white">Account Data:</strong> Retained until the account is deleted by a TBN administrator.</li>
-              <li><strong className="text-white">Video/Audio Streams & Recordings:</strong> Live streams are transmitted in real-time. TBN and its broadcast partners may retain recordings indefinitely for archival, rebroadcast, and promotional purposes.</li>
+              <li><strong className="text-white">Video/Audio Streams & Recordings:</strong> Live streams are transmitted in real-time. TBN may retain recordings for archival purposes and use and re-use them in any traditional and non-traditional broadcast formats. Use is strictly limited to broadcast transmission platforms as set forth in the Adult Likeness Authorization and Release.</li>
               <li><strong className="text-white">Chat Messages:</strong> Retained for the duration of the streaming session and stored in TBN's database.</li>
               <li><strong className="text-white">Session Tokens & Links:</strong> Automatically expire based on configured durations (default 24 hours) and are cleaned up periodically.</li>
               <li><strong className="text-white">Consent Records:</strong> Retained indefinitely as legal compliance records to provide verifiable proof of informed consent.</li>
@@ -200,69 +200,49 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">9. Release & Waiver of Claims</h2>
+            <h2 className="text-xl font-semibold text-white mb-3">9. Release, Indemnification & Waiver of Claims</h2>
             <p>
-              By using this Platform and granting consent to participate in TBN's broadcast, you hereby release and forever 
-              discharge Trinity Broadcasting Network, Inc., its parent companies, subsidiaries, affiliates, successors, 
-              assigns, licensees, officers, directors, employees, agents, and representatives (collectively, the "Released Parties") 
-              from any and all claims, demands, actions, causes of action, suits, costs, expenses, liabilities, and damages of 
-              every kind and nature, whether known or unknown, arising out of or in connection with your participation in the 
-              broadcast and/or your use of the Platform, including but not limited to:
+              By using this Platform and granting consent to participate in TBN's Recording, you hereby release, discharge, 
+              indemnify and hold harmless TBN, its employees, agents, licensees, successors and assigns from any and all claims, 
+              demands or causes of action that you may have, or may have in the future, for defamation, invasion of privacy or 
+              right of publicity, infringement of copyright or trademark, or violation of any other right arising out of or 
+              relating to any utilization of the rights granted under this agreement, including but not limited to:
             </p>
             <ul className="list-disc list-inside space-y-2 ml-2 mt-3">
               <li>Claims for defamation, libel, or slander</li>
               <li>Claims for invasion of privacy or violation of the right of publicity</li>
+              <li>Claims for infringement of copyright or trademark</li>
               <li>Claims for infringement of moral rights</li>
-              <li>Claims for intentional or negligent infliction of emotional distress</li>
               <li>Claims arising under any state or federal statute, including CCPA, BIPA, and FCC regulations</li>
               <li>Claims for compensation, royalties, or residuals related to the use of your likeness, voice, or appearance</li>
             </ul>
+            <p className="mt-3">
+              Although you understand and agree that you are to receive no monetary compensation from TBN or its affiliated 
+              companies, licensees, assignees, and other successors-in-interest for your appearance or participation in the 
+              Recording, you acknowledge that you have received adequate consideration for this Release.
+            </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">10. Binding Arbitration</h2>
+            <h2 className="text-xl font-semibold text-white mb-3">10. Dispute Resolution</h2>
             <p>
-              <strong className="text-white">PLEASE READ THIS SECTION CAREFULLY. IT AFFECTS YOUR LEGAL RIGHTS, INCLUDING YOUR RIGHT TO FILE A LAWSUIT IN COURT.</strong>
+              <strong className="text-white">PLEASE READ THIS SECTION CAREFULLY. IT AFFECTS YOUR LEGAL RIGHTS.</strong>
+            </p>
+            <p className="mt-3">
+              All rights, licenses and privileges granted to TBN under these terms and the Adult Likeness Authorization 
+              and Release are irrevocable and not subject to rescission, restraint or injunction under any circumstances. 
+              Nothing herein shall be construed to obligate TBN to produce, distribute or use any of the rights granted herein.
             </p>
             <p className="mt-3">
               Any dispute, claim, or controversy arising out of or relating to this Privacy Policy, your use of the Platform, 
-              or your participation in any TBN broadcast ("Dispute") shall be resolved exclusively through final and binding 
-              arbitration administered by the American Arbitration Association ("AAA") in accordance with its Commercial 
-              Arbitration Rules then in effect, rather than in a court of law. The arbitration shall take place in 
-              Orange County, California, unless the parties mutually agree to a different location.
-            </p>
-            <p className="mt-3">
-              The arbitrator shall have the exclusive authority to resolve any Dispute, including but not limited to disputes 
-              regarding the scope, enforceability, or validity of this arbitration provision. The arbitrator's decision shall 
-              be final and binding, and judgment on the award rendered by the arbitrator may be entered in any court of 
-              competent jurisdiction.
-            </p>
-            <p className="mt-3">
-              Each party shall bear its own costs and attorney's fees in connection with the arbitration, except as otherwise 
-              provided by law or the AAA's rules. The arbitration shall be conducted in the English language.
+              the Adult Likeness Authorization and Release, or your participation in any TBN broadcast shall be construed 
+              according to the laws of the State of Texas, where jurisdiction shall lie with venue in the County of Dallas. 
+              You hereby waive jurisdiction and venue in any other place.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">11. Class Action Waiver</h2>
-            <p>
-              <strong className="text-white">YOU AGREE THAT ANY DISPUTE RESOLUTION PROCEEDINGS, WHETHER IN ARBITRATION OR COURT, 
-              WILL BE CONDUCTED ONLY ON AN INDIVIDUAL BASIS AND NOT IN A CLASS, CONSOLIDATED, OR REPRESENTATIVE ACTION.</strong>
-            </p>
-            <p className="mt-3">
-              You expressly waive your right to participate in any class action, collective action, or representative proceeding 
-              against Trinity Broadcasting Network (TBN), its affiliates, officers, directors, employees, or agents. You agree 
-              that any claims must be brought in your individual capacity and not as a plaintiff or class member in any purported 
-              class, collective, or representative proceeding. The arbitrator shall not have the authority to combine or 
-              consolidate claims of more than one person, or to conduct any class, collective, or representative proceeding. 
-              If this class action waiver is found to be unenforceable, then the entirety of the arbitration provision 
-              (Section 10) shall be null and void, and the Dispute shall be decided by a court of competent jurisdiction 
-              in Orange County, California.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-white mb-3">12. Children's Privacy</h2>
+            <h2 className="text-xl font-semibold text-white mb-3">11. Children's Privacy</h2>
             <p>
               This Platform is not intended for use by individuals under the age of 18. TBN does not knowingly 
               collect personal information from minors. If you are under 18, you must have a parent or legal 
@@ -272,7 +252,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">13. Cookies & Tracking</h2>
+            <h2 className="text-xl font-semibold text-white mb-3">12. Cookies & Tracking</h2>
             <p>
               TBN uses session cookies for authentication purposes only. These cookies are HTTP-only, 
               secure, and expire when your session ends or after the configured timeout period. TBN does not 
@@ -281,18 +261,17 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">14. Governing Law</h2>
+            <h2 className="text-xl font-semibold text-white mb-3">13. Governing Law</h2>
             <p>
-              This Privacy Policy and any disputes arising hereunder shall be governed by and construed in accordance 
-              with the laws of the State of California, without regard to its conflict of laws principles. To the extent 
-              that any legal proceeding is not subject to the binding arbitration provision in Section 10, you agree 
-              to submit to the exclusive jurisdiction and venue of the state and federal courts located in Orange County, 
-              California.
+              This Privacy Policy and any disputes arising hereunder shall be construed according to the laws of the 
+              State of Texas, where jurisdiction shall lie with venue in the County of Dallas. You hereby waive jurisdiction 
+              and venue in any other place. This agreement contains the entire understanding of the parties relating to 
+              the subject matter.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">15. Severability</h2>
+            <h2 className="text-xl font-semibold text-white mb-3">14. Severability</h2>
             <p>
               If any provision of this Privacy Policy is held to be invalid, illegal, or unenforceable, the remaining 
               provisions shall continue in full force and effect. The invalid, illegal, or unenforceable provision shall 
@@ -302,7 +281,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">16. Changes to This Policy</h2>
+            <h2 className="text-xl font-semibold text-white mb-3">15. Changes to This Policy</h2>
             <p>
               TBN may update this Privacy Policy from time to time. TBN will notify registered users of 
               significant changes via email (if provided) or through a notice on the Platform. Your continued 
@@ -311,7 +290,7 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-3">17. Contact Information</h2>
+            <h2 className="text-xl font-semibold text-white mb-3">16. Contact Information</h2>
             <p>
               If you have questions about this Privacy Policy, wish to exercise your privacy rights, 
               or need to report a privacy concern, please contact:
