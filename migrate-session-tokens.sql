@@ -1,6 +1,8 @@
--- Migration script to update existing Virtual Audience database to v2.4
--- Run this on production database to add missing tables, columns, and chat system
+-- Migration script to update existing Virtual Audience database to v2.5
+-- Run this on production database to add missing tables, columns, and features
 -- Includes: assigned_server columns for multi-server WHIP load balancing
+-- Includes: consent system for TBN Adult Likeness Authorization and Release
+-- Includes: rooms for multi-participant streaming
 
 -- Create enums if they don't exist
 DO $$ BEGIN
@@ -52,27 +54,7 @@ CREATE TABLE IF NOT EXISTS "viewer_links" (
         "created_by" integer REFERENCES "users"("id")
 );
 
--- Create generated_viewer_links table if it doesn't exist (alternative naming)
-CREATE TABLE IF NOT EXISTS "generated_viewer_links" (
-        "id" text PRIMARY KEY NOT NULL,
-        "return_feed" text NOT NULL,
-        "chat_enabled" boolean DEFAULT false NOT NULL,
-        "url" text NOT NULL,
-        "session_token" text UNIQUE,
-        "created_at" timestamp DEFAULT now() NOT NULL,
-        "expires_at" timestamp,
-        "created_by" integer REFERENCES "users"("id")
-);
-
--- Add missing updated_at column to users table if it doesn't exist
-DO $$ BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='updated_at') THEN
-        ALTER TABLE "users" ADD COLUMN "updated_at" timestamp DEFAULT now() NOT NULL;
-        RAISE NOTICE 'Added updated_at column to users table';
-    END IF;
-END $$;
-
--- Add session_token column to links table if it doesn't exist - handle both old and new table names
+-- Add session_token column to links tables if missing
 DO $$ 
 BEGIN 
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='generated_links') THEN
@@ -89,15 +71,9 @@ BEGIN
     END IF;
 END $$;
 
--- Add session_token column to viewer_links table if it doesn't exist - handle both old and new table names
+-- Add session_token column to viewer_links table if missing
 DO $$ 
 BEGIN 
-    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='generated_viewer_links') THEN
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='generated_viewer_links' AND column_name='session_token') THEN
-            ALTER TABLE "generated_viewer_links" ADD COLUMN "session_token" text UNIQUE;
-            RAISE NOTICE 'Added session_token column to generated_viewer_links table';
-        END IF;
-    END IF;
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='viewer_links') THEN
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='viewer_links' AND column_name='session_token') THEN
             ALTER TABLE "viewer_links" ADD COLUMN "session_token" text UNIQUE;
@@ -106,7 +82,7 @@ BEGIN
     END IF;
 END $$;
 
--- Add session_token column to short_links table if it doesn't exist
+-- Add session_token column to short_links table if missing
 DO $$ 
 BEGIN 
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='short_links') THEN
@@ -246,6 +222,7 @@ CREATE TABLE IF NOT EXISTS "room_stream_assignments" (
 );
 
 -- Consent system for US broadcast compliance (CCPA, BIPA, FCC)
+-- Records TBN Adult Likeness Authorization and Release consent
 DO $$ BEGIN
     CREATE TYPE consent_type AS ENUM ('camera_microphone', 'recording', 'broadcast', 'privacy_policy', 'arbitration_class_waiver');
 EXCEPTION
@@ -289,7 +266,7 @@ CREATE INDEX IF NOT EXISTS "consent_records_stream_name_idx" ON "consent_records
 CREATE INDEX IF NOT EXISTS "consent_records_consent_type_idx" ON "consent_records" ("consent_type");
 CREATE INDEX IF NOT EXISTS "consent_records_granted_at_idx" ON "consent_records" ("granted_at");
 
--- Add arbitration_class_waiver to consent_type enum if not present
+-- Add arbitration_class_waiver to consent_type enum if upgrading from older version
 DO $$
 BEGIN
     ALTER TYPE consent_type ADD VALUE IF NOT EXISTS 'arbitration_class_waiver';
@@ -312,7 +289,7 @@ END $$;
 
 -- Verify all required tables exist
 SELECT 
-    'Database Migration v2.4 Verification' as status,
+    'Database Migration v2.5 Verification' as status,
     CASE 
         WHEN (SELECT COUNT(*) FROM information_schema.tables WHERE table_name IN (
             'users', 'generated_links', 'short_links', 'viewer_links', 'short_viewer_links',
@@ -329,8 +306,8 @@ SELECT
 SELECT table_name, 
        CASE WHEN table_name = 'session' THEN 'Session storage'
             WHEN table_name = 'users' THEN 'User authentication'
-            WHEN table_name = 'generated_links' THEN 'Main streaming links'
-            WHEN table_name = 'short_links' THEN 'Shortened streaming links'
+            WHEN table_name = 'generated_links' THEN 'Main streaming links (with assigned_server)'
+            WHEN table_name = 'short_links' THEN 'Shortened streaming links (with assigned_server)'
             WHEN table_name = 'viewer_links' THEN 'Viewer-only links'
             WHEN table_name = 'short_viewer_links' THEN 'Shortened viewer links'
             WHEN table_name = 'session_tokens' THEN 'Session token security'
@@ -341,10 +318,11 @@ SELECT table_name,
             WHEN table_name = 'rooms' THEN 'Multi-participant rooms'
             WHEN table_name = 'room_participants' THEN 'Room participants'
             WHEN table_name = 'room_stream_assignments' THEN 'Room stream assignments'
-            WHEN table_name = 'consent_records' THEN 'US broadcast consent records (CCPA/BIPA/FCC)'
+            WHEN table_name = 'consent_records' THEN 'TBN Adult Likeness Authorization consent records'
        END as description
 FROM information_schema.tables 
 WHERE table_name IN ('users', 'generated_links', 'short_links', 'viewer_links', 'short_viewer_links', 'session_tokens', 'chat_messages', 'chat_participants', 'session', 'password_reset_tokens', 'registration_tokens', 'rooms', 'room_participants', 'room_stream_assignments', 'consent_records')
 ORDER BY table_name;
 
-\echo 'Virtual Audience Platform v2.4 migration completed successfully with rooms, consent system, multi-server load balancing, and US broadcast compliance support';
+\echo 'Virtual Audience Platform v2.5 migration completed successfully'
+\echo 'Features: rooms, consent system (TBN Adult Likeness Authorization), multi-server WHIP load balancing, US broadcast compliance'
