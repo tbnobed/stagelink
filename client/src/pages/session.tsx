@@ -26,7 +26,6 @@ export default function Session() {
   const [linkId, setLinkId] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showConsentDialog, setShowConsentDialog] = useState(false);
   const [consentGranted, setConsentGranted] = useState(false);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
@@ -184,42 +183,23 @@ export default function Session() {
 
   const handleConsentGranted = async () => {
     setConsentGranted(true);
-    setShowConsentDialog(false);
-    try {
-      const result = await startPublishing(publisherVideoRef.current);
-      setIsPublishing(true);
-      setSessionId(result.sessionId || 'Connected');
-      setAudioCodec('opus/48000/2');
-      setVideoCodec('h264/720p@30fps');
-      
-      toast({
-        title: "Success",
-        description: "Stream started successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Publishing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Authorization Accepted",
+      description: "You may now access the session. Click Start Stream when ready.",
+    });
   };
 
   const handleConsentDenied = () => {
-    setShowConsentDialog(false);
     toast({
-      title: "Consent Required",
-      description: "You must accept all consent terms before streaming can begin.",
+      title: "Authorization Required",
+      description: "You must accept the Adult Likeness Authorization and Release to access this session.",
       variant: "destructive",
     });
+    setLocation('/');
   };
 
   const togglePublishing = async () => {
     if (!isPublishing) {
-      if (!consentGranted) {
-        setShowConsentDialog(true);
-        return;
-      }
       try {
         const result = await startPublishing(publisherVideoRef.current);
         setIsPublishing(true);
@@ -346,17 +326,22 @@ export default function Session() {
     );
   }
 
-  return (
-    <div ref={containerRef} className={`h-screen va-bg-dark flex flex-col swipe-container ${isMobile ? 'mobile-layout' : ''}`}>
-      
-      {showConsentDialog && (
+  // Gate: show consent dialog as full-page blocker before any session content
+  if (!consentGranted) {
+    return (
+      <div className="min-h-screen va-bg-dark">
         <ConsentDialog
           streamName={streamName || 'unknown'}
           guestIdentifier={guestUser?.username || undefined}
           onConsentGranted={handleConsentGranted}
           onConsentDenied={handleConsentDenied}
         />
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className={`h-screen va-bg-dark flex flex-col swipe-container ${isMobile ? 'mobile-layout' : ''}`}>
 
       {/* Mobile Navigation */}
       <MobileNav
