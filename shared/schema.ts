@@ -264,7 +264,7 @@ export type RoomParticipant = typeof roomParticipants.$inferSelect;
 export type InsertRoomStreamAssignment = z.infer<typeof insertRoomStreamAssignmentSchema>;
 export type RoomStreamAssignment = typeof roomStreamAssignments.$inferSelect;
 
-export const consentTypeEnum = pgEnum('consent_type', ['camera_microphone', 'recording', 'broadcast', 'privacy_policy']);
+export const consentTypeEnum = pgEnum('consent_type', ['camera_microphone', 'recording', 'broadcast', 'privacy_policy', 'arbitration_class_waiver']);
 
 export const consentRecords = pgTable("consent_records", {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),

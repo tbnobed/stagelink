@@ -247,7 +247,7 @@ CREATE TABLE IF NOT EXISTS "room_stream_assignments" (
 
 -- Consent system for US broadcast compliance (CCPA, BIPA, FCC)
 DO $$ BEGIN
-    CREATE TYPE consent_type AS ENUM ('camera_microphone', 'recording', 'broadcast', 'privacy_policy');
+    CREATE TYPE consent_type AS ENUM ('camera_microphone', 'recording', 'broadcast', 'privacy_policy', 'arbitration_class_waiver');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -288,6 +288,14 @@ CREATE INDEX IF NOT EXISTS "consent_records_guest_identifier_idx" ON "consent_re
 CREATE INDEX IF NOT EXISTS "consent_records_stream_name_idx" ON "consent_records" ("stream_name");
 CREATE INDEX IF NOT EXISTS "consent_records_consent_type_idx" ON "consent_records" ("consent_type");
 CREATE INDEX IF NOT EXISTS "consent_records_granted_at_idx" ON "consent_records" ("granted_at");
+
+-- Add arbitration_class_waiver to consent_type enum if not present
+DO $$
+BEGIN
+    ALTER TYPE consent_type ADD VALUE IF NOT EXISTS 'arbitration_class_waiver';
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Add assigned_server column for multi-server WHIP load balancing
 DO $$

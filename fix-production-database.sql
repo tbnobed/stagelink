@@ -78,6 +78,14 @@ CREATE TABLE IF NOT EXISTS "short_viewer_links" (
         "created_by" integer REFERENCES "users"("id")
 );
 
+-- Add arbitration_class_waiver to consent_type enum if not present
+DO $$
+BEGIN
+    ALTER TYPE consent_type ADD VALUE IF NOT EXISTS 'arbitration_class_waiver';
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- Add missing columns to existing tables
 DO $$ BEGIN
     -- Add session_token to generated_links if missing

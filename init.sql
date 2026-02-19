@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS "registration_tokens" (
 
 -- Consent system for US broadcast compliance
 DO $$ BEGIN
-    CREATE TYPE consent_type AS ENUM ('camera_microphone', 'recording', 'broadcast', 'privacy_policy');
+    CREATE TYPE consent_type AS ENUM ('camera_microphone', 'recording', 'broadcast', 'privacy_policy', 'arbitration_class_waiver');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
