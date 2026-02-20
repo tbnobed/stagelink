@@ -69,7 +69,8 @@ export function ConsentDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto">
+      <div className="min-h-full flex items-start sm:items-center justify-center p-4 py-8">
       <div className="w-full max-w-2xl bg-[hsl(0,0%,10%)] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
         <div className="p-6 border-b border-white/10 text-center">
           <h2 className="text-lg font-bold text-white tracking-wide uppercase">Adult Likeness Authorization and Release</h2>
@@ -78,7 +79,7 @@ export function ConsentDialog({
 
         <div
           ref={scrollRef}
-          className="p-6 max-h-[50vh] overflow-y-auto space-y-4 text-sm text-white/80 leading-relaxed"
+          className="p-6 max-h-[40vh] sm:max-h-[50vh] overflow-y-auto space-y-4 text-sm text-white/80 leading-relaxed"
         >
           <p>
             I hereby grant to Trinity Broadcasting Network ("TBN") and to its affiliated companies, licensees, assignees, and other successors-in-interest the non-exclusive right as set forth herein, and to my appearance, image, likeness, performance, voice and/or name and the results and proceeds thereof ("Likeness") solely in connection with the recording and/or broadcast programming of TBN ("Recording").
@@ -179,6 +180,7 @@ export function ConsentDialog({
             I Agree & Continue
           </Button>
         </div>
+      </div>
       </div>
     </div>
   );
