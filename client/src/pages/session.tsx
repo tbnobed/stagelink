@@ -421,56 +421,59 @@ export default function Session() {
     );
   }
 
-  // Waiting room overlay — shown when production has no open slots
-  if (productionId && productionStatus === 'waiting') {
-    return (
-      <div className="min-h-screen va-bg-dark flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          <div className="relative mx-auto w-24 h-24 mb-6">
-            <div className="absolute inset-0 rounded-full bg-yellow-500/20 animate-ping" />
-            <div className="relative rounded-full bg-yellow-500/10 border-2 border-yellow-500/50 w-full h-full flex items-center justify-center">
-              <svg className="w-10 h-10 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-          <h2 className="text-2xl font-bold va-text-primary mb-2">You're in the waiting room</h2>
-          <p className="va-text-secondary mb-4">
-            {guestName ? `Hi ${guestName}!` : 'Hi there!'} The live session is currently full.
-          </p>
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
-            <p className="text-yellow-300 text-sm font-medium">Your position in queue</p>
-            <p className="text-5xl font-bold text-yellow-400 mt-1">#{waitingPosition}</p>
-          </div>
-          <p className="va-text-secondary text-sm">
-            You'll automatically be moved to the live session when a spot opens up. Please keep this page open.
-          </p>
-          {/* Return feed visible while waiting */}
-          <div className="mt-6 rounded-xl overflow-hidden border va-border-dark" style={{ aspectRatio: '16/9' }}>
-            <video
-              ref={playerVideoRef}
-              autoPlay
-              playsInline
-              muted={isMuted}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            onClick={startReturnFeed}
-            disabled={isReturnFeedStarted}
-          >
-            {isReturnFeedStarted ? 'Return Feed Playing' : 'Watch Return Feed While You Wait'}
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const isInWaitingRoom = productionId !== null && productionStatus === 'waiting';
 
   return (
-    <div ref={containerRef} className={`h-screen va-bg-dark flex flex-col swipe-container ${isMobile ? 'mobile-layout' : ''}`}>
+    <div ref={containerRef} className={`relative h-screen va-bg-dark flex flex-col swipe-container ${isMobile ? 'mobile-layout' : ''}`}>
+
+      {/* Waiting Room Overlay — rendered on top when capacity is full; session layout stays mounted */}
+      {isInWaitingRoom && (
+        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="text-center max-w-lg w-full">
+            <div className="relative mx-auto w-24 h-24 mb-6">
+              <div className="absolute inset-0 rounded-full bg-yellow-500/20 animate-ping" />
+              <div className="relative rounded-full bg-yellow-500/10 border-2 border-yellow-500/50 w-full h-full flex items-center justify-center">
+                <svg className="w-10 h-10 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold va-text-primary mb-2">You're in the waiting room</h2>
+            <p className="va-text-secondary mb-4">
+              {guestName ? `Hi ${guestName}!` : 'Hi there!'} The live session is currently full.
+            </p>
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
+              <p className="text-yellow-300 text-sm font-medium">Your position in queue</p>
+              <p className="text-5xl font-bold text-yellow-400 mt-1">#{waitingPosition}</p>
+            </div>
+            <p className="va-text-secondary text-sm mb-6">
+              You'll automatically go live when a spot opens up. Keep this page open.
+            </p>
+            {/* Return feed shown prominently while waiting */}
+            <div className="rounded-xl overflow-hidden border va-border-dark mb-3" style={{ aspectRatio: '16/9' }}>
+              <video
+                ref={playerVideoRef}
+                autoPlay
+                playsInline
+                muted={isMuted}
+                className="w-full h-full object-cover bg-black"
+              />
+            </div>
+            {!isReturnFeedStarted && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={startReturnFeed}
+              >
+                Watch Return Feed While You Wait
+              </Button>
+            )}
+            {isReturnFeedStarted && (
+              <p className="text-sm text-green-400 mt-1">Return feed is playing</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Mobile Navigation */}
       <MobileNav
@@ -560,6 +563,8 @@ export default function Session() {
                   {/* Stream Control */}
                   <Button 
                     onClick={togglePublishing}
+                    disabled={isInWaitingRoom}
+                    title={isInWaitingRoom ? 'Waiting for an open slot in the production' : undefined}
                     className={`w-full font-semibold mb-4 ${
                       isPublishing
                         ? 'bg-red-500 hover:bg-red-600 text-white'
@@ -568,7 +573,7 @@ export default function Session() {
                     data-testid="button-toggle-stream"
                   >
                     <i className={`fas ${isPublishing ? 'fa-stop' : 'fa-video'} mr-2`}></i>
-                    {isPublishing ? 'Stop Stream' : 'Start Stream'}
+                    {isInWaitingRoom ? 'Waiting for Slot...' : isPublishing ? 'Stop Stream' : 'Start Stream'}
                   </Button>
 
                   {/* Video Element */}

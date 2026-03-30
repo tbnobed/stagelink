@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Production, GeneratedLink } from "@shared/schema";
 
+type ProductionStatus = 'draft' | 'active' | 'ended';
+
 type ParticipantStatus = 'live' | 'waiting' | 'offline';
 interface ParticipantRecord extends GeneratedLink {
   status: ParticipantStatus;
@@ -31,16 +33,26 @@ const participantStatusColors: Record<ParticipantStatus, string> = {
   offline: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
 };
 
+interface ProductionFormData {
+  name: string;
+  description: string | null;
+  returnFeed: string;
+  maxLiveParticipants: number;
+  status: ProductionStatus;
+  assignedServer: string | null;
+  scheduledAt: string | null;
+}
+
 function ProductionForm({ initial, onSave, onCancel }: {
   initial?: Partial<Production>;
-  onSave: (data: any) => void;
+  onSave: (data: ProductionFormData) => void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(initial?.name || '');
   const [description, setDescription] = useState(initial?.description || '');
   const [returnFeed, setReturnFeed] = useState(initial?.returnFeed || '');
   const [maxLive, setMaxLive] = useState<number>(initial?.maxLiveParticipants ?? 128);
-  const [status, setStatus] = useState(initial?.status || 'draft');
+  const [status, setStatus] = useState<ProductionStatus>((initial?.status as ProductionStatus) || 'draft');
   const [assignedServer, setAssignedServer] = useState(initial?.assignedServer || '');
   const [scheduledAt, setScheduledAt] = useState(
     initial?.scheduledAt ? new Date(initial.scheduledAt).toISOString().slice(0, 16) : ''
@@ -85,7 +97,7 @@ function ProductionForm({ initial, onSave, onCancel }: {
         </div>
         <div>
           <Label htmlFor="prod-status" className="va-text-primary">Status</Label>
-          <select id="prod-status" value={status} onChange={e => setStatus(e.target.value as any)}
+          <select id="prod-status" value={status} onChange={e => setStatus(e.target.value as ProductionStatus)}
             className="w-full mt-1 h-10 rounded-md border border-gray-700 bg-gray-900 text-white px-3">
             <option value="draft">Draft</option>
             <option value="active">Active</option>
