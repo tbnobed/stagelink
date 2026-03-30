@@ -375,21 +375,21 @@ class ChatWebSocketServer {
 
     const { productionId, linkId, guestName = 'Guest', token } = message;
 
-    // Token-based auth: if a session token is provided, verify it maps to the claimed linkId
-    if (token) {
-      const tokenLinkId = await storage.getSessionTokenLinkId(token);
-      if (tokenLinkId !== linkId) {
-        ws.send(JSON.stringify({ type: 'production_status', status: 'error', message: 'Unauthorized' }));
-        return;
-      }
-    } else {
-      // No token provided: fall back to DB membership check
-      const links = await storage.getLinksByProduction(productionId);
-      const validLink = links.find(l => l.id === linkId);
-      if (!validLink) {
-        ws.send(JSON.stringify({ type: 'production_status', status: 'error', message: 'Unauthorized' }));
-        return;
-      }
+    // Token is required — reject any join that lacks one
+    if (!token) {
+      ws.send(JSON.stringify({ type: 'production_status', status: 'error', message: 'Unauthorized' }));
+      return;
+    }
+    const tokenLinkId = await storage.getSessionTokenLinkId(token);
+    if (!tokenLinkId || tokenLinkId !== linkId) {
+      ws.send(JSON.stringify({ type: 'production_status', status: 'error', message: 'Unauthorized' }));
+      return;
+    }
+    // Defense-in-depth: verify the resolved link actually belongs to the stated production
+    const resolvedLink = await storage.getLink(linkId);
+    if (!resolvedLink || resolvedLink.productionId !== productionId) {
+      ws.send(JSON.stringify({ type: 'production_status', status: 'error', message: 'Unauthorized' }));
+      return;
     }
 
     // Fetch production config if not already tracked
