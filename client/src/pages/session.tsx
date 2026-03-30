@@ -37,6 +37,8 @@ export default function Session() {
   const productionWsRef = useRef<WebSocket | null>(null);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
+  // Separate ref for the return feed video inside the waiting room overlay
+  const waitingReturnFeedRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const initializationRef = useRef(false);
   const { toast } = useToast();
@@ -221,7 +223,11 @@ export default function Session() {
   }, [returnFeedStatus]);
 
   const startReturnFeed = async () => {
-    if (!playerVideoRef.current) return;
+    // When in waiting room, bind to the overlay's dedicated video element; otherwise main player
+    const targetRef = (productionId && productionStatus === 'waiting')
+      ? waitingReturnFeedRef
+      : playerVideoRef;
+    if (!targetRef.current) return;
     
     const urlParams = new URLSearchParams(window.location.search);
     const returnStream = urlParams.get('return');
@@ -232,7 +238,7 @@ export default function Session() {
     setIsReturnFeedStarted(true);
     
     try {
-      await startPlayback(playerVideoRef.current, feedStream);
+      await startPlayback(targetRef.current, feedStream);
       setReturnFeedStatus('connected');
       toast({
         title: "Return Feed Connected",
@@ -253,6 +259,9 @@ export default function Session() {
   const stopReturnFeed = () => {
     setReturnFeedStatus('disconnected');
     setIsReturnFeedStarted(false);
+    if (waitingReturnFeedRef.current) {
+      waitingReturnFeedRef.current.srcObject = null;
+    }
     if (playerVideoRef.current) {
       playerVideoRef.current.srcObject = null;
     }
@@ -280,6 +289,14 @@ export default function Session() {
   };
 
   const togglePublishing = async () => {
+    // Hard-block publishing when waiting for a production slot — covers all UI paths (desktop + mobile)
+    if (productionId && productionStatus === 'waiting') {
+      toast({
+        title: "In Waiting Room",
+        description: "You'll be moved to live automatically when a slot opens up.",
+      });
+      return;
+    }
     if (!isPublishing) {
       try {
         const result = await startPublishing(publisherVideoRef.current);
@@ -449,10 +466,10 @@ export default function Session() {
             <p className="va-text-secondary text-sm mb-6">
               You'll automatically go live when a spot opens up. Keep this page open.
             </p>
-            {/* Return feed shown prominently while waiting */}
+            {/* Return feed shown prominently while waiting — uses dedicated ref separate from main player */}
             <div className="rounded-xl overflow-hidden border va-border-dark mb-3" style={{ aspectRatio: '16/9' }}>
               <video
-                ref={playerVideoRef}
+                ref={waitingReturnFeedRef}
                 autoPlay
                 playsInline
                 muted={isMuted}
