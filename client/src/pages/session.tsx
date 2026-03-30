@@ -41,6 +41,8 @@ export default function Session() {
   const waitingReturnFeedRef = useRef<HTMLVideoElement>(null);
   // Mirror of productionStatus accessible from WS message closures without stale state
   const productionStatusRef = useRef<ProductionStatus>('idle');
+  // Mirror of returnFeedStatus accessible from WS closures without stale state
+  const returnFeedStatusRef = useRef<'disconnected' | 'connecting' | 'connected' | 'failed' | 'retrying'>('disconnected');
   const containerRef = useRef<HTMLDivElement>(null);
   const initializationRef = useRef(false);
   const { toast } = useToast();
@@ -187,6 +189,8 @@ export default function Session() {
           } else if (msg.status === 'waiting') {
             setProductionStatus('waiting');
             setWaitingPosition(msg.position || 0);
+            // Flag that return feed should auto-start; effect below watches productionStatus
+            // and fires startReturnFeed when status transitions to 'waiting'
           } else if (msg.status === 'promoted') {
             setProductionStatus('live');
             setWaitingPosition(0);
@@ -230,6 +234,20 @@ export default function Session() {
   // Keep productionStatusRef in sync for stale-closure-safe access in WS handlers
   useEffect(() => {
     productionStatusRef.current = productionStatus;
+  }, [productionStatus]);
+
+  // Keep returnFeedStatusRef in sync for stale-closure-safe access in WS handlers
+  useEffect(() => {
+    returnFeedStatusRef.current = returnFeedStatus;
+  }, [returnFeedStatus]);
+
+  // Auto-start the return feed whenever the guest enters the waiting room
+  // This effect has the latest startReturnFeed reference, avoiding stale-closure issues
+  useEffect(() => {
+    if (productionStatus === 'waiting' && returnFeedStatus === 'disconnected') {
+      startReturnFeed();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productionStatus]);
 
   // Add debugging for status changes
@@ -313,16 +331,33 @@ export default function Session() {
       return;
     }
     if (!isPublishing) {
-      // If production-linked and was signed off, re-enter the queue first
-      if (productionId && productionStatus === 'idle' && productionWsRef.current && productionWsRef.current.readyState === WebSocket.OPEN) {
-        productionWsRef.current.send(JSON.stringify({
-          type: 'production_join',
-          productionId,
-          linkId,
-          guestName: guestName || 'Guest',
-          sessionId: `prod-${productionId}`,
-        }));
-        // Don't immediately publish; wait for server status (live or waiting)
+      // If production-linked and admission status is not yet 'live', enter/re-enter the queue.
+      // This blocks the race where the WS is still connecting or status is 'idle':
+      // publishing must wait until server explicitly grants a 'live' slot.
+      if (productionId && (productionStatus === 'idle' || productionStatus === 'waiting')) {
+        if (productionWsRef.current && productionWsRef.current.readyState === WebSocket.OPEN) {
+          productionWsRef.current.send(JSON.stringify({
+            type: 'production_join',
+            productionId,
+            linkId,
+            guestName: guestName || 'Guest',
+            sessionId: `prod-${productionId}`,
+          }));
+        } else {
+          toast({
+            title: "Connecting…",
+            description: "Establishing production connection, please try again in a moment.",
+          });
+        }
+        // Don't immediately publish; wait for server status response (live or waiting)
+        return;
+      }
+      // If production-linked but status is not 'live', deny (should not happen in normal flow)
+      if (productionId && productionStatus !== 'live') {
+        toast({
+          title: "Not Admitted",
+          description: "Waiting for production admission before starting stream.",
+        });
         return;
       }
       try {
