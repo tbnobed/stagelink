@@ -1885,6 +1885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           guestName: guest.guestName?.trim() || null,
           guestEmail: guest.guestEmail.trim(),
           expiresAt,
+          inviteStatus: 'pending' as const,
         };
 
         const link = await storage.createLink(linkData, userId);
@@ -1904,9 +1905,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             guestName: guest.guestName?.trim() || null,
             guestEmail: guest.guestEmail.trim(),
             expiresAt,
+            inviteStatus: 'pending',
           }, userId);
           createdLinks.push({ ...link, shortCode, shortUrl: `${platformUrl}/s/${shortCode}` });
-        } catch {
+        } catch (shortLinkErr) {
+          console.error(`Failed to create short link for participant ${guest.guestEmail}:`, shortLinkErr);
           createdLinks.push({ ...link, shortCode: null, shortUrl: null });
         }
       }
