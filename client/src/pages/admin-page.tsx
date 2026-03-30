@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2, Users, Settings, Mail, Shield, Clock, Globe, Monitor } from "lucide-react";
+import { Loader2, Plus, Trash2, Users, Settings, Mail, Shield, Clock, Globe, Monitor, Pencil, Check, X, SlidersHorizontal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMobile } from "@/hooks/use-mobile";
 import { InviteDialog } from "@/components/invite-dialog";
+import type { ReturnFeed } from "@shared/schema";
 
 interface SafeUser {
   id: number;
@@ -58,6 +59,47 @@ export default function AdminPage() {
   const { data: consentRecords, isLoading: consentLoading } = useQuery<any[]>({
     queryKey: ["/api/consent/records"],
   });
+
+  const { data: returnFeeds = [], isLoading: returnFeedsLoading } = useQuery<ReturnFeed[]>({
+    queryKey: ["/api/return-feeds"],
+  });
+
+  const [editingFeedId, setEditingFeedId] = useState<number | null>(null);
+  const [editFeedValues, setEditFeedValues] = useState({ label: '', streamName: '', serverAddress: '' });
+  const [showAddFeed, setShowAddFeed] = useState(false);
+  const [newFeed, setNewFeed] = useState({ label: '', streamName: '', serverAddress: '' });
+
+  const createFeedMutation = useMutation({
+    mutationFn: async (data: { label: string; streamName: string; serverAddress: string | null; sortOrder: number }) => {
+      const res = await apiRequest('POST', '/api/return-feeds', data);
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/return-feeds'] }); setShowAddFeed(false); setNewFeed({ label: '', streamName: '', serverAddress: '' }); toast({ title: 'Feed added' }); },
+    onError: () => toast({ title: 'Failed to add feed', variant: 'destructive' }),
+  });
+
+  const updateFeedMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: Partial<ReturnFeed> }) => {
+      const res = await apiRequest('PUT', `/api/return-feeds/${id}`, updates);
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/return-feeds'] }); setEditingFeedId(null); toast({ title: 'Feed updated' }); },
+    onError: () => toast({ title: 'Failed to update feed', variant: 'destructive' }),
+  });
+
+  const deleteFeedMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/return-feeds/${id}`, undefined);
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/return-feeds'] }); toast({ title: 'Feed deleted' }); },
+    onError: () => toast({ title: 'Failed to delete feed', variant: 'destructive' }),
+  });
+
+  const startEditFeed = (feed: ReturnFeed) => {
+    setEditingFeedId(feed.id);
+    setEditFeedValues({ label: feed.label, streamName: feed.streamName, serverAddress: feed.serverAddress || '' });
+  };
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: typeof newUser) => {
@@ -577,6 +619,84 @@ export default function AdminPage() {
               </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Return Feeds Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-5 w-5" />
+              <div>
+                <CardTitle>Return Feeds</CardTitle>
+                <CardDescription>Configure studio return feed streams available in the Generator and Productions pages</CardDescription>
+              </div>
+            </div>
+            {!showAddFeed && (
+              <Button size="sm" onClick={() => setShowAddFeed(true)} className="gap-2">
+                <Plus className="h-4 w-4" /> Add Feed
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Display Name</TableHead>
+                <TableHead>Stream Name</TableHead>
+                <TableHead>Server Override</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {returnFeedsLoading ? (
+                <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading…</TableCell></TableRow>
+              ) : returnFeeds.map(feed => (
+                <TableRow key={feed.id}>
+                  {editingFeedId === feed.id ? (
+                    <>
+                      <TableCell><Input value={editFeedValues.label} onChange={e => setEditFeedValues(v => ({ ...v, label: e.target.value }))} className="h-8 text-sm" /></TableCell>
+                      <TableCell><Input value={editFeedValues.streamName} onChange={e => setEditFeedValues(v => ({ ...v, streamName: e.target.value }))} className="h-8 text-sm font-mono" /></TableCell>
+                      <TableCell><Input value={editFeedValues.serverAddress} onChange={e => setEditFeedValues(v => ({ ...v, serverAddress: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port (optional)" /></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button size="sm" className="h-7 px-2" onClick={() => updateFeedMutation.mutate({ id: feed.id, updates: { label: editFeedValues.label, streamName: editFeedValues.streamName, serverAddress: editFeedValues.serverAddress || null } })}><Check className="h-3 w-3" /></Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingFeedId(null)}><X className="h-3 w-3" /></Button>
+                        </div>
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell className="font-medium">{feed.label}</TableCell>
+                      <TableCell className="font-mono text-sm text-muted-foreground">{feed.streamName}</TableCell>
+                      <TableCell className="font-mono text-sm text-muted-foreground">{feed.serverAddress || <span className="italic text-muted-foreground/50">default</span>}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => startEditFeed(feed)}><Pencil className="h-3 w-3" /></Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => deleteFeedMutation.mutate(feed.id)}><Trash2 className="h-3 w-3" /></Button>
+                        </div>
+                      </TableCell>
+                    </>
+                  )}
+                </TableRow>
+              ))}
+              {showAddFeed && (
+                <TableRow>
+                  <TableCell><Input value={newFeed.label} onChange={e => setNewFeed(v => ({ ...v, label: e.target.value }))} className="h-8 text-sm" placeholder="e.g. Socal 7" autoFocus /></TableCell>
+                  <TableCell><Input value={newFeed.streamName} onChange={e => setNewFeed(v => ({ ...v, streamName: e.target.value }))} className="h-8 text-sm font-mono" placeholder="e.g. Socal7" /></TableCell>
+                  <TableCell><Input value={newFeed.serverAddress} onChange={e => setNewFeed(v => ({ ...v, serverAddress: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port (optional)" /></TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-1 justify-end">
+                      <Button size="sm" className="h-7 px-2" onClick={() => { if (newFeed.label && newFeed.streamName) createFeedMutation.mutate({ label: newFeed.label, streamName: newFeed.streamName, serverAddress: newFeed.serverAddress || null, sortOrder: 999 }); }}><Check className="h-3 w-3" /></Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => { setShowAddFeed(false); setNewFeed({ label: '', streamName: '', serverAddress: '' }); }}><X className="h-3 w-3" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
