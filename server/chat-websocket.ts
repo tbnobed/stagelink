@@ -490,10 +490,12 @@ class ChatWebSocketServer {
     if (!state.liveParticipants.has(clientKey)) return;
 
     state.liveParticipants.delete(clientKey);
-    // Participant stays connected as ws is open; they stay tracked but are no longer live.
-    // Remove from wsToProductionClientKey so they don't auto-promote on disconnect,
-    // but keep clientProductionMap for re-join if they click Start again.
+    // Remove from live tracking; clear wsToProductionClientKey so that:
+    // (a) if page closes, no double-processing in handleProductionDisconnectByWs
+    // (b) if guest tries to Start again, production_join will re-enter them
     this.wsToProductionClientKey.delete(ws);
+    // Also clear clientProductionMap so re-join via production_join works cleanly
+    this.clientProductionMap.delete(clientKey);
     console.log(`Production ${productionId}: ${entry.linkId} signed off. ${state.liveParticipants.size}/${state.maxLive} live`);
 
     // Auto-promote next waiter if any
@@ -511,6 +513,11 @@ class ChatWebSocketServer {
         w.ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position: i + 1 }));
       }
     });
+
+    // Send the signed-off guest their new status: idle (they must re-join to get another slot)
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'production_status', status: 'signed_off' }));
+    }
   }
 
   private async handleNotificationListener(ws: WebSocket, message: ChatMessage) {

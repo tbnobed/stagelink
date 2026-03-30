@@ -39,6 +39,8 @@ export default function Session() {
   const playerVideoRef = useRef<HTMLVideoElement>(null);
   // Separate ref for the return feed video inside the waiting room overlay
   const waitingReturnFeedRef = useRef<HTMLVideoElement>(null);
+  // Mirror of productionStatus accessible from WS message closures without stale state
+  const productionStatusRef = useRef<ProductionStatus>('idle');
   const containerRef = useRef<HTMLDivElement>(null);
   const initializationRef = useRef(false);
   const { toast } = useToast();
@@ -177,8 +179,24 @@ export default function Session() {
         const msg = JSON.parse(event.data);
         if (msg.type === 'production_status') {
           if (msg.status === 'live') {
+            const wasIdle = productionStatusRef.current === 'idle';
             setProductionStatus('live');
             setWaitingPosition(0);
+            // Auto-start publishing if re-entering from idle (signed-off guest clicked Start again and got slot)
+            if (wasIdle && publisherVideoRef.current) {
+              startPublishing(publisherVideoRef.current).then(result => {
+                setIsPublishing(true);
+                setSessionId(result.sessionId || 'Connected');
+                setAudioCodec('opus/48000/2');
+                setVideoCodec('h264/720p@30fps');
+              }).catch(err => {
+                console.error('Re-join auto-publish failed:', err);
+                toast({
+                  title: "Stream Ready",
+                  description: "You have a live slot. Click 'Start Stream' to begin.",
+                });
+              });
+            }
           } else if (msg.status === 'waiting') {
             setProductionStatus('waiting');
             setWaitingPosition(msg.position || 0);
@@ -202,6 +220,11 @@ export default function Session() {
                 });
               });
             }
+          } else if (msg.status === 'signed_off') {
+            // Server confirmed sign-off; guest is no longer tracked as live or waiting.
+            // Set to 'idle' so they can re-enter the queue by clicking Start Stream again.
+            setProductionStatus('idle');
+            setWaitingPosition(0);
           }
         }
       } catch {}
@@ -216,6 +239,11 @@ export default function Session() {
       productionWsRef.current = null;
     };
   }, [productionId, linkId, consentGranted, guestName, toast]);
+
+  // Keep productionStatusRef in sync for stale-closure-safe access in WS handlers
+  useEffect(() => {
+    productionStatusRef.current = productionStatus;
+  }, [productionStatus]);
 
   // Add debugging for status changes
   useEffect(() => {
@@ -298,6 +326,18 @@ export default function Session() {
       return;
     }
     if (!isPublishing) {
+      // If production-linked and was signed off, re-enter the queue first
+      if (productionId && productionStatus === 'idle' && productionWsRef.current && productionWsRef.current.readyState === WebSocket.OPEN) {
+        productionWsRef.current.send(JSON.stringify({
+          type: 'production_join',
+          productionId,
+          linkId,
+          guestName: guestName || 'Guest',
+          sessionId: `prod-${productionId}`,
+        }));
+        // Don't immediately publish; wait for server status (live or waiting)
+        return;
+      }
       try {
         const result = await startPublishing(publisherVideoRef.current);
         setIsPublishing(true);
