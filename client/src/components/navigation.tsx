@@ -25,8 +25,12 @@ export default function Navigation() {
     { path: "/generator", label: "Generator", icon: "fas fa-link" },
     { path: "/links", label: "Links", icon: "fas fa-list" },
     { path: "/rooms", label: "Rooms", icon: "fas fa-video" },
-    { path: "/productions", label: "Productions", icon: "fas fa-broadcast-tower" }
   ] : [];
+
+  // Productions: only visible to admin and engineer roles
+  if (user?.role === 'admin' || user?.role === 'engineer') {
+    navItems.push({ path: "/productions", label: "Productions", icon: "fas fa-broadcast-tower" });
+  }
 
   // Only show admin nav item for admin users
   if (user?.role === 'admin') {

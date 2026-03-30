@@ -39,7 +39,7 @@ function Router() {
         <ProtectedRoute path="/room/:id/fullscreen" component={RoomFullscreen} />
         <ProtectedRoute path="/room/:id/manage" component={RoomManage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
-        <ProtectedRoute path="/productions" component={Productions} />
+        <ProtectedRoute path="/productions" component={Productions} adminOrEngineerOnly />
         <ProtectedRoute path="/admin" component={AdminPage} adminOnly />
         <Route path="/session" component={Session} />
         <Route path="/viewer" component={Viewer} />

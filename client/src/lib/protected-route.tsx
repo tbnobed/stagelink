@@ -6,10 +6,12 @@ export function ProtectedRoute({
   path,
   component: Component,
   adminOnly = false,
+  adminOrEngineerOnly = false,
 }: {
   path: string;
   component: () => React.JSX.Element;
   adminOnly?: boolean;
+  adminOrEngineerOnly?: boolean;
 }) {
   const { user, isLoading } = useAuth();
 
@@ -38,6 +40,19 @@ export function ProtectedRoute({
           <div className="text-center">
             <h2 className="text-2xl font-bold text-destructive mb-2">Access Denied</h2>
             <p className="text-muted-foreground">You need admin privileges to access this page.</p>
+          </div>
+        </div>
+      </Route>
+    );
+  }
+
+  if (adminOrEngineerOnly && user.role !== 'admin' && user.role !== 'engineer') {
+    return (
+      <Route path={path}>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-destructive mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You need admin or engineer privileges to access this page.</p>
           </div>
         </div>
       </Route>

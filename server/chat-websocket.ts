@@ -65,6 +65,8 @@ class ChatWebSocketServer {
   private productionStates: Map<string, ProductionState> = new Map(); // productionId -> state
   private clientProductionMap: Map<string, { productionId: string; linkId: string }> = new Map(); // clientKey -> {productionId, linkId}
   private wsToProductionClientKey: Map<WebSocket, string> = new Map(); // ws -> production clientKey
+  // Tracks the single authoritative WS socket per clientKey; used to invalidate stale sockets on reconnect
+  private clientKeyToActiveWs: Map<string, WebSocket> = new Map();
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 
@@ -400,6 +402,20 @@ class ChatWebSocketServer {
     const state = this.productionStates.get(productionId)!;
     const clientKey = `prod-${linkId}`;
 
+    // Atomically replace the old WS for this clientKey to prevent stale-disconnect corruption.
+    // If a previous socket was associated with this clientKey, deregister it so that
+    // when it eventually closes it won't erroneously remove the participant from live/waiting.
+    const oldWs = this.clientKeyToActiveWs.get(clientKey);
+    if (oldWs && oldWs !== ws) {
+      this.wsToProductionClientKey.delete(oldWs);
+      // Also replace ws in the waiting queue entry if present
+      const waitingEntry = state.waitingQueue.find(w => w.clientKey === clientKey);
+      if (waitingEntry) {
+        waitingEntry.ws = ws;
+      }
+    }
+    this.clientKeyToActiveWs.set(clientKey, ws);
+
     // If already live (reconnect), just re-confirm
     if (state.liveParticipants.has(clientKey)) {
       state.liveParticipants.set(clientKey, linkId);
@@ -430,6 +446,15 @@ class ChatWebSocketServer {
     const clientKey = this.wsToProductionClientKey.get(ws);
     if (!clientKey) return;
     this.wsToProductionClientKey.delete(ws);
+
+    // If a newer WS has replaced this one for this clientKey, ignore the stale disconnect
+    // to prevent queue/live state corruption
+    const activeWs = this.clientKeyToActiveWs.get(clientKey);
+    if (activeWs && activeWs !== ws) {
+      console.log(`Production: ignoring stale disconnect for clientKey ${clientKey} (newer WS is active)`);
+      return;
+    }
+    this.clientKeyToActiveWs.delete(clientKey);
 
     const entry = this.clientProductionMap.get(clientKey);
     if (!entry) return;
@@ -490,10 +515,11 @@ class ChatWebSocketServer {
     if (!state.liveParticipants.has(clientKey)) return;
 
     state.liveParticipants.delete(clientKey);
-    // Remove from live tracking; clear wsToProductionClientKey so that:
+    // Remove from live tracking; clear all WS-to-clientKey mappings so that:
     // (a) if page closes, no double-processing in handleProductionDisconnectByWs
-    // (b) if guest tries to Start again, production_join will re-enter them
+    // (b) if guest tries to Start again, production_join will re-enter them cleanly
     this.wsToProductionClientKey.delete(ws);
+    this.clientKeyToActiveWs.delete(clientKey);
     // Also clear clientProductionMap so re-join via production_join works cleanly
     this.clientProductionMap.delete(clientKey);
     console.log(`Production ${productionId}: ${entry.linkId} signed off. ${state.liveParticipants.size}/${state.maxLive} live`);
