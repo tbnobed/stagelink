@@ -664,11 +664,7 @@ class ChatWebSocketServer {
     const waitingIdx = state.waitingQueue.findIndex(w => w.linkId === linkId);
     if (waitingIdx === -1) return false;
 
-    // Enforce capacity even for manual promotion (admin must free a slot first)
-    if (state.liveParticipants.size >= state.maxLive) {
-      return false;
-    }
-
+    // Manual admin promotion proceeds regardless of current live count (admin override)
     const waiter = state.waitingQueue.splice(waitingIdx, 1)[0];
     state.liveParticipants.set(clientKey, linkId);
 

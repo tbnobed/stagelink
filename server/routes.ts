@@ -1800,6 +1800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wsServer = (global as any).chatWebSocketServer as InstanceType<typeof ChatWebSocketServer>;
       const liveStatus = wsServer ? wsServer.getProductionLiveStatus(req.params.id) : null;
 
+      const now = new Date();
       const participants = links.map(link => {
         let status: 'offline' | 'live' | 'waiting' = 'offline';
         let position: number | undefined;
@@ -1814,7 +1815,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-        return { ...link, status, position };
+        // Determine whether the link itself is valid (not expired)
+        const linkStatus: 'active' | 'expired' = (!link.expiresAt || new Date(link.expiresAt) > now) ? 'active' : 'expired';
+        return { ...link, status, position, linkStatus };
       });
 
       res.json({ production: prod, participants });
@@ -1830,11 +1833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!wsServer) return res.status(503).json({ error: 'WebSocket server not available' });
       const promoted = wsServer.promoteParticipantByLinkId(req.params.id, req.params.linkId);
       if (!promoted) {
-        // Could be: participant not found, or capacity full
-        const liveStatus = wsServer.getProductionLiveStatus(req.params.id);
-        const notFound = !liveStatus?.waitingIds.find(w => w.linkId === req.params.linkId);
-        if (notFound) return res.status(404).json({ error: 'Participant not found in waiting queue' });
-        return res.status(409).json({ error: 'Production is at capacity. A live slot must open first.' });
+        return res.status(404).json({ error: 'Participant not found in waiting queue' });
       }
       res.json({ success: true });
     } catch (error) {

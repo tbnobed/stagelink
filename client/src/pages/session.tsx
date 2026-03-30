@@ -179,24 +179,11 @@ export default function Session() {
         const msg = JSON.parse(event.data);
         if (msg.type === 'production_status') {
           if (msg.status === 'live') {
-            const wasIdle = productionStatusRef.current === 'idle';
+            // Granted a live slot — update state and let the user manually start the stream.
+            // The normal manual-start flow (togglePublishing) applies here. Auto-start only
+            // happens when the server sends 'promoted' (waiting → live by admin action).
             setProductionStatus('live');
             setWaitingPosition(0);
-            // Auto-start publishing if re-entering from idle (signed-off guest clicked Start again and got slot)
-            if (wasIdle && publisherVideoRef.current) {
-              startPublishing(publisherVideoRef.current).then(result => {
-                setIsPublishing(true);
-                setSessionId(result.sessionId || 'Connected');
-                setAudioCodec('opus/48000/2');
-                setVideoCodec('h264/720p@30fps');
-              }).catch(err => {
-                console.error('Re-join auto-publish failed:', err);
-                toast({
-                  title: "Stream Ready",
-                  description: "You have a live slot. Click 'Start Stream' to begin.",
-                });
-              });
-            }
           } else if (msg.status === 'waiting') {
             setProductionStatus('waiting');
             setWaitingPosition(msg.position || 0);

@@ -11,9 +11,11 @@ import type { Production, GeneratedLink } from "@shared/schema";
 type ProductionStatus = 'draft' | 'active' | 'ended';
 
 type ParticipantStatus = 'live' | 'waiting' | 'offline';
+type LinkStatus = 'active' | 'expired';
 interface ParticipantRecord extends GeneratedLink {
   status: ParticipantStatus;
   position?: number;
+  linkStatus: LinkStatus;
 }
 
 interface ParticipantsResponse {
@@ -162,34 +164,40 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
   const waiting = data.participants.filter(p => p.status === 'waiting').sort((a, b) => (a.position || 0) - (b.position || 0));
   const offline = data.participants.filter(p => p.status === 'offline');
 
-  const Group = ({ title, items, badgeClass, showPromote }: { title: string; items: ParticipantRecord[]; badgeClass: string; showPromote?: boolean }) => (
+  const linkStatusColor = (ls: LinkStatus) =>
+    ls === 'active' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-gray-500/10 text-gray-500 border-gray-600/20';
+
+  const ParticipantRow = ({ p, showPromote }: { p: ParticipantRecord; showPromote?: boolean }) => (
+    <div className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2">
+      <div className="min-w-0 flex-1">
+        <p className="text-white text-sm font-medium truncate">{p.guestName || '(unnamed)'}</p>
+        <p className="text-gray-400 text-xs truncate">{p.guestEmail || p.id}</p>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {p.status === 'waiting' && p.position && (
+          <span className="text-yellow-400 text-xs font-mono">#{p.position}</span>
+        )}
+        <span className={`text-xs px-2 py-0.5 rounded-full border ${participantStatusColors[p.status]}`}>{p.status}</span>
+        <span className={`text-xs px-2 py-0.5 rounded-full border ${linkStatusColor(p.linkStatus)}`}>{p.linkStatus}</span>
+        {showPromote && (
+          <Button size="sm" variant="outline"
+            className="h-7 text-xs border-yellow-600/50 text-yellow-400 hover:bg-yellow-500/10"
+            onClick={() => promoteMutation.mutate(p.id)}
+            disabled={promoteMutation.isPending}
+          >Promote</Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const Group = ({ title, items, showPromote }: { title: string; items: ParticipantRecord[]; showPromote?: boolean }) => (
     <div className="mb-6">
       <h4 className="text-sm font-semibold text-gray-400 mb-2 uppercase tracking-wider">{title} ({items.length})</h4>
       {items.length === 0 ? (
         <p className="text-gray-500 text-sm italic">None</p>
       ) : (
         <div className="space-y-2">
-          {items.map(p => (
-            <div key={p.id} className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2">
-              <div>
-                <p className="text-white text-sm font-medium">{p.guestName || '(unnamed)'}</p>
-                <p className="text-gray-400 text-xs">{p.guestEmail || p.id}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {p.status === 'waiting' && p.position && (
-                  <span className="text-yellow-400 text-xs font-mono">#{p.position}</span>
-                )}
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${badgeClass}`}>{p.status}</span>
-                {showPromote && (
-                  <Button size="sm" variant="outline"
-                    className="h-7 text-xs border-yellow-600/50 text-yellow-400 hover:bg-yellow-500/10"
-                    onClick={() => promoteMutation.mutate(p.id)}
-                    disabled={promoteMutation.isPending}
-                  >Promote</Button>
-                )}
-              </div>
-            </div>
-          ))}
+          {items.map(p => <ParticipantRow key={p.id} p={p} showPromote={showPromote} />)}
         </div>
       )}
     </div>
@@ -197,9 +205,9 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
 
   return (
     <div>
-      <Group title="Live" items={live} badgeClass={participantStatusColors.live} />
-      <Group title="Waiting" items={waiting} badgeClass={participantStatusColors.waiting} showPromote />
-      <Group title="Offline" items={offline} badgeClass={participantStatusColors.offline} />
+      <Group title="Live" items={live} />
+      <Group title="Waiting" items={waiting} showPromote />
+      <Group title="Offline" items={offline} />
     </div>
   );
 }
