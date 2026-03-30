@@ -4,9 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Production, GeneratedLink } from "@shared/schema";
+
+const RETURN_FEED_OPTIONS = [
+  { value: "Socal1", label: "Socal 1" },
+  { value: "Socal2", label: "Socal 2" },
+  { value: "Socal3", label: "Socal 3" },
+  { value: "Socal4", label: "Socal 4" },
+  { value: "Socal5", label: "Socal 5" },
+  { value: "Socal6", label: "Socal 6" },
+  { value: "livestream", label: "Plex 1" },
+  { value: "livestream2", label: "Plex 2" },
+  { value: "livestream3", label: "Plex 3" },
+  { value: "livestream4", label: "Plex 4" },
+  { value: "livestream5", label: "Plex 5" },
+  { value: "livestream6", label: "Plex 6" },
+  { value: "livestream7", label: "Plex 7" },
+  { value: "livestream8", label: "Plex 8" },
+];
 
 type ProductionStatus = 'draft' | 'active' | 'ended';
 type InviteStatus = 'pending' | 'sent' | 'failed' | null;
@@ -61,13 +79,14 @@ function ProductionForm({ initial, onSave, onCancel }: {
     initial?.scheduledAt ? new Date(initial.scheduledAt).toISOString().slice(0, 16) : ''
   );
 
-  const { data: streamNames = [] } = useQuery<string[]>({
-    queryKey: ['/api/stream-names'],
-    staleTime: 30000,
-  });
+  const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!returnFeed) {
+      toast({ title: 'Please select a return feed', variant: 'destructive' });
+      return;
+    }
     onSave({
       name,
       description: description || null,
@@ -93,25 +112,16 @@ function ProductionForm({ initial, onSave, onCancel }: {
       </div>
       <div>
         <Label htmlFor="prod-return" className="va-text-primary">Return Feed Stream Name</Label>
-        <Input
-          id="prod-return"
-          list="return-feed-options"
-          value={returnFeed}
-          onChange={e => setReturnFeed(e.target.value)}
-          required
-          className="bg-gray-900 border-gray-700 text-white mt-1"
-          placeholder={streamNames.length > 0 ? 'Select or type a stream name…' : 'e.g. tbn-studio-feed'}
-        />
-        {streamNames.length > 0 && (
-          <datalist id="return-feed-options">
-            {streamNames.map(name => (
-              <option key={name} value={name} />
+        <Select value={returnFeed} onValueChange={setReturnFeed}>
+          <SelectTrigger className="bg-gray-900 border-gray-700 text-white mt-1">
+            <SelectValue placeholder="Select a return feed…" />
+          </SelectTrigger>
+          <SelectContent className="bg-gray-900 border-gray-700">
+            {RETURN_FEED_OPTIONS.map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
             ))}
-          </datalist>
-        )}
-        {streamNames.length === 0 && (
-          <p className="text-xs text-gray-500 mt-1">Enter the stream name for the studio return feed.</p>
-        )}
+          </SelectContent>
+        </Select>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
