@@ -3,7 +3,33 @@ import { pgTable, text, varchar, boolean, timestamp, pgEnum, integer } from "dri
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const productionStatusEnum = pgEnum('production_status', ['draft', 'active', 'ended']);
+
 export const userRoleEnum = pgEnum('user_role', ['admin', 'engineer', 'user']);
+
+// Productions table - represents a named live event with participant capacity management
+export const productions = pgTable("productions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  scheduledAt: timestamp("scheduled_at"),
+  status: productionStatusEnum("status").notNull().default('draft'),
+  maxLiveParticipants: integer("max_live_participants").notNull().default(128),
+  returnFeed: text("return_feed").notNull(),
+  assignedServer: text("assigned_server"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+export const insertProductionSchema = createInsertSchema(productions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+});
+export type InsertProduction = z.infer<typeof insertProductionSchema>;
+export type Production = typeof productions.$inferSelect;
 
 export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
@@ -38,6 +64,9 @@ export const generatedLinks = pgTable("generated_links", {
   url: text("url").notNull(),
   sessionToken: text("session_token").unique(),
   assignedServer: text("assigned_server"),
+  productionId: varchar("production_id").references(() => productions.id, { onDelete: 'set null' }),
+  guestName: text("guest_name"),
+  guestEmail: text("guest_email"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),
@@ -58,6 +87,9 @@ export const shortLinks = pgTable("short_links", {
   chatEnabled: boolean("chat_enabled").notNull().default(false),
   sessionToken: text("session_token").unique(),
   assignedServer: text("assigned_server"),
+  productionId: varchar("production_id").references(() => productions.id, { onDelete: 'set null' }),
+  guestName: text("guest_name"),
+  guestEmail: text("guest_email"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),

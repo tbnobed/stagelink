@@ -10,6 +10,8 @@ import { MobileVideoControls } from "@/components/mobile-video-controls";
 import { ConsentDialog } from "@/components/consent-dialog";
 import { useMobile, useSwipeGestures } from "@/hooks/use-mobile";
 
+type ProductionStatus = 'idle' | 'live' | 'waiting' | 'promoted';
+
 export default function Session() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [sessionId, setSessionId] = useState("Not connected");
@@ -27,6 +29,12 @@ export default function Session() {
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [consentGranted, setConsentGranted] = useState(false);
+  // Production capacity management state
+  const [productionId, setProductionId] = useState<string | null>(null);
+  const [guestName, setGuestName] = useState<string | null>(null);
+  const [productionStatus, setProductionStatus] = useState<ProductionStatus>('idle');
+  const [waitingPosition, setWaitingPosition] = useState<number>(0);
+  const productionWsRef = useRef<WebSocket | null>(null);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,11 +94,20 @@ export default function Session() {
           
           setTokenValid(true);
           setLinkId(result.linkId);
+
+          // Store production info if available
+          if (result.productionId) {
+            setProductionId(result.productionId);
+          }
+          const displayName = result.guestName || `Guest_${stream || 'User'}`;
+          if (result.guestName) {
+            setGuestName(result.guestName);
+          }
           
           // Create a guest user context for chat
           setGuestUser({
             id: null, // Guest users don't have database IDs
-            username: `Guest_${stream || 'User'}`,
+            username: displayName,
             role: 'user'
           });
         } catch (error) {
@@ -133,6 +150,55 @@ export default function Session() {
 
     validateTokenAndInitialize();
   }, [toast, setLocation]); // Proper dependencies
+
+  // Production capacity management via WebSocket
+  useEffect(() => {
+    if (!productionId || !linkId || !consentGranted) return;
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/chat`;
+    const ws = new WebSocket(wsUrl);
+    productionWsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        type: 'production_join',
+        productionId,
+        linkId,
+        guestName: guestName || 'Guest',
+        sessionId: `prod-${productionId}`,
+      }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'production_status') {
+          if (msg.status === 'live') {
+            setProductionStatus('live');
+            setWaitingPosition(0);
+          } else if (msg.status === 'waiting') {
+            setProductionStatus('waiting');
+            setWaitingPosition(msg.position || 0);
+          } else if (msg.status === 'promoted') {
+            setProductionStatus('promoted');
+            setWaitingPosition(0);
+            toast({ title: "You're Live!", description: "A spot opened up — you can now go live!" });
+            setTimeout(() => setProductionStatus('live'), 100);
+          }
+        }
+      } catch {}
+    };
+
+    ws.onclose = () => {
+      console.log('Production WS closed');
+    };
+
+    return () => {
+      ws.close();
+      productionWsRef.current = null;
+    };
+  }, [productionId, linkId, consentGranted, guestName, toast]);
 
   // Add debugging for status changes
   useEffect(() => {
@@ -336,6 +402,54 @@ export default function Session() {
           onConsentGranted={handleConsentGranted}
           onConsentDenied={handleConsentDenied}
         />
+      </div>
+    );
+  }
+
+  // Waiting room overlay — shown when production has no open slots
+  if (productionId && productionStatus === 'waiting') {
+    return (
+      <div className="min-h-screen va-bg-dark flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <div className="relative mx-auto w-24 h-24 mb-6">
+            <div className="absolute inset-0 rounded-full bg-yellow-500/20 animate-ping" />
+            <div className="relative rounded-full bg-yellow-500/10 border-2 border-yellow-500/50 w-full h-full flex items-center justify-center">
+              <svg className="w-10 h-10 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold va-text-primary mb-2">You're in the waiting room</h2>
+          <p className="va-text-secondary mb-4">
+            {guestName ? `Hi ${guestName}!` : 'Hi there!'} The live session is currently full.
+          </p>
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
+            <p className="text-yellow-300 text-sm font-medium">Your position in queue</p>
+            <p className="text-5xl font-bold text-yellow-400 mt-1">#{waitingPosition}</p>
+          </div>
+          <p className="va-text-secondary text-sm">
+            You'll automatically be moved to the live session when a spot opens up. Please keep this page open.
+          </p>
+          {/* Return feed visible while waiting */}
+          <div className="mt-6 rounded-xl overflow-hidden border va-border-dark" style={{ aspectRatio: '16/9' }}>
+            <video
+              ref={playerVideoRef}
+              autoPlay
+              playsInline
+              muted={isMuted}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={startReturnFeed}
+            disabled={isReturnFeedStarted}
+          >
+            {isReturnFeedStarted ? 'Return Feed Playing' : 'Watch Return Feed While You Wait'}
+          </Button>
+        </div>
       </div>
     );
   }

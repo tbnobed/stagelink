@@ -23,6 +23,7 @@ import AdminPage from "@/pages/admin-page";
 import ProfilePage from "@/pages/profile-page";
 import ResetPasswordPage from "@/pages/reset-password-page";
 import PrivacyPolicy from "@/pages/privacy-policy";
+import Productions from "@/pages/productions";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
         <ProtectedRoute path="/room/:id/fullscreen" component={RoomFullscreen} />
         <ProtectedRoute path="/room/:id/manage" component={RoomManage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
+        <ProtectedRoute path="/productions" component={Productions} />
         <ProtectedRoute path="/admin" component={AdminPage} adminOnly />
         <Route path="/session" component={Session} />
         <Route path="/viewer" component={Viewer} />

@@ -64,6 +64,7 @@ Preferred communication style: Simple, everyday language.
 - **Consent System**: Verifiable consent recording for US broadcast compliance. ConsentDialog gates streaming with mandatory acceptance of camera/microphone, recording, broadcast, and privacy policy terms. Consent records include timestamp, IP address, user agent, and full consent text. Admin audit log available in Admin Panel.
 - **Privacy Policy**: Comprehensive privacy policy page (/privacy) addressing CCPA, BIPA, FCC regulations for US broadcast streaming.
 - **Error Handling**: Comprehensive error boundaries and toast notifications.
+- **Productions & Capacity Management**: Named live events with configurable maximum live participant caps (default 128). Guests linked to a production are routed through a real-time waiting room when capacity is full. Automatic promotion via WebSocket when a slot opens; manual promotion from the admin Productions page. Each guest link can be assigned to a production with name and email tracking. WebSocket production tracking (`production_join` message type) in chat-websocket.ts with in-memory state. REST API: `GET/POST/PUT/DELETE /api/productions`, `GET /api/productions/:id/participants`, `POST /api/productions/:id/participants/:linkId/promote`. Admin page at `/productions`. Generator page supports production/guest name/email assignment per link.
 
 # External Dependencies
 

@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, productions, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord, type Production, type InsertProduction } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
@@ -45,7 +45,6 @@ export interface IStorage {
   deleteExpiredShortViewerLinks(): Promise<number>;
   
   // Session Tokens
-  validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }>;
   createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken>;
   cleanupExpiredTokens(): Promise<number>;
   
@@ -98,6 +97,15 @@ export interface IStorage {
   getConsentRecords(filters?: { sessionId?: string; userId?: number; guestIdentifier?: string }): Promise<ConsentRecord[]>;
   getConsentRecordsByStream(streamName: string): Promise<ConsentRecord[]>;
   getAllConsentRecords(limit?: number, offset?: number): Promise<ConsentRecord[]>;
+
+  // Productions
+  getAllProductions(): Promise<Production[]>;
+  getProduction(id: string): Promise<Production | undefined>;
+  createProduction(production: InsertProduction, userId?: number): Promise<Production>;
+  updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined>;
+  deleteProduction(id: string): Promise<boolean>;
+  getLinksByProduction(productionId: string): Promise<GeneratedLink[]>;
+  validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string; productionId?: string; guestName?: string; guestEmail?: string }>;
 }
 
 export class MemStorage implements IStorage {
@@ -452,7 +460,7 @@ export class MemStorage implements IStorage {
   }
 
   // Session Token Methods (Not implemented for MemStorage - tokens are used for production)
-  async validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }> {
+  async validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string; productionId?: string; guestName?: string; guestEmail?: string }> {
     console.log('Validating session token:', token);
     
     const sessionToken = this.sessionTokens.get(token);
@@ -613,6 +621,16 @@ export class MemStorage implements IStorage {
   async getAllConsentRecords(limit?: number, offset?: number): Promise<ConsentRecord[]> {
     return [];
   }
+
+  // Productions (MemStorage stubs)
+  async getAllProductions(): Promise<Production[]> { return []; }
+  async getProduction(id: string): Promise<Production | undefined> { return undefined; }
+  async createProduction(production: InsertProduction, userId?: number): Promise<Production> {
+    throw new Error('createProduction not implemented in MemStorage');
+  }
+  async updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined> { return undefined; }
+  async deleteProduction(id: string): Promise<boolean> { return false; }
+  async getLinksByProduction(productionId: string): Promise<GeneratedLink[]> { return []; }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1050,7 +1068,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Session Token Methods
-  async validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string }> {
+  async validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string; productionId?: string; guestName?: string; guestEmail?: string }> {
     // First, check the session_tokens table (new system)
     const [sessionToken] = await db
       .select()
@@ -1060,25 +1078,30 @@ export class DatabaseStorage implements IStorage {
     if (sessionToken) {
       // Check if token has expired
       if (sessionToken.expiresAt <= new Date()) {
-        // Clean up expired token
         await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
         return { valid: false };
       }
 
-      // Check if the associated link still exists
+      // Check if the associated link still exists; gather production info
       if (sessionToken.linkId) {
         if (sessionToken.linkType === 'guest') {
           const [link] = await db.select().from(generatedLinks).where(eq(generatedLinks.id, sessionToken.linkId));
           if (!link) {
-            // Link was deleted, invalidate token
             await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
             return { valid: false };
           }
+          return {
+            valid: true,
+            linkId: sessionToken.linkId,
+            linkType: sessionToken.linkType || undefined,
+            productionId: link.productionId || undefined,
+            guestName: link.guestName || undefined,
+            guestEmail: link.guestEmail || undefined,
+          };
         }
         if (sessionToken.linkType === 'viewer') {
           const [viewerLink] = await db.select().from(viewerLinks).where(eq(viewerLinks.id, sessionToken.linkId));
           if (!viewerLink) {
-            // Viewer link was deleted, invalidate token
             await db.delete(sessionTokens).where(eq(sessionTokens.id, token));
             return { valid: false };
           }
@@ -1093,22 +1116,22 @@ export class DatabaseStorage implements IStorage {
     }
 
     // If not found in session_tokens, check the legacy system (tokens stored directly in links)
-    // Check generated_links table
     const [generatedLink] = await db
       .select()
       .from(generatedLinks)
       .where(eq(generatedLinks.sessionToken, token));
 
     if (generatedLink) {
-      // Check if link has expired
       if (generatedLink.expiresAt && generatedLink.expiresAt <= new Date()) {
         return { valid: false };
       }
-
       return {
         valid: true,
         linkId: generatedLink.id,
         linkType: 'guest',
+        productionId: generatedLink.productionId || undefined,
+        guestName: generatedLink.guestName || undefined,
+        guestEmail: generatedLink.guestEmail || undefined,
       };
     }
 
@@ -1119,11 +1142,9 @@ export class DatabaseStorage implements IStorage {
       .where(eq(viewerLinks.sessionToken, token));
 
     if (viewerLink) {
-      // Check if link has expired
       if (viewerLink.expiresAt && viewerLink.expiresAt <= new Date()) {
         return { valid: false };
       }
-
       return {
         valid: true,
         linkId: viewerLink.id,
@@ -1131,7 +1152,6 @@ export class DatabaseStorage implements IStorage {
       };
     }
 
-    // Token not found in any table
     return { valid: false };
   }
 
@@ -1623,6 +1643,51 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(consentRecords.grantedAt))
       .limit(limit)
       .offset(offset);
+  }
+
+  // Production Methods
+  async getAllProductions(): Promise<Production[]> {
+    return await db.select().from(productions).orderBy(desc(productions.createdAt));
+  }
+
+  async getProduction(id: string): Promise<Production | undefined> {
+    const [production] = await db.select().from(productions).where(eq(productions.id, id));
+    return production || undefined;
+  }
+
+  async createProduction(production: InsertProduction, userId?: number): Promise<Production> {
+    const [newProduction] = await db
+      .insert(productions)
+      .values({
+        ...production,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: userId || null,
+      })
+      .returning();
+    return newProduction;
+  }
+
+  async updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined> {
+    const [production] = await db
+      .update(productions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(productions.id, id))
+      .returning();
+    return production || undefined;
+  }
+
+  async deleteProduction(id: string): Promise<boolean> {
+    const result = await db.delete(productions).where(eq(productions.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getLinksByProduction(productionId: string): Promise<GeneratedLink[]> {
+    return await db
+      .select()
+      .from(generatedLinks)
+      .where(eq(generatedLinks.productionId, productionId))
+      .orderBy(generatedLinks.guestName);
   }
 }
 

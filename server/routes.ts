@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireAdmin, requireAdminOrEngineer } from "./auth";
 import { ChatWebSocketServer } from "./chat-websocket";
-import { insertUserSchema, insertShortLinkSchema, insertRoomSchema, insertRoomParticipantSchema, insertRoomStreamAssignmentSchema } from "@shared/schema";
+import { insertUserSchema, insertShortLinkSchema, insertRoomSchema, insertRoomParticipantSchema, insertRoomStreamAssignmentSchema, insertProductionSchema } from "@shared/schema";
 import { generateUniqueShortCode } from "./utils/shortCode";
 import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl, getNextWhipServer, formatServerAddress, getWhipServerList, buildServerWhepUrl, parseServerAddress } from "./utils/srs-config";
 import { sendStreamingInvite, sendViewerInvite } from "./email-service";
@@ -1720,6 +1720,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to join room:', error);
       res.status(500).json({ error: 'Failed to join room' });
+    }
+  });
+
+  // ===================== Productions API =====================
+
+  // GET all productions
+  app.get('/api/productions', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const prods = await storage.getAllProductions();
+      res.json(prods);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch productions' });
+    }
+  });
+
+  // GET single production
+  app.get('/api/productions/:id', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const prod = await storage.getProduction(req.params.id);
+      if (!prod) return res.status(404).json({ error: 'Production not found' });
+      res.json(prod);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch production' });
+    }
+  });
+
+  // POST create production
+  app.post('/api/productions', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const data = insertProductionSchema.parse(req.body);
+      const prod = await storage.createProduction(data, (req.user as any)?.id);
+      res.status(201).json(prod);
+    } catch (error: any) {
+      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
+      res.status(500).json({ error: 'Failed to create production' });
+    }
+  });
+
+  // PUT update production
+  app.put('/api/productions/:id', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const data = insertProductionSchema.partial().parse(req.body);
+      const prod = await storage.updateProduction(req.params.id, data);
+      if (!prod) return res.status(404).json({ error: 'Production not found' });
+      // If maxLiveParticipants changed, update in-memory WS state
+      if (data.maxLiveParticipants !== undefined) {
+        const wsServer = (global as any).chatWebSocketServer as InstanceType<typeof ChatWebSocketServer>;
+        if (wsServer) wsServer.updateProductionCapacity(req.params.id, data.maxLiveParticipants);
+      }
+      res.json(prod);
+    } catch (error: any) {
+      if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
+      res.status(500).json({ error: 'Failed to update production' });
+    }
+  });
+
+  // DELETE production
+  app.delete('/api/productions/:id', requireAdmin, async (req, res) => {
+    try {
+      const deleted = await storage.deleteProduction(req.params.id);
+      if (!deleted) return res.status(404).json({ error: 'Production not found' });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete production' });
+    }
+  });
+
+  // GET participants for a production (DB links + in-memory live/waiting status)
+  app.get('/api/productions/:id/participants', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const prod = await storage.getProduction(req.params.id);
+      if (!prod) return res.status(404).json({ error: 'Production not found' });
+
+      const links = await storage.getLinksByProduction(req.params.id);
+      const wsServer = (global as any).chatWebSocketServer as InstanceType<typeof ChatWebSocketServer>;
+      const liveStatus = wsServer ? wsServer.getProductionLiveStatus(req.params.id) : null;
+
+      const participants = links.map(link => {
+        let status: 'offline' | 'live' | 'waiting' = 'offline';
+        let position: number | undefined;
+        if (liveStatus) {
+          if (liveStatus.liveIds.includes(link.id)) {
+            status = 'live';
+          } else {
+            const waiter = liveStatus.waitingIds.find(w => w.linkId === link.id);
+            if (waiter) {
+              status = 'waiting';
+              position = waiter.position;
+            }
+          }
+        }
+        return { ...link, status, position };
+      });
+
+      res.json({ production: prod, participants });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch participants' });
+    }
+  });
+
+  // POST promote a waiting participant to live
+  app.post('/api/productions/:id/participants/:linkId/promote', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const wsServer = (global as any).chatWebSocketServer as InstanceType<typeof ChatWebSocketServer>;
+      if (!wsServer) return res.status(503).json({ error: 'WebSocket server not available' });
+      const promoted = wsServer.promoteParticipantByLinkId(req.params.id, req.params.linkId);
+      if (!promoted) return res.status(404).json({ error: 'Participant not found in waiting queue' });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to promote participant' });
     }
   });
 

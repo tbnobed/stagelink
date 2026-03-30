@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import QRCode from "qrcode";
 import { InviteDialog } from "@/components/invite-dialog";
+import type { Production } from "@shared/schema";
 
 export default function Generator() {
   // Guest Session Link States
@@ -31,6 +33,11 @@ export default function Generator() {
   const [viewerShowQR, setViewerShowQR] = useState(false);
   const [latestViewerLinkId, setLatestViewerLinkId] = useState<string>("");
   
+  // Production assignment for guest links
+  const [selectedProductionId, setSelectedProductionId] = useState<string>("");
+  const [guestName, setGuestName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+
   // Link Type Toggle
   const [linkType, setLinkType] = useState<"guest" | "viewer">("guest");
   
@@ -50,6 +57,11 @@ export default function Generator() {
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const viewerQrCanvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
+
+  const { data: productions } = useQuery<Production[]>({
+    queryKey: ['/api/productions'],
+    staleTime: 30000,
+  });
 
   const generateLink = async () => {
     if (!streamName.trim()) {
@@ -87,7 +99,10 @@ export default function Generator() {
             returnFeed: returnFeed,
             chatEnabled: enableChat,
             url: url,
-            expiresAt: expiresAt || null
+            expiresAt: expiresAt || null,
+            productionId: selectedProductionId || null,
+            guestName: guestName.trim() || null,
+            guestEmail: guestEmail.trim() || null,
           }),
         }),
         // Create short link
@@ -397,6 +412,49 @@ export default function Generator() {
                     className="va-bg-dark-surface-2 va-border-dark va-text-primary placeholder:text-gray-500 focus:ring-va-primary focus:border-transparent mt-2"
                     data-testid="input-stream-name"
                   />
+                </div>
+              )}
+
+              {/* Production Assignment (Guest links only) */}
+              {linkType === "guest" && (
+                <div className="border border-dashed va-border-dark rounded-lg p-4 space-y-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Production (optional)</p>
+                  <div>
+                    <Label htmlFor="guestName" className="va-text-secondary text-sm">Guest Name</Label>
+                    <Input
+                      id="guestName"
+                      type="text"
+                      placeholder="e.g. John Smith"
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      className="va-bg-dark-surface-2 va-border-dark va-text-primary placeholder:text-gray-500 mt-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="guestEmail" className="va-text-secondary text-sm">Guest Email</Label>
+                    <Input
+                      id="guestEmail"
+                      type="email"
+                      placeholder="e.g. john@example.com"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      className="va-bg-dark-surface-2 va-border-dark va-text-primary placeholder:text-gray-500 mt-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="productionId" className="va-text-secondary text-sm">Assign to Production</Label>
+                    <select
+                      id="productionId"
+                      value={selectedProductionId}
+                      onChange={e => setSelectedProductionId(e.target.value)}
+                      className="w-full mt-1 h-9 rounded-md border va-border-dark va-bg-dark-surface-2 va-text-primary px-3 text-sm"
+                    >
+                      <option value="">— None —</option>
+                      {productions?.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.status})</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
