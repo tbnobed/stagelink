@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Production, GeneratedLink } from "@shared/schema";
 
 type ProductionStatus = 'draft' | 'active' | 'ended';
+type InviteStatus = 'pending' | 'sent' | 'failed' | null;
 
 type ParticipantStatus = 'live' | 'waiting' | 'offline';
 type LinkStatus = 'active' | 'expired';
@@ -212,6 +213,224 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
   );
 }
 
+function InviteParticipantsPanel({ production }: { production: Production }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [singleName, setSingleName] = useState('');
+  const [singleEmail, setSingleEmail] = useState('');
+  const [csvText, setCsvText] = useState('');
+  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
+
+  const { data, isLoading, refetch } = useQuery<ParticipantsResponse>({
+    queryKey: ['/api/productions', production.id, 'participants'],
+    queryFn: async () => {
+      const res = await fetch(`/api/productions/${production.id}/participants`);
+      if (!res.ok) throw new Error('Failed to fetch participants');
+      return res.json();
+    },
+    refetchInterval: 10000,
+  });
+
+  const addGuestsMutation = useMutation({
+    mutationFn: async (guests: Array<{ guestName: string; guestEmail: string }>) => {
+      const res = await apiRequest('POST', `/api/productions/${production.id}/participants`, { guests });
+      if (!res.ok) throw new Error('Failed to add guests');
+      return res.json();
+    },
+    onSuccess: (result) => {
+      toast({ title: `${result.created?.length || 0} guest link(s) created` });
+      queryClient.invalidateQueries({ queryKey: ['/api/productions', production.id, 'participants'] });
+      setSingleName('');
+      setSingleEmail('');
+      setCsvText('');
+    },
+    onError: () => toast({ title: 'Failed to add guests', variant: 'destructive' }),
+  });
+
+  const sendInvitesMutation = useMutation({
+    mutationFn: async (linkIds?: string[]) => {
+      const res = await apiRequest('POST', `/api/productions/${production.id}/invite`, linkIds ? { linkIds } : {});
+      if (!res.ok) throw new Error('Failed to send invites');
+      return res.json();
+    },
+    onSuccess: (result) => {
+      toast({ title: `Invites sent: ${result.sent} sent, ${result.failed} failed` });
+      refetch();
+    },
+    onError: () => toast({ title: 'Failed to send invites', variant: 'destructive' }),
+  });
+
+  const handleAddSingle = () => {
+    if (!singleEmail.trim()) {
+      toast({ title: 'Email is required', variant: 'destructive' });
+      return;
+    }
+    addGuestsMutation.mutate([{ guestName: singleName.trim(), guestEmail: singleEmail.trim() }]);
+  };
+
+  const handleAddCsv = () => {
+    if (!csvText.trim()) return;
+    const lines = csvText.trim().split('\n').filter(l => l.trim());
+    const guests = lines.map(line => {
+      const parts = line.split(',').map(p => p.trim());
+      if (parts.length >= 2) {
+        return { guestName: parts[0], guestEmail: parts[1] };
+      } else if (parts.length === 1 && parts[0].includes('@')) {
+        return { guestName: '', guestEmail: parts[0] };
+      }
+      return null;
+    }).filter(Boolean) as Array<{ guestName: string; guestEmail: string }>;
+
+    if (guests.length === 0) {
+      toast({ title: 'No valid guests found in CSV', description: 'Use format: Name, email@example.com', variant: 'destructive' });
+      return;
+    }
+    addGuestsMutation.mutate(guests);
+  };
+
+  const handleResend = async (linkId: string) => {
+    setSendingIds(prev => new Set(prev).add(linkId));
+    try {
+      await sendInvitesMutation.mutateAsync([linkId]);
+    } finally {
+      setSendingIds(prev => { const s = new Set(prev); s.delete(linkId); return s; });
+    }
+  };
+
+  const participants = data?.participants || [];
+  const unsentCount = participants.filter(p => !p.inviteStatus || p.inviteStatus === 'pending' || p.inviteStatus === 'failed').length;
+  const hasEmail = participants.filter(p => p.guestEmail).length;
+
+  const inviteStatusBadge = (status: InviteStatus, invitedAt: Date | string | null | undefined) => {
+    if (!status || status === 'pending') {
+      return <span className="text-xs px-2 py-0.5 rounded-full border bg-gray-500/10 text-gray-400 border-gray-600/30">Not Sent</span>;
+    }
+    if (status === 'sent') {
+      const ts = invitedAt ? new Date(invitedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+      return <span className="text-xs px-2 py-0.5 rounded-full border bg-green-500/10 text-green-400 border-green-500/20" title={ts ? `Invited ${ts}` : undefined}>Invited {ts && <span className="opacity-70">{ts}</span>}</span>;
+    }
+    if (status === 'failed') {
+      return <span className="text-xs px-2 py-0.5 rounded-full border bg-red-500/10 text-red-400 border-red-500/20">Failed</span>;
+    }
+    return null;
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Add Single Guest */}
+      <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+        <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Add a Guest</h4>
+        <div className="grid sm:grid-cols-2 gap-3 mb-3">
+          <div>
+            <Label className="text-gray-400 text-xs mb-1 block">Name</Label>
+            <Input
+              value={singleName}
+              onChange={e => setSingleName(e.target.value)}
+              placeholder="e.g. Jane Smith"
+              className="bg-gray-900 border-gray-700 text-white"
+            />
+          </div>
+          <div>
+            <Label className="text-gray-400 text-xs mb-1 block">Email <span className="text-red-400">*</span></Label>
+            <Input
+              type="email"
+              value={singleEmail}
+              onChange={e => setSingleEmail(e.target.value)}
+              placeholder="jane@example.com"
+              className="bg-gray-900 border-gray-700 text-white"
+              onKeyDown={e => e.key === 'Enter' && handleAddSingle()}
+            />
+          </div>
+        </div>
+        <Button
+          onClick={handleAddSingle}
+          disabled={addGuestsMutation.isPending || !singleEmail.trim()}
+          className="bg-va-primary hover:bg-va-primary/90 text-white"
+          size="sm"
+        >
+          {addGuestsMutation.isPending ? 'Adding...' : '+ Add Guest'}
+        </Button>
+      </div>
+
+      {/* CSV Import */}
+      <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+        <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-1">Bulk Import via CSV</h4>
+        <p className="text-gray-500 text-xs mb-3">Paste one guest per line: <code className="bg-gray-700 px-1 rounded">Name, email@example.com</code></p>
+        <Textarea
+          value={csvText}
+          onChange={e => setCsvText(e.target.value)}
+          placeholder={"John Smith, john@example.com\nMary Jones, mary@example.com"}
+          className="bg-gray-900 border-gray-700 text-white font-mono text-sm h-28 mb-3"
+        />
+        <Button
+          onClick={handleAddCsv}
+          disabled={addGuestsMutation.isPending || !csvText.trim()}
+          className="bg-va-primary hover:bg-va-primary/90 text-white"
+          size="sm"
+        >
+          {addGuestsMutation.isPending ? 'Importing...' : 'Import Guests'}
+        </Button>
+      </div>
+
+      {/* Participant List with Invite Status */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
+            Invite Status ({participants.length} guests)
+          </h4>
+          {hasEmail > 0 && unsentCount > 0 && (
+            <Button
+              size="sm"
+              onClick={() => sendInvitesMutation.mutate(undefined)}
+              disabled={sendInvitesMutation.isPending}
+              className="bg-purple-700 hover:bg-purple-600 text-white"
+            >
+              {sendInvitesMutation.isPending ? 'Sending...' : `Send All Unsent (${unsentCount})`}
+            </Button>
+          )}
+          {hasEmail > 0 && unsentCount === 0 && participants.length > 0 && (
+            <span className="text-xs text-green-400">All invites sent</span>
+          )}
+        </div>
+
+        {isLoading && <p className="text-gray-500 text-sm">Loading...</p>}
+
+        {!isLoading && participants.length === 0 && (
+          <p className="text-gray-500 text-sm italic text-center py-6">No guests added yet. Use the form above to add participants.</p>
+        )}
+
+        {participants.length > 0 && (
+          <div className="space-y-2">
+            {participants.map(p => (
+              <div key={p.id} className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2.5 gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-white text-sm font-medium truncate">{p.guestName || '(unnamed)'}</p>
+                  <p className="text-gray-400 text-xs truncate">{p.guestEmail || <span className="italic text-gray-600">no email</span>}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {inviteStatusBadge(p.inviteStatus as InviteStatus, p.invitedAt)}
+                  {p.guestEmail && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-purple-600/40 text-purple-400 hover:bg-purple-500/10"
+                      onClick={() => handleResend(p.id)}
+                      disabled={sendingIds.has(p.id) || sendInvitesMutation.isPending}
+                    >
+                      {sendingIds.has(p.id) ? '...' : (p.inviteStatus === 'sent' ? 'Resend' : 'Send')}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ProductionSummaryBadges({ productionId }: { productionId: string }) {
   const { data } = useQuery<ParticipantsResponse>({
     queryKey: ['/api/productions', productionId, 'participants'],
@@ -237,12 +456,15 @@ function ProductionSummaryBadges({ productionId }: { productionId: string }) {
   );
 }
 
+type DetailTab = 'participants' | 'invite';
+
 export default function Productions() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editProd, setEditProd] = useState<Production | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState<DetailTab>('participants');
 
   const { data: productions, isLoading } = useQuery<Production[]>({
     queryKey: ['/api/productions'],
@@ -330,7 +552,10 @@ export default function Productions() {
                 className={`bg-gray-900 border rounded-xl p-4 cursor-pointer transition-all ${
                   selectedId === prod.id ? 'border-va-primary/70 bg-gray-800' : 'border-gray-700 hover:border-gray-600'
                 }`}
-                onClick={() => setSelectedId(prod.id === selectedId ? null : prod.id)}
+                onClick={() => {
+                  setSelectedId(prod.id === selectedId ? null : prod.id);
+                  setDetailTab('participants');
+                }}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -424,13 +649,47 @@ export default function Productions() {
                   </div>
                 </div>
 
-                {/* Participants */}
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold va-text-primary">Participants</h3>
-                    <span className="text-gray-400 text-sm">Auto-refreshes every 5s</span>
+                {/* Tabs */}
+                <div className="border-b border-gray-700 px-6">
+                  <div className="flex gap-0">
+                    <button
+                      className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                        detailTab === 'participants'
+                          ? 'border-va-primary text-white'
+                          : 'border-transparent text-gray-500 hover:text-gray-300'
+                      }`}
+                      onClick={() => setDetailTab('participants')}
+                    >
+                      Participants
+                    </button>
+                    <button
+                      className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                        detailTab === 'invite'
+                          ? 'border-purple-500 text-white'
+                          : 'border-transparent text-gray-500 hover:text-gray-300'
+                      }`}
+                      onClick={() => setDetailTab('invite')}
+                    >
+                      Invite Participants
+                    </button>
                   </div>
-                  <ParticipantsPanel productionId={selected.id} />
+                </div>
+
+                {/* Tab Content */}
+                <div className="p-6">
+                  {detailTab === 'participants' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold va-text-primary">Participants</h3>
+                        <span className="text-gray-400 text-sm">Auto-refreshes every 5s</span>
+                      </div>
+                      <ParticipantsPanel productionId={selected.id} />
+                    </div>
+                  )}
+
+                  {detailTab === 'invite' && (
+                    <InviteParticipantsPanel production={selected} />
+                  )}
                 </div>
               </div>
             )}

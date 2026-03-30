@@ -56,6 +56,8 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginData = z.infer<typeof loginSchema>;
 export type User = typeof users.$inferSelect;
 
+export const inviteStatusEnum = pgEnum('invite_status', ['pending', 'sent', 'failed']);
+
 export const generatedLinks = pgTable("generated_links", {
   id: text("id").primaryKey(),
   streamName: text("stream_name").notNull(),
@@ -67,6 +69,8 @@ export const generatedLinks = pgTable("generated_links", {
   productionId: varchar("production_id").references(() => productions.id, { onDelete: 'set null' }),
   guestName: text("guest_name"),
   guestEmail: text("guest_email"),
+  inviteStatus: inviteStatusEnum("invite_status"),
+  invitedAt: timestamp("invited_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),

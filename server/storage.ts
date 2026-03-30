@@ -105,6 +105,7 @@ export interface IStorage {
   updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined>;
   deleteProduction(id: string): Promise<boolean>;
   getLinksByProduction(productionId: string): Promise<GeneratedLink[]>;
+  updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined>;
   validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string; productionId?: string; guestName?: string; guestEmail?: string }>;
   getSessionTokenLinkId(token: string): Promise<string | null>;
 }
@@ -639,6 +640,13 @@ export class MemStorage implements IStorage {
   async updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined> { return undefined; }
   async deleteProduction(id: string): Promise<boolean> { return false; }
   async getLinksByProduction(productionId: string): Promise<GeneratedLink[]> { return []; }
+  async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {
+    const link = this.links.get(linkId);
+    if (!link) return undefined;
+    const updated = { ...link, inviteStatus: status as any, invitedAt: invitedAt || link.invitedAt };
+    this.links.set(linkId, updated);
+    return updated;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1715,6 +1723,15 @@ export class DatabaseStorage implements IStorage {
       .from(generatedLinks)
       .where(eq(generatedLinks.productionId, productionId))
       .orderBy(generatedLinks.guestName);
+  }
+
+  async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {
+    const [updated] = await db
+      .update(generatedLinks)
+      .set({ inviteStatus: status, invitedAt: invitedAt ?? new Date() })
+      .where(eq(generatedLinks.id, linkId))
+      .returning();
+    return updated || undefined;
   }
 }
 

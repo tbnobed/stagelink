@@ -1841,6 +1841,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST add participants (generate links) for a production
+  // Body: { guests: [{ guestName, guestEmail }] }
+  app.post('/api/productions/:id/participants', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const prod = await storage.getProduction(req.params.id);
+      if (!prod) return res.status(404).json({ error: 'Production not found' });
+
+      const { guests } = req.body as { guests: Array<{ guestName: string; guestEmail: string }> };
+      if (!Array.isArray(guests) || guests.length === 0) {
+        return res.status(400).json({ error: 'guests array is required' });
+      }
+
+      const userId = (req.user as any)?.id;
+      const platformUrl = `${req.protocol}://${req.get('host')}`;
+      const createdLinks = [];
+
+      for (const guest of guests) {
+        if (!guest.guestEmail || !guest.guestEmail.trim()) continue;
+
+        const linkId = Date.now().toString() + Math.random().toString(36).slice(2, 6);
+        const streamName = `prod-${req.params.id.slice(0, 8)}-${Math.random().toString(36).slice(2, 8)}`;
+        const returnFeed = prod.returnFeed;
+        const baseUrl = `${platformUrl}/session?stream=${encodeURIComponent(streamName)}&return=${encodeURIComponent(returnFeed)}&chat=true`;
+
+        const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
+        const sessionToken = await storage.createSessionToken(linkId, 'guest', expiresAt, userId);
+
+        const assignedWhipServer = getNextWhipServer();
+        const assignedServerAddr = formatServerAddress(assignedWhipServer);
+
+        const finalUrl = `${baseUrl}&token=${sessionToken.id}&server=${assignedServerAddr}`;
+
+        const linkData = {
+          id: linkId,
+          streamName,
+          returnFeed,
+          chatEnabled: true,
+          url: finalUrl,
+          sessionToken: sessionToken.id,
+          assignedServer: assignedServerAddr,
+          productionId: req.params.id,
+          guestName: guest.guestName?.trim() || null,
+          guestEmail: guest.guestEmail.trim(),
+          expiresAt,
+        };
+
+        const link = await storage.createLink(linkData, userId);
+
+        // Also create a short link for this participant
+        const { randomBytes } = await import('crypto');
+        const shortCode = randomBytes(3).toString('hex');
+        try {
+          await storage.createShortLink({
+            id: shortCode,
+            streamName,
+            returnFeed,
+            chatEnabled: true,
+            sessionToken: undefined,
+            assignedServer: assignedServerAddr,
+            productionId: req.params.id,
+            guestName: guest.guestName?.trim() || null,
+            guestEmail: guest.guestEmail.trim(),
+            expiresAt,
+          }, userId);
+          createdLinks.push({ ...link, shortCode, shortUrl: `${platformUrl}/s/${shortCode}` });
+        } catch {
+          createdLinks.push({ ...link, shortCode: null, shortUrl: null });
+        }
+      }
+
+      res.status(201).json({ created: createdLinks });
+    } catch (error) {
+      console.error('Failed to add participants:', error);
+      res.status(500).json({ error: 'Failed to add participants' });
+    }
+  });
+
+  // POST send invite emails to participants
+  // Body: { linkIds: string[] } — send to these specific links (or omit to send to all unsent)
+  app.post('/api/productions/:id/invite', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const prod = await storage.getProduction(req.params.id);
+      if (!prod) return res.status(404).json({ error: 'Production not found' });
+
+      const { sendProductionInvite } = await import('./email-service');
+      const platformUrl = `${req.protocol}://${req.get('host')}`;
+
+      const { linkIds } = req.body as { linkIds?: string[] };
+
+      let links = await storage.getLinksByProduction(req.params.id);
+
+      if (linkIds && linkIds.length > 0) {
+        links = links.filter(l => linkIds.includes(l.id));
+      } else {
+        // Default: only send to unsent (no inviteStatus or status=pending/failed)
+        links = links.filter(l => !l.inviteStatus || l.inviteStatus === 'pending' || l.inviteStatus === 'failed');
+      }
+
+      const results: Array<{ linkId: string; success: boolean; email?: string; error?: string }> = [];
+
+      for (const link of links) {
+        if (!link.guestEmail) {
+          results.push({ linkId: link.id, success: false, error: 'No email address' });
+          continue;
+        }
+
+        // Build the join URL — use the short link if available, otherwise the full URL
+        const joinUrl = link.url;
+
+        try {
+          const sent = await sendProductionInvite({
+            to: link.guestEmail,
+            guestName: link.guestName || 'Valued Guest',
+            productionName: prod.name,
+            scheduledAt: prod.scheduledAt,
+            description: prod.description,
+            joinLink: joinUrl,
+          });
+
+          const status = sent ? 'sent' : 'failed';
+          await storage.updateLinkInviteStatus(link.id, status, sent ? new Date() : undefined);
+          results.push({ linkId: link.id, success: sent, email: link.guestEmail });
+        } catch (err) {
+          await storage.updateLinkInviteStatus(link.id, 'failed');
+          results.push({ linkId: link.id, success: false, email: link.guestEmail, error: 'Send error' });
+        }
+      }
+
+      const sent = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+      res.json({ sent, failed, results });
+    } catch (error) {
+      console.error('Failed to send invites:', error);
+      res.status(500).json({ error: 'Failed to send invites' });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // Initialize WebSocket server for chat

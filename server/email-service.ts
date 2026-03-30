@@ -455,3 +455,108 @@ StageLinq Team
 
   return sendEmail({ to, subject, text, html });
 }
+
+export async function sendProductionInvite({
+  to,
+  guestName,
+  productionName,
+  scheduledAt,
+  description,
+  joinLink,
+}: {
+  to: string;
+  guestName: string;
+  productionName: string;
+  scheduledAt?: Date | null;
+  description?: string | null;
+  joinLink: string;
+}): Promise<boolean> {
+  const scheduledText = scheduledAt
+    ? scheduledAt.toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
+    : null;
+
+  const subject = `You're invited to join ${productionName} — TBN Virtual Audience`;
+
+  const text = [
+    `Hello ${guestName},`,
+    '',
+    `You have been invited to participate in a live broadcast on TBN Virtual Audience.`,
+    '',
+    `Production: ${productionName}`,
+    ...(scheduledText ? [`Date & Time: ${scheduledText}`] : []),
+    ...(description ? ['', description, ''] : ['']),
+    'How to Join:',
+    '1. Open the link below on a laptop or desktop computer with a webcam and microphone.',
+    '2. Allow camera and microphone access when your browser prompts you.',
+    '3. Read and accept the participation agreement before going live.',
+    '4. If the show is at capacity you will be placed in a waiting room — you will be admitted automatically when a spot opens.',
+    '',
+    `Join Now: ${joinLink}`,
+    '',
+    'This link is personal to you. Please do not share it with others.',
+    '',
+    'God bless,',
+    'TBN Virtual Audience Team',
+    'Trinity Broadcasting Network',
+  ].join('\n');
+
+  const steps = [
+    'Open the link below on a <strong style="color:#e5e7eb;">laptop or desktop computer</strong> with a webcam and microphone.',
+    'Allow <strong style="color:#e5e7eb;">camera and microphone access</strong> when your browser prompts you.',
+    'Read and accept the <strong style="color:#e5e7eb;">participation agreement</strong> before going live.',
+    'If the show is at capacity you will be placed in a <strong style="color:#e5e7eb;">waiting room</strong> — you will be admitted automatically when a spot opens.',
+  ];
+
+  const stepsHtml = steps.map((step, i) => `
+    <tr>
+      <td width="36" style="vertical-align:top;padding:0 0 12px 0;">
+        <div style="width:28px;height:28px;border-radius:50%;background-color:#7c3aed;text-align:center;line-height:28px;font-size:13px;font-weight:700;color:#ffffff;">${i + 1}</div>
+      </td>
+      <td style="vertical-align:top;padding:4px 0 12px 8px;">
+        <span style="font-size:14px;color:#d1d5db;line-height:1.5;">${step}</span>
+      </td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>You're Invited — TBN Virtual Audience</title></head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#0a0a0a;padding:40px 20px;">
+<tr><td align="center">
+<table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;width:100%;">
+<tr><td style="background:linear-gradient(135deg,#1a0a2e 0%,#0d1a3a 100%);border-radius:12px 12px 0 0;padding:36px 40px;text-align:center;border-bottom:3px solid #7c3aed;">
+  <div style="font-size:13px;font-weight:700;letter-spacing:3px;color:#a78bfa;text-transform:uppercase;margin-bottom:8px;">Trinity Broadcasting Network</div>
+  <div style="font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">TBN Virtual Audience</div>
+</td></tr>
+<tr><td style="background-color:#111827;padding:36px 40px;">
+  <p style="font-size:16px;color:#d1d5db;margin:0 0 8px 0;">Hello <strong style="color:#ffffff;">${guestName}</strong>,</p>
+  <p style="font-size:16px;color:#d1d5db;margin:0 0 28px 0;">You have been invited to participate in a live broadcast on TBN Virtual Audience.</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#1f2937;border-radius:8px;border:1px solid #374151;margin-bottom:28px;">
+    <tr><td style="padding:20px 24px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#7c3aed;text-transform:uppercase;margin-bottom:6px;">Production</div>
+      <div style="font-size:22px;font-weight:700;color:#ffffff;margin-bottom:${(scheduledText || description) ? '16px' : '0'};">${productionName}</div>
+      ${scheduledText ? `<div style="margin-bottom:${description ? '12px' : '0'};"><span style="font-size:11px;font-weight:700;letter-spacing:2px;color:#6b7280;text-transform:uppercase;">Date &amp; Time</span><br><span style="font-size:15px;color:#e5e7eb;font-weight:600;">${scheduledText}</span></div>` : ''}
+      ${description ? `<p style="font-size:14px;color:#9ca3af;margin:0;line-height:1.6;">${description}</p>` : ''}
+    </td></tr>
+  </table>
+  <div style="margin-bottom:28px;">
+    <div style="font-size:12px;font-weight:700;letter-spacing:2px;color:#6b7280;text-transform:uppercase;margin-bottom:14px;">How to Join</div>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">${stepsHtml}</table>
+  </div>
+  <div style="text-align:center;margin-bottom:28px;">
+    <a href="${joinLink}" style="display:inline-block;background-color:#7c3aed;color:#ffffff;font-size:17px;font-weight:700;text-decoration:none;padding:16px 48px;border-radius:8px;letter-spacing:0.3px;">Join Now →</a>
+  </div>
+  <p style="font-size:12px;color:#6b7280;text-align:center;margin:0;">This link is personal to you. Please do not share it with others.</p>
+</td></tr>
+<tr><td style="background-color:#0d0d0d;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center;border-top:1px solid #1f2937;">
+  <p style="font-size:12px;color:#4b5563;margin:0 0 4px 0;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Trinity Broadcasting Network</p>
+  <p style="font-size:11px;color:#374151;margin:0;">TBN Virtual Audience Platform</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  return sendEmail({ to, subject, text, html });
+}
