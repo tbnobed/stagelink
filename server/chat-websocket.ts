@@ -38,6 +38,7 @@ interface ChatMessage {
   productionId?: string;
   linkId?: string;
   guestName?: string;
+  token?: string;
 }
 
 const messageSchema = z.object({
@@ -372,14 +373,23 @@ class ChatWebSocketServer {
       return;
     }
 
-    const { productionId, linkId, guestName = 'Guest' } = message;
+    const { productionId, linkId, guestName = 'Guest', token } = message;
 
-    // Server-side validation: verify the linkId actually belongs to this productionId
-    const links = await storage.getLinksByProduction(productionId);
-    const validLink = links.find(l => l.id === linkId);
-    if (!validLink) {
-      ws.send(JSON.stringify({ type: 'production_status', status: 'error', message: 'Unauthorized: link not found in production' }));
-      return;
+    // Token-based auth: if a session token is provided, verify it maps to the claimed linkId
+    if (token) {
+      const tokenLinkId = await storage.getSessionTokenLinkId(token);
+      if (tokenLinkId !== linkId) {
+        ws.send(JSON.stringify({ type: 'production_status', status: 'error', message: 'Unauthorized' }));
+        return;
+      }
+    } else {
+      // No token provided: fall back to DB membership check
+      const links = await storage.getLinksByProduction(productionId);
+      const validLink = links.find(l => l.id === linkId);
+      if (!validLink) {
+        ws.send(JSON.stringify({ type: 'production_status', status: 'error', message: 'Unauthorized' }));
+        return;
+      }
     }
 
     // Fetch production config if not already tracked

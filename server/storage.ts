@@ -106,6 +106,7 @@ export interface IStorage {
   deleteProduction(id: string): Promise<boolean>;
   getLinksByProduction(productionId: string): Promise<GeneratedLink[]>;
   validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string; productionId?: string; guestName?: string; guestEmail?: string }>;
+  getSessionTokenLinkId(token: string): Promise<string | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -498,6 +499,13 @@ export class MemStorage implements IStorage {
       linkId: sessionToken.linkId || undefined, 
       linkType: sessionToken.linkType || undefined 
     };
+  }
+
+  async getSessionTokenLinkId(token: string): Promise<string | null> {
+    const sessionToken = this.sessionTokens.get(token);
+    if (!sessionToken) return null;
+    if (sessionToken.expiresAt && new Date() > sessionToken.expiresAt) return null;
+    return sessionToken.linkId || null;
   }
 
   async createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken> {
@@ -1153,6 +1161,25 @@ export class DatabaseStorage implements IStorage {
     }
 
     return { valid: false };
+  }
+
+  async getSessionTokenLinkId(token: string): Promise<string | null> {
+    const [row] = await db
+      .select({ linkId: sessionTokens.linkId, expiresAt: sessionTokens.expiresAt })
+      .from(sessionTokens)
+      .where(eq(sessionTokens.id, token));
+    if (!row) {
+      // Fall back to legacy session_token column on generated_links
+      const [link] = await db
+        .select({ id: generatedLinks.id, expiresAt: generatedLinks.expiresAt })
+        .from(generatedLinks)
+        .where(eq(generatedLinks.sessionToken, token));
+      if (!link) return null;
+      if (link.expiresAt && link.expiresAt <= new Date()) return null;
+      return link.id;
+    }
+    if (row.expiresAt && row.expiresAt <= new Date()) return null;
+    return row.linkId || null;
   }
 
   async createSessionToken(linkId: string, linkType: string, expiresAt: Date, userId?: number): Promise<SessionToken> {

@@ -165,12 +165,14 @@ export default function Session() {
     productionWsRef.current = ws;
 
     ws.onopen = () => {
+      const sessionToken = new URLSearchParams(window.location.search).get('token');
       ws.send(JSON.stringify({
         type: 'production_join',
         productionId,
         linkId,
         guestName: guestName || 'Guest',
         sessionId: `prod-${productionId}`,
+        ...(sessionToken ? { token: sessionToken } : {}),
       }));
     };
 
@@ -318,12 +320,14 @@ export default function Session() {
       // Block publishing until server grants a 'live' slot; enter/re-enter the queue otherwise
       if (productionId && productionStatus !== 'live') {
         if (productionWsRef.current?.readyState === WebSocket.OPEN) {
+          const sessionToken = new URLSearchParams(window.location.search).get('token');
           productionWsRef.current.send(JSON.stringify({
             type: 'production_join',
             productionId,
             linkId,
             guestName: guestName || 'Guest',
             sessionId: `prod-${productionId}`,
+            ...(sessionToken ? { token: sessionToken } : {}),
           }));
         } else {
           toast({
