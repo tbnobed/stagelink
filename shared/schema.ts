@@ -27,6 +27,10 @@ export const insertProductionSchema = createInsertSchema(productions).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+}).extend({
+  scheduledAt: z.string().datetime().nullable().optional(),
+  description: z.string().nullable().optional(),
+  assignedServer: z.string().nullable().optional(),
 });
 export type InsertProduction = z.infer<typeof insertProductionSchema>;
 export type Production = typeof productions.$inferSelect;
