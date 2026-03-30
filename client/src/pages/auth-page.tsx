@@ -233,15 +233,17 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-[hsl(0,0%,5%)] flex">
-      <div className="flex-1 relative flex items-center justify-center p-8 overflow-hidden" style={{ background: 'linear-gradient(160deg, hsl(0,0%,6%) 0%, hsl(159,20%,7%) 60%, hsl(0,0%,5%) 100%)' }}>
-        {/* Decorative radial glow top-right */}
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-[0.07]" style={{ background: 'radial-gradient(circle, hsl(159,100%,41%) 0%, transparent 70%)' }} />
-        {/* Decorative radial glow bottom-left */}
-        <div className="absolute -bottom-40 -left-20 w-80 h-80 rounded-full opacity-[0.05]" style={{ background: 'radial-gradient(circle, hsl(159,100%,41%) 0%, transparent 70%)' }} />
-        {/* Subtle dot grid */}
-        <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
-        {/* Accent line */}
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent 0%, hsl(159,100%,41%) 50%, transparent 100%)', opacity: 0.15 }} />
+      <div className="flex-1 relative flex items-center justify-center p-8 overflow-hidden" style={{ background: 'linear-gradient(150deg, hsl(0,0%,7%) 0%, hsl(159,25%,10%) 50%, hsl(0,0%,6%) 100%)' }}>
+        {/* Large radial glow top-right */}
+        <div className="absolute -top-24 -right-24 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, hsla(159,100%,41%,0.18) 0%, transparent 65%)' }} />
+        {/* Large radial glow bottom-left */}
+        <div className="absolute -bottom-32 -left-16 w-[400px] h-[400px] rounded-full" style={{ background: 'radial-gradient(circle, hsla(159,100%,41%,0.12) 0%, transparent 65%)' }} />
+        {/* Dot grid */}
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.06) 1px, transparent 0)', backgroundSize: '28px 28px' }} />
+        {/* Top accent line */}
+        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: 'linear-gradient(90deg, transparent 0%, hsl(159,100%,41%) 50%, transparent 100%)', opacity: 0.4 }} />
+        {/* Bottom accent line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent 0%, hsl(159,100%,41%) 50%, transparent 100%)', opacity: 0.15 }} />
         <div className="relative w-full max-w-sm">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
