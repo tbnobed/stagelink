@@ -168,34 +168,105 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
   const linkStatusColor = (ls: LinkStatus) =>
     ls === 'active' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-gray-500/10 text-gray-500 border-gray-600/20';
 
-  const inviteBadge = (status: InviteStatus) => {
-    if (!status || status === 'pending') return null;
-    if (status === 'sent') return <span className="text-xs px-1.5 py-0.5 rounded-full border bg-green-500/10 text-green-400 border-green-500/20">Invited</span>;
-    if (status === 'failed') return <span className="text-xs px-1.5 py-0.5 rounded-full border bg-red-500/10 text-red-400 border-red-500/20">Invite Failed</span>;
+  const [sendingInviteId, setSendingInviteId] = useState<string | null>(null);
+
+  const sendSingleInvite = async (linkId: string) => {
+    setSendingInviteId(linkId);
+    try {
+      const res = await fetch(`/api/productions/${productionId}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{ linkId }]),
+      });
+      const result = await res.json();
+      if (result.sent > 0) {
+        toast({ title: 'Invite sent' });
+      } else {
+        toast({ title: 'Failed to send invite', variant: 'destructive' });
+      }
+      refetch();
+    } catch {
+      toast({ title: 'Error sending invite', variant: 'destructive' });
+    } finally {
+      setSendingInviteId(null);
+    }
+  };
+
+  const inviteStatusCell = (p: ParticipantRecord) => {
+    const status = p.inviteStatus as InviteStatus;
+    const ts = p.invitedAt ? new Date(p.invitedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : null;
+    if (!status || status === 'pending') {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-500">Not Sent</span>
+          {p.guestEmail && (
+            <Button size="sm" variant="outline"
+              className="h-6 text-xs border-purple-600/40 text-purple-400 hover:bg-purple-500/10 px-2"
+              onClick={() => sendSingleInvite(p.id)}
+              disabled={sendingInviteId === p.id}
+            >{sendingInviteId === p.id ? '...' : 'Send'}</Button>
+          )}
+        </div>
+      );
+    }
+    if (status === 'sent') {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-green-400" title={ts ? `Sent ${ts}` : undefined}>
+            Invited{ts ? <span className="text-green-600 ml-1">{ts}</span> : null}
+          </span>
+          {p.guestEmail && (
+            <Button size="sm" variant="outline"
+              className="h-6 text-xs border-gray-600/40 text-gray-400 hover:bg-gray-500/10 px-2"
+              onClick={() => sendSingleInvite(p.id)}
+              disabled={sendingInviteId === p.id}
+            >{sendingInviteId === p.id ? '...' : 'Resend'}</Button>
+          )}
+        </div>
+      );
+    }
+    if (status === 'failed') {
+      return (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-red-400">Failed</span>
+          {p.guestEmail && (
+            <Button size="sm" variant="outline"
+              className="h-6 text-xs border-red-600/40 text-red-400 hover:bg-red-500/10 px-2"
+              onClick={() => sendSingleInvite(p.id)}
+              disabled={sendingInviteId === p.id}
+            >{sendingInviteId === p.id ? '...' : 'Retry'}</Button>
+          )}
+        </div>
+      );
+    }
     return null;
   };
 
   const ParticipantRow = ({ p, showPromote }: { p: ParticipantRecord; showPromote?: boolean }) => (
-    <div className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2">
-      <div className="min-w-0 flex-1">
-        <p className="text-white text-sm font-medium truncate">{p.guestName || '(unnamed)'}</p>
-        <p className="text-gray-400 text-xs truncate">{p.guestEmail || p.id}</p>
+    <div className="bg-gray-800/50 rounded-lg px-3 py-2">
+      <div className="flex items-center justify-between">
+        <div className="min-w-0 flex-1">
+          <p className="text-white text-sm font-medium truncate">{p.guestName || '(unnamed)'}</p>
+          <p className="text-gray-400 text-xs truncate">{p.guestEmail || p.id}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          {p.status === 'waiting' && p.position && (
+            <span className="text-yellow-400 text-xs font-mono">#{p.position}</span>
+          )}
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${participantStatusColors[p.status]}`}>{p.status}</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${linkStatusColor(p.linkStatus)}`}>{p.linkStatus}</span>
+          {showPromote && (
+            <Button size="sm" variant="outline"
+              className="h-7 text-xs border-yellow-600/50 text-yellow-400 hover:bg-yellow-500/10"
+              onClick={() => promoteMutation.mutate(p.id)}
+              disabled={promoteMutation.isPending}
+            >Promote</Button>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-        {p.status === 'waiting' && p.position && (
-          <span className="text-yellow-400 text-xs font-mono">#{p.position}</span>
-        )}
-        <span className={`text-xs px-2 py-0.5 rounded-full border ${participantStatusColors[p.status]}`}>{p.status}</span>
-        <span className={`text-xs px-2 py-0.5 rounded-full border ${linkStatusColor(p.linkStatus)}`}>{p.linkStatus}</span>
-        {inviteBadge(p.inviteStatus as InviteStatus)}
-        {showPromote && (
-          <Button size="sm" variant="outline"
-            className="h-7 text-xs border-yellow-600/50 text-yellow-400 hover:bg-yellow-500/10"
-            onClick={() => promoteMutation.mutate(p.id)}
-            disabled={promoteMutation.isPending}
-          >Promote</Button>
-        )}
-      </div>
+      {p.guestEmail && (
+        <div className="mt-1.5 pl-0">{inviteStatusCell(p)}</div>
+      )}
     </div>
   );
 

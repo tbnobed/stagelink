@@ -643,7 +643,7 @@ export class MemStorage implements IStorage {
   async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {
     const link = this.links.get(linkId);
     if (!link) return undefined;
-    const updated = { ...link, inviteStatus: status as any, invitedAt: invitedAt || link.invitedAt };
+    const updated: GeneratedLink = { ...link, inviteStatus: status, invitedAt: invitedAt ?? link.invitedAt ?? null };
     this.links.set(linkId, updated);
     return updated;
   }
@@ -1726,9 +1726,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {
+    const setFields: { inviteStatus: typeof status; invitedAt?: Date } = { inviteStatus: status };
+    if (invitedAt !== undefined) setFields.invitedAt = invitedAt;
     const [updated] = await db
       .update(generatedLinks)
-      .set({ inviteStatus: status, invitedAt: invitedAt ?? new Date() })
+      .set(setFields)
       .where(eq(generatedLinks.id, linkId))
       .returning();
     return updated || undefined;

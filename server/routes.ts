@@ -1919,7 +1919,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST send invite emails to participants
-  // Body: { linkIds: string[] } — send to these specific links (or omit to send to all unsent)
+  // Body: Array<{ guestName, guestEmail, linkId }> — send to specific links
+  //   OR: { linkIds: string[] } — legacy shorthand
+  //   OR: empty body — send to all unsent/failed participants
   app.post('/api/productions/:id/invite', requireAdminOrEngineer, async (req, res) => {
     try {
       const prod = await storage.getProduction(req.params.id);
@@ -1928,12 +1930,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sendProductionInvite } = await import('./email-service');
       const platformUrl = `${req.protocol}://${req.get('host')}`;
 
-      const { linkIds } = req.body as { linkIds?: string[] };
+      // Resolve target link IDs from request body
+      let targetLinkIds: string[] | null = null;
+
+      if (Array.isArray(req.body)) {
+        // Spec-conformant format: [{ guestName, guestEmail, linkId }]
+        const items = req.body as Array<{ guestName?: string; guestEmail?: string; linkId: string }>;
+        targetLinkIds = items.filter(i => i.linkId).map(i => i.linkId);
+      } else if (req.body?.linkIds && Array.isArray(req.body.linkIds)) {
+        // Legacy shorthand: { linkIds: string[] }
+        targetLinkIds = req.body.linkIds;
+      }
+      // null = empty body → send to all unsent/failed
 
       let links = await storage.getLinksByProduction(req.params.id);
 
-      if (linkIds && linkIds.length > 0) {
-        links = links.filter(l => linkIds.includes(l.id));
+      if (targetLinkIds && targetLinkIds.length > 0) {
+        links = links.filter(l => targetLinkIds!.includes(l.id));
       } else {
         // Default: only send to unsent (no inviteStatus or status=pending/failed)
         links = links.filter(l => !l.inviteStatus || l.inviteStatus === 'pending' || l.inviteStatus === 'failed');
