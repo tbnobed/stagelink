@@ -644,7 +644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/short-links', requireAuth, async (req, res) => {
     try {
       const userId = (req.user as any)?.id;
-      const { streamName, returnFeed, chatEnabled, expiresAt } = req.body;
+      const { streamName, returnFeed, chatEnabled, expiresAt, productionId, guestName, guestEmail } = req.body;
       
       // Generate unique short code
       const shortCode = await generateUniqueShortCode(async (code) => {
@@ -662,6 +662,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         chatEnabled: chatEnabled ?? false,
         assignedServer: assignedServerAddr,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        productionId: productionId || null,
+        guestName: guestName || null,
+        guestEmail: guestEmail || null,
       }, userId);
 
       res.json(shortLink);

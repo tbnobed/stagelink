@@ -181,10 +181,25 @@ export default function Session() {
             setProductionStatus('waiting');
             setWaitingPosition(msg.position || 0);
           } else if (msg.status === 'promoted') {
-            setProductionStatus('promoted');
+            setProductionStatus('live');
             setWaitingPosition(0);
-            toast({ title: "You're Live!", description: "A spot opened up — you can now go live!" });
-            setTimeout(() => setProductionStatus('live'), 100);
+            toast({ title: "You're Live!", description: "A spot opened up — your stream is starting!" });
+            // Auto-start WHIP publishing when promoted from waiting
+            if (publisherVideoRef.current) {
+              startPublishing(publisherVideoRef.current).then(result => {
+                setIsPublishing(true);
+                setSessionId(result.sessionId || 'Connected');
+                setAudioCodec('opus/48000/2');
+                setVideoCodec('h264/720p@30fps');
+              }).catch(err => {
+                console.error('Auto-publish on promotion failed:', err);
+                toast({
+                  title: "Stream Error",
+                  description: "You were promoted but stream failed to start. Please click 'Start Stream' manually.",
+                  variant: "destructive"
+                });
+              });
+            }
           }
         }
       } catch {}

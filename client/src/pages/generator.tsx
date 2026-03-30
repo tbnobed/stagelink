@@ -115,7 +115,10 @@ export default function Generator() {
             streamName: streamName.trim(),
             returnFeed: returnFeed,
             chatEnabled: enableChat,
-            expiresAt: expiresAt || null
+            expiresAt: expiresAt || null,
+            productionId: selectedProductionId || null,
+            guestName: guestName.trim() || null,
+            guestEmail: guestEmail.trim() || null,
           }),
         })
       ]);

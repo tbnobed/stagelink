@@ -4,10 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useLocation } from "wouter";
 import type { Production, GeneratedLink } from "@shared/schema";
 
 type ParticipantStatus = 'live' | 'waiting' | 'offline';
@@ -194,10 +192,34 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
   );
 }
 
+function ProductionSummaryBadges({ productionId }: { productionId: string }) {
+  const { data } = useQuery<ParticipantsResponse>({
+    queryKey: ['/api/productions', productionId, 'participants'],
+    queryFn: async () => {
+      const res = await fetch(`/api/productions/${productionId}/participants`);
+      if (!res.ok) throw new Error('Failed');
+      return res.json();
+    },
+    refetchInterval: 10000,
+    staleTime: 5000,
+  });
+  if (!data) return null;
+  const live = data.participants.filter(p => p.status === 'live').length;
+  const waiting = data.participants.filter(p => p.status === 'waiting').length;
+  const offline = data.participants.filter(p => p.status === 'offline').length;
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      {live > 0 && <span className="text-xs text-green-400">{live} live</span>}
+      {waiting > 0 && <span className="text-xs text-yellow-400">{waiting} waiting</span>}
+      {offline > 0 && <span className="text-xs text-gray-500">{offline} offline</span>}
+      {live === 0 && waiting === 0 && offline === 0 && <span className="text-xs text-gray-600">No participants</span>}
+    </div>
+  );
+}
+
 export default function Productions() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [, setLocation] = useLocation();
   const [showForm, setShowForm] = useState(false);
   const [editProd, setEditProd] = useState<Production | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -296,14 +318,15 @@ export default function Productions() {
                     {prod.description && (
                       <p className="text-gray-400 text-xs mt-0.5 truncate">{prod.description}</p>
                     )}
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${statusColors[prod.status]}`}>
                         {prod.status}
                       </span>
                       <span className="text-gray-500 text-xs">
-                        {prod.maxLiveParticipants} live cap
+                        cap: {prod.maxLiveParticipants}
                       </span>
                     </div>
+                    <ProductionSummaryBadges productionId={prod.id} />
                   </div>
                 </div>
               </div>

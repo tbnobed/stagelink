@@ -64,6 +64,7 @@ class ChatWebSocketServer {
   private notificationListeners: Map<string, ChatClient> = new Map(); // key: notification-userId
   private productionStates: Map<string, ProductionState> = new Map(); // productionId -> state
   private clientProductionMap: Map<string, { productionId: string; linkId: string }> = new Map(); // clientKey -> {productionId, linkId}
+  private wsToProductionClientKey: Map<WebSocket, string> = new Map(); // ws -> production clientKey
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 
@@ -371,6 +372,14 @@ class ChatWebSocketServer {
 
     const { productionId, linkId, guestName = 'Guest' } = message;
 
+    // Server-side validation: verify the linkId actually belongs to this productionId
+    const links = await storage.getLinksByProduction(productionId);
+    const validLink = links.find(l => l.id === linkId);
+    if (!validLink) {
+      ws.send(JSON.stringify({ type: 'production_status', status: 'error', message: 'Unauthorized: link not found in production' }));
+      return;
+    }
+
     // Fetch production config if not already tracked
     if (!this.productionStates.has(productionId)) {
       const production = await storage.getProduction(productionId);
@@ -386,51 +395,80 @@ class ChatWebSocketServer {
     }
 
     const state = this.productionStates.get(productionId)!;
-    // Use linkId as the clientKey for production tracking
     const clientKey = `prod-${linkId}`;
 
-    // If already live, just re-confirm
+    // If already live (reconnect), just re-confirm
     if (state.liveParticipants.has(clientKey)) {
       state.liveParticipants.set(clientKey, linkId);
-      ws.send(JSON.stringify({ type: 'production_status', status: 'live', position: 0 }));
       this.clientProductionMap.set(clientKey, { productionId, linkId });
+      this.wsToProductionClientKey.set(ws, clientKey);
+      ws.send(JSON.stringify({ type: 'production_status', status: 'live', position: 0 }));
       return;
     }
 
     // Remove from waiting queue if already there (re-connect)
     state.waitingQueue = state.waitingQueue.filter(w => w.clientKey !== clientKey);
     this.clientProductionMap.set(clientKey, { productionId, linkId });
+    this.wsToProductionClientKey.set(ws, clientKey);
 
     if (state.liveParticipants.size < state.maxLive) {
-      // Assign live slot
       state.liveParticipants.set(clientKey, linkId);
       ws.send(JSON.stringify({ type: 'production_status', status: 'live', position: 0 }));
       console.log(`Production ${productionId}: ${guestName} (${linkId}) is LIVE. ${state.liveParticipants.size}/${state.maxLive}`);
     } else {
-      // Add to waiting queue
       state.waitingQueue.push({ clientKey, linkId, guestName, ws });
       const position = state.waitingQueue.length;
       ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position }));
-      console.log(`Production ${productionId}: ${guestName} (${linkId}) is WAITING at position ${position}. Queue length: ${state.waitingQueue.length}`);
+      console.log(`Production ${productionId}: ${guestName} (${linkId}) is WAITING at position ${position}.`);
     }
   }
 
   private handleProductionDisconnectByWs(ws: WebSocket) {
-    for (const [productionId, state] of Array.from(this.productionStates.entries())) {
-      // Check waiting queue first
-      const waitingIdx = state.waitingQueue.findIndex(w => w.ws === ws);
-      if (waitingIdx !== -1) {
-        const removed = state.waitingQueue.splice(waitingIdx, 1)[0];
-        this.clientProductionMap.delete(removed.clientKey);
-        // Re-notify remaining waiters of their new position
-        state.waitingQueue.forEach((w, i) => {
-          if (w.ws.readyState === WebSocket.OPEN) {
-            w.ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position: i + 1 }));
-          }
-        });
-        console.log(`Production ${productionId}: waiter ${removed.guestName} disconnected and removed from queue`);
-        return;
+    const clientKey = this.wsToProductionClientKey.get(ws);
+    if (!clientKey) return;
+    this.wsToProductionClientKey.delete(ws);
+
+    const entry = this.clientProductionMap.get(clientKey);
+    if (!entry) return;
+
+    const { productionId } = entry;
+    const state = this.productionStates.get(productionId);
+    if (!state) return;
+
+    // Remove from waiting queue if present
+    const waitingIdx = state.waitingQueue.findIndex(w => w.clientKey === clientKey);
+    if (waitingIdx !== -1) {
+      const removed = state.waitingQueue.splice(waitingIdx, 1)[0];
+      this.clientProductionMap.delete(clientKey);
+      state.waitingQueue.forEach((w, i) => {
+        if (w.ws.readyState === WebSocket.OPEN) {
+          w.ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position: i + 1 }));
+        }
+      });
+      console.log(`Production ${productionId}: waiter ${removed.guestName} disconnected`);
+      return;
+    }
+
+    // Remove from live participants and auto-promote next waiter
+    if (state.liveParticipants.has(clientKey)) {
+      state.liveParticipants.delete(clientKey);
+      this.clientProductionMap.delete(clientKey);
+      console.log(`Production ${productionId}: live ${entry.linkId} disconnected. ${state.liveParticipants.size}/${state.maxLive} live`);
+
+      while (state.liveParticipants.size < state.maxLive && state.waitingQueue.length > 0) {
+        const nextWaiter = state.waitingQueue.shift()!;
+        state.liveParticipants.set(nextWaiter.clientKey, nextWaiter.linkId);
+        if (nextWaiter.ws.readyState === WebSocket.OPEN) {
+          nextWaiter.ws.send(JSON.stringify({ type: 'production_status', status: 'promoted', position: 0 }));
+        }
+        console.log(`Production ${productionId}: auto-promoted ${nextWaiter.guestName} to live`);
       }
+
+      state.waitingQueue.forEach((w, i) => {
+        if (w.ws.readyState === WebSocket.OPEN) {
+          w.ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position: i + 1 }));
+        }
+      });
     }
   }
 
