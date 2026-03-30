@@ -39,8 +39,6 @@ export default function Session() {
   const playerVideoRef = useRef<HTMLVideoElement>(null);
   // Separate ref for the return feed video inside the waiting room overlay
   const waitingReturnFeedRef = useRef<HTMLVideoElement>(null);
-  const productionStatusRef = useRef<ProductionStatus>('idle');
-  const returnFeedStatusRef = useRef<'disconnected' | 'connecting' | 'connected' | 'failed' | 'retrying'>('disconnected');
   const containerRef = useRef<HTMLDivElement>(null);
   const initializationRef = useRef(false);
   const { toast } = useToast();
@@ -231,12 +229,15 @@ export default function Session() {
     };
   }, [productionId, linkId, consentGranted, guestName, toast]);
 
-  useEffect(() => { productionStatusRef.current = productionStatus; }, [productionStatus]);
-  useEffect(() => { returnFeedStatusRef.current = returnFeedStatus; }, [returnFeedStatus]);
 
   // Auto-start return feed when entering the waiting room
   useEffect(() => {
     if (productionStatus === 'waiting' && returnFeedStatus === 'disconnected') {
+      startReturnFeed();
+    }
+    // On promotion (waiting → live), the overlay unmounts removing waitingReturnFeedRef.
+    // Re-attach playback to the main playerVideoRef so the return feed remains audible/visible.
+    if (productionStatus === 'live' && isReturnFeedStarted && playerVideoRef.current) {
       startReturnFeed();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
