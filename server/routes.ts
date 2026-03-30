@@ -1947,8 +1947,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
 
-        // Build the join URL — use the short link if available, otherwise the full URL
-        const joinUrl = link.url;
+        // Resolve personal short link for this participant; fall back to full URL
+        const shortLink = await storage.getShortLinkByParams(link.streamName, link.returnFeed, link.chatEnabled);
+        const joinUrl = shortLink
+          ? `${platformUrl}/s/${shortLink.id}`
+          : link.url;
 
         try {
           const sent = await sendProductionInvite({

@@ -168,6 +168,13 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
   const linkStatusColor = (ls: LinkStatus) =>
     ls === 'active' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-gray-500/10 text-gray-500 border-gray-600/20';
 
+  const inviteBadge = (status: InviteStatus) => {
+    if (!status || status === 'pending') return null;
+    if (status === 'sent') return <span className="text-xs px-1.5 py-0.5 rounded-full border bg-green-500/10 text-green-400 border-green-500/20">Invited</span>;
+    if (status === 'failed') return <span className="text-xs px-1.5 py-0.5 rounded-full border bg-red-500/10 text-red-400 border-red-500/20">Invite Failed</span>;
+    return null;
+  };
+
   const ParticipantRow = ({ p, showPromote }: { p: ParticipantRecord; showPromote?: boolean }) => (
     <div className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2">
       <div className="min-w-0 flex-1">
@@ -180,6 +187,7 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
         )}
         <span className={`text-xs px-2 py-0.5 rounded-full border ${participantStatusColors[p.status]}`}>{p.status}</span>
         <span className={`text-xs px-2 py-0.5 rounded-full border ${linkStatusColor(p.linkStatus)}`}>{p.linkStatus}</span>
+        {inviteBadge(p.inviteStatus as InviteStatus)}
         {showPromote && (
           <Button size="sm" variant="outline"
             className="h-7 text-xs border-yellow-600/50 text-yellow-400 hover:bg-yellow-500/10"
@@ -210,6 +218,51 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
       <Group title="Waiting" items={waiting} showPromote />
       <Group title="Offline" items={offline} />
     </div>
+  );
+}
+
+function SendAllUnsentButton({ productionId }: { productionId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data } = useQuery<ParticipantsResponse>({
+    queryKey: ['/api/productions', productionId, 'participants'],
+    queryFn: async () => {
+      const res = await fetch(`/api/productions/${productionId}/participants`);
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    },
+    staleTime: 5000,
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/productions/${productionId}/invite`, {});
+      if (!res.ok) throw new Error('Failed to send invites');
+      return res.json();
+    },
+    onSuccess: (result) => {
+      toast({ title: `Invites sent: ${result.sent} sent, ${result.failed} failed` });
+      queryClient.invalidateQueries({ queryKey: ['/api/productions', productionId, 'participants'] });
+    },
+    onError: () => toast({ title: 'Failed to send invites', variant: 'destructive' }),
+  });
+
+  const unsentCount = (data?.participants || []).filter(p =>
+    p.guestEmail && (!p.inviteStatus || p.inviteStatus === 'pending' || p.inviteStatus === 'failed')
+  ).length;
+
+  if (unsentCount === 0) return null;
+
+  return (
+    <Button
+      size="sm"
+      onClick={() => sendMutation.mutate()}
+      disabled={sendMutation.isPending}
+      className="bg-purple-700 hover:bg-purple-600 text-white"
+    >
+      {sendMutation.isPending ? 'Sending...' : `Send All Unsent (${unsentCount})`}
+    </Button>
   );
 }
 
@@ -681,7 +734,10 @@ export default function Productions() {
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold va-text-primary">Participants</h3>
-                        <span className="text-gray-400 text-sm">Auto-refreshes every 5s</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-400 text-sm">Auto-refreshes every 5s</span>
+                          <SendAllUnsentButton productionId={selected.id} />
+                        </div>
                       </div>
                       <ParticipantsPanel productionId={selected.id} />
                     </div>
