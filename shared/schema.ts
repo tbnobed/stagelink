@@ -329,3 +329,20 @@ export const insertConsentRecordSchema = createInsertSchema(consentRecords).omit
 
 export type InsertConsentRecord = z.infer<typeof insertConsentRecordSchema>;
 export type ConsentRecord = typeof consentRecords.$inferSelect;
+
+// Return feeds table — configurable list of studio return feeds
+export const returnFeeds = pgTable("return_feeds", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  label: text("label").notNull(),
+  streamName: text("stream_name").notNull(),
+  serverAddress: text("server_address"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertReturnFeedSchema = createInsertSchema(returnFeeds).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertReturnFeed = z.infer<typeof insertReturnFeedSchema>;
+export type ReturnFeed = typeof returnFeeds.$inferSelect;

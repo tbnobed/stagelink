@@ -7,24 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Production, GeneratedLink } from "@shared/schema";
-
-const RETURN_FEED_OPTIONS = [
-  { value: "Socal1", label: "Socal 1" },
-  { value: "Socal2", label: "Socal 2" },
-  { value: "Socal3", label: "Socal 3" },
-  { value: "Socal4", label: "Socal 4" },
-  { value: "Socal5", label: "Socal 5" },
-  { value: "Socal6", label: "Socal 6" },
-  { value: "livestream", label: "Plex 1" },
-  { value: "livestream2", label: "Plex 2" },
-  { value: "livestream3", label: "Plex 3" },
-  { value: "livestream4", label: "Plex 4" },
-  { value: "livestream5", label: "Plex 5" },
-  { value: "livestream6", label: "Plex 6" },
-  { value: "livestream7", label: "Plex 7" },
-  { value: "livestream8", label: "Plex 8" },
-];
+import type { Production, GeneratedLink, ReturnFeed } from "@shared/schema";
 
 type ProductionStatus = 'draft' | 'active' | 'ended';
 type InviteStatus = 'pending' | 'sent' | 'failed' | null;
@@ -79,6 +62,11 @@ function ProductionForm({ initial, onSave, onCancel }: {
     initial?.scheduledAt ? new Date(initial.scheduledAt).toISOString().slice(0, 16) : ''
   );
 
+  const { data: returnFeedOptions = [] } = useQuery<ReturnFeed[]>({
+    queryKey: ['/api/return-feeds'],
+    staleTime: 60000,
+  });
+
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -117,8 +105,8 @@ function ProductionForm({ initial, onSave, onCancel }: {
             <SelectValue placeholder="Select a return feed…" />
           </SelectTrigger>
           <SelectContent className="bg-gray-900 border-gray-700">
-            {RETURN_FEED_OPTIONS.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            {returnFeedOptions.map(feed => (
+              <SelectItem key={feed.id} value={feed.streamName}>{feed.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

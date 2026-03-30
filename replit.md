@@ -65,6 +65,7 @@ Preferred communication style: Simple, everyday language.
 - **Privacy Policy**: Comprehensive privacy policy page (/privacy) addressing CCPA, BIPA, FCC regulations for US broadcast streaming.
 - **Error Handling**: Comprehensive error boundaries and toast notifications.
 - **Productions & Capacity Management**: Named live events with configurable maximum live participant caps (default 128). Guests linked to a production are routed through a real-time waiting room when capacity is full. Automatic promotion via WebSocket when a slot opens; manual promotion from the admin Productions page. Each guest link can be assigned to a production with name and email tracking. WebSocket production tracking (`production_join` message type) in chat-websocket.ts with in-memory state. REST API: `GET/POST/PUT/DELETE /api/productions`, `GET /api/productions/:id/participants`, `POST /api/productions/:id/participants/:linkId/promote`. Admin page at `/productions`. Generator page supports production/guest name/email assignment per link.
+- **Settings Page**: Admin-only settings page at `/settings` for managing platform configuration. Currently supports return feed management: add, edit, delete, and reorder the list of studio return feeds (display name, stream name, optional server address override). The `return_feeds` database table is the single source of truth for the dropdown options shown on the Generator and Productions pages. Default feeds (Socal 1–6, Plex 1–8) are seeded on first setup.
 
 # External Dependencies
 

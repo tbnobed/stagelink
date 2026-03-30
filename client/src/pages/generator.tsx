@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import QRCode from "qrcode";
 import { InviteDialog } from "@/components/invite-dialog";
-import type { Production } from "@shared/schema";
+import type { Production, ReturnFeed } from "@shared/schema";
 
 export default function Generator() {
   // Guest Session Link States
@@ -61,6 +61,11 @@ export default function Generator() {
   const { data: productions } = useQuery<Production[]>({
     queryKey: ['/api/productions'],
     staleTime: 30000,
+  });
+
+  const { data: returnFeedOptions = [] } = useQuery<ReturnFeed[]>({
+    queryKey: ['/api/return-feeds'],
+    staleTime: 60000,
   });
 
   const generateLink = async () => {
@@ -474,20 +479,9 @@ export default function Generator() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="va-bg-dark-surface-2 va-border-dark">
-                    <SelectItem value="Socal1">Socal 1</SelectItem>
-                    <SelectItem value="Socal2">Socal 2</SelectItem>
-                    <SelectItem value="Socal3">Socal 3</SelectItem>
-                    <SelectItem value="Socal4">Socal 4</SelectItem>
-                    <SelectItem value="Socal5">Socal 5</SelectItem>
-                    <SelectItem value="Socal6">Socal 6</SelectItem>
-                    <SelectItem value="livestream">Plex 1</SelectItem>
-                    <SelectItem value="livestream2">Plex 2</SelectItem>
-                    <SelectItem value="livestream3">Plex 3</SelectItem>
-                    <SelectItem value="livestream4">Plex 4</SelectItem>
-                    <SelectItem value="livestream5">Plex 5</SelectItem>
-                    <SelectItem value="livestream6">Plex 6</SelectItem>
-                    <SelectItem value="livestream7">Plex 7</SelectItem>
-                    <SelectItem value="livestream8">Plex 8</SelectItem>
+                    {returnFeedOptions.map(feed => (
+                      <SelectItem key={feed.id} value={feed.streamName}>{feed.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, productions, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord, type Production, type InsertProduction } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, productions, returnFeeds, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord, type Production, type InsertProduction, type ReturnFeed, type InsertReturnFeed } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
@@ -106,6 +106,11 @@ export interface IStorage {
   deleteProduction(id: string): Promise<boolean>;
   getLinksByProduction(productionId: string): Promise<GeneratedLink[]>;
   getUniqueReturnFeeds(): Promise<string[]>;
+  // Return Feed Settings
+  getAllReturnFeeds(): Promise<ReturnFeed[]>;
+  createReturnFeed(feed: InsertReturnFeed): Promise<ReturnFeed>;
+  updateReturnFeed(id: number, updates: Partial<InsertReturnFeed>): Promise<ReturnFeed | undefined>;
+  deleteReturnFeed(id: number): Promise<boolean>;
   updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined>;
   validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string; productionId?: string; guestName?: string; guestEmail?: string }>;
   getSessionTokenLinkId(token: string): Promise<string | null>;
@@ -642,6 +647,10 @@ export class MemStorage implements IStorage {
   async deleteProduction(id: string): Promise<boolean> { return false; }
   async getLinksByProduction(productionId: string): Promise<GeneratedLink[]> { return []; }
   async getUniqueReturnFeeds(): Promise<string[]> { return []; }
+  async getAllReturnFeeds(): Promise<ReturnFeed[]> { return []; }
+  async createReturnFeed(feed: InsertReturnFeed): Promise<ReturnFeed> { throw new Error('Not implemented'); }
+  async updateReturnFeed(id: number, updates: Partial<InsertReturnFeed>): Promise<ReturnFeed | undefined> { return undefined; }
+  async deleteReturnFeed(id: number): Promise<boolean> { return false; }
   async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {
     const link = this.links.get(linkId);
     if (!link) return undefined;
@@ -1743,6 +1752,25 @@ export class DatabaseStorage implements IStorage {
       ...fromProductions.map(r => r.returnFeed),
     ].filter(Boolean) as string[];
     return [...new Set(all)].sort();
+  }
+
+  async getAllReturnFeeds(): Promise<ReturnFeed[]> {
+    return await db.select().from(returnFeeds).orderBy(returnFeeds.sortOrder, returnFeeds.id);
+  }
+
+  async createReturnFeed(feed: InsertReturnFeed): Promise<ReturnFeed> {
+    const [created] = await db.insert(returnFeeds).values(feed).returning();
+    return created;
+  }
+
+  async updateReturnFeed(id: number, updates: Partial<InsertReturnFeed>): Promise<ReturnFeed | undefined> {
+    const [updated] = await db.update(returnFeeds).set(updates).where(eq(returnFeeds.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteReturnFeed(id: number): Promise<boolean> {
+    const result = await db.delete(returnFeeds).where(eq(returnFeeds.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {

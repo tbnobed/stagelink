@@ -34,6 +34,7 @@ export default function Navigation() {
 
   // Only show admin nav item for admin users
   if (user?.role === 'admin') {
+    navItems.push({ path: "/settings", label: "Settings", icon: "fas fa-sliders-h" });
     navItems.push({ path: "/admin", label: "Admin", icon: "fas fa-cog" });
   }
 

@@ -1726,6 +1726,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===================== Return Feeds Settings API =====================
+
+  app.get('/api/return-feeds', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const feeds = await storage.getAllReturnFeeds();
+      res.json(feeds);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch return feeds' });
+    }
+  });
+
+  app.post('/api/return-feeds', requireAdmin, async (req, res) => {
+    try {
+      const { label, streamName, serverAddress, sortOrder } = req.body;
+      if (!label || !streamName) return res.status(400).json({ error: 'label and streamName are required' });
+      const feed = await storage.createReturnFeed({ label, streamName, serverAddress: serverAddress || null, sortOrder: sortOrder ?? 0 });
+      res.status(201).json(feed);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create return feed' });
+    }
+  });
+
+  app.put('/api/return-feeds/:id', requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { label, streamName, serverAddress, sortOrder } = req.body;
+      const feed = await storage.updateReturnFeed(id, { label, streamName, serverAddress: serverAddress || null, sortOrder });
+      if (!feed) return res.status(404).json({ error: 'Return feed not found' });
+      res.json(feed);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update return feed' });
+    }
+  });
+
+  app.delete('/api/return-feeds/:id', requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteReturnFeed(id);
+      if (!deleted) return res.status(404).json({ error: 'Return feed not found' });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete return feed' });
+    }
+  });
+
   // GET unique return feed stream names (used to populate dropdown in production form)
   app.get('/api/stream-names', requireAdminOrEngineer, async (req, res) => {
     try {
