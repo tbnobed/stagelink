@@ -322,6 +322,16 @@ export default function Session() {
       setSessionId('Not connected');
       setAudioCodec('-');
       setVideoCodec('-');
+
+      // Notify production server that this guest has signed off (releases live slot)
+      if (productionId && productionWsRef.current && productionWsRef.current.readyState === WebSocket.OPEN) {
+        productionWsRef.current.send(JSON.stringify({
+          type: 'production_leave_live',
+          productionId,
+          linkId,
+          sessionId: `prod-${productionId}`,
+        }));
+      }
       
       toast({
         title: "Info",

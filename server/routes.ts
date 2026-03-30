@@ -1829,7 +1829,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wsServer = (global as any).chatWebSocketServer as InstanceType<typeof ChatWebSocketServer>;
       if (!wsServer) return res.status(503).json({ error: 'WebSocket server not available' });
       const promoted = wsServer.promoteParticipantByLinkId(req.params.id, req.params.linkId);
-      if (!promoted) return res.status(404).json({ error: 'Participant not found in waiting queue' });
+      if (!promoted) {
+        // Could be: participant not found, or capacity full
+        const liveStatus = wsServer.getProductionLiveStatus(req.params.id);
+        const notFound = !liveStatus?.waitingIds.find(w => w.linkId === req.params.linkId);
+        if (notFound) return res.status(404).json({ error: 'Participant not found in waiting queue' });
+        return res.status(409).json({ error: 'Production is at capacity. A live slot must open first.' });
+      }
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Failed to promote participant' });

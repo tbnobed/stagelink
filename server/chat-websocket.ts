@@ -20,7 +20,7 @@ interface ChatClient {
 }
 
 interface ChatMessage {
-  type: 'join' | 'leave' | 'message' | 'participant_update' | 'participants_list' | 'production_join';
+  type: 'join' | 'leave' | 'message' | 'participant_update' | 'participants_list' | 'production_join' | 'production_leave_live' | 'notification_listener';
   sessionId: string;
   userId?: number | null;
   username?: string;
@@ -147,6 +147,9 @@ class ChatWebSocketServer {
         break;
       case 'production_join':
         await this.handleProductionJoin(ws, message);
+        break;
+      case 'production_leave_live':
+        this.handleProductionLeaveLive(ws, message);
         break;
     }
   }
@@ -472,6 +475,44 @@ class ChatWebSocketServer {
     }
   }
 
+  private handleProductionLeaveLive(ws: WebSocket, message: ChatMessage) {
+    // Called when a guest stops their stream without closing the page (sign-off, not disconnect)
+    const clientKey = this.wsToProductionClientKey.get(ws);
+    if (!clientKey) return;
+
+    const entry = this.clientProductionMap.get(clientKey);
+    if (!entry) return;
+
+    const { productionId } = entry;
+    const state = this.productionStates.get(productionId);
+    if (!state) return;
+
+    if (!state.liveParticipants.has(clientKey)) return;
+
+    state.liveParticipants.delete(clientKey);
+    // Participant stays connected as ws is open; they stay tracked but are no longer live.
+    // Remove from wsToProductionClientKey so they don't auto-promote on disconnect,
+    // but keep clientProductionMap for re-join if they click Start again.
+    this.wsToProductionClientKey.delete(ws);
+    console.log(`Production ${productionId}: ${entry.linkId} signed off. ${state.liveParticipants.size}/${state.maxLive} live`);
+
+    // Auto-promote next waiter if any
+    while (state.liveParticipants.size < state.maxLive && state.waitingQueue.length > 0) {
+      const nextWaiter = state.waitingQueue.shift()!;
+      state.liveParticipants.set(nextWaiter.clientKey, nextWaiter.linkId);
+      if (nextWaiter.ws.readyState === WebSocket.OPEN) {
+        nextWaiter.ws.send(JSON.stringify({ type: 'production_status', status: 'promoted', position: 0 }));
+      }
+      console.log(`Production ${productionId}: auto-promoted ${nextWaiter.guestName} after sign-off`);
+    }
+
+    state.waitingQueue.forEach((w, i) => {
+      if (w.ws.readyState === WebSocket.OPEN) {
+        w.ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position: i + 1 }));
+      }
+    });
+  }
+
   private async handleNotificationListener(ws: WebSocket, message: ChatMessage) {
     if (!message.username || !message.role || !message.userId) {
       ws.send(JSON.stringify({ 
@@ -589,6 +630,11 @@ class ChatWebSocketServer {
     const clientKey = `prod-${linkId}`;
     const waitingIdx = state.waitingQueue.findIndex(w => w.linkId === linkId);
     if (waitingIdx === -1) return false;
+
+    // Enforce capacity even for manual promotion (admin must free a slot first)
+    if (state.liveParticipants.size >= state.maxLive) {
+      return false;
+    }
 
     const waiter = state.waitingQueue.splice(waitingIdx, 1)[0];
     state.liveParticipants.set(clientKey, linkId);

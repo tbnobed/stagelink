@@ -241,7 +241,7 @@ export default function Productions() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: ProductionFormData) => {
       const res = await apiRequest('POST', '/api/productions', data);
       return res.json();
     },
@@ -254,7 +254,7 @@ export default function Productions() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    mutationFn: async ({ id, data }: { id: string; data: ProductionFormData }) => {
       const res = await apiRequest('PUT', `/api/productions/${id}`, data);
       return res.json();
     },
