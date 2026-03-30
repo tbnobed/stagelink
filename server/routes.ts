@@ -1726,6 +1726,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET unique return feed stream names (used to populate dropdown in production form)
+  app.get('/api/stream-names', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const feeds = await storage.getUniqueReturnFeeds();
+      res.json(feeds);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch stream names' });
+    }
+  });
+
   // ===================== Productions API =====================
 
   // GET all productions

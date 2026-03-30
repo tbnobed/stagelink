@@ -61,6 +61,11 @@ function ProductionForm({ initial, onSave, onCancel }: {
     initial?.scheduledAt ? new Date(initial.scheduledAt).toISOString().slice(0, 16) : ''
   );
 
+  const { data: streamNames = [] } = useQuery<string[]>({
+    queryKey: ['/api/stream-names'],
+    staleTime: 30000,
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -88,8 +93,25 @@ function ProductionForm({ initial, onSave, onCancel }: {
       </div>
       <div>
         <Label htmlFor="prod-return" className="va-text-primary">Return Feed Stream Name</Label>
-        <Input id="prod-return" value={returnFeed} onChange={e => setReturnFeed(e.target.value)} required
-          className="bg-gray-900 border-gray-700 text-white mt-1" placeholder="e.g. tbn-studio-feed" />
+        <Input
+          id="prod-return"
+          list="return-feed-options"
+          value={returnFeed}
+          onChange={e => setReturnFeed(e.target.value)}
+          required
+          className="bg-gray-900 border-gray-700 text-white mt-1"
+          placeholder={streamNames.length > 0 ? 'Select or type a stream name…' : 'e.g. tbn-studio-feed'}
+        />
+        {streamNames.length > 0 && (
+          <datalist id="return-feed-options">
+            {streamNames.map(name => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+        )}
+        {streamNames.length === 0 && (
+          <p className="text-xs text-gray-500 mt-1">Enter the stream name for the studio return feed.</p>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>

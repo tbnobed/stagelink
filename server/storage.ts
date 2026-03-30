@@ -105,6 +105,7 @@ export interface IStorage {
   updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined>;
   deleteProduction(id: string): Promise<boolean>;
   getLinksByProduction(productionId: string): Promise<GeneratedLink[]>;
+  getUniqueReturnFeeds(): Promise<string[]>;
   updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined>;
   validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string; productionId?: string; guestName?: string; guestEmail?: string }>;
   getSessionTokenLinkId(token: string): Promise<string | null>;
@@ -640,6 +641,7 @@ export class MemStorage implements IStorage {
   async updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined> { return undefined; }
   async deleteProduction(id: string): Promise<boolean> { return false; }
   async getLinksByProduction(productionId: string): Promise<GeneratedLink[]> { return []; }
+  async getUniqueReturnFeeds(): Promise<string[]> { return []; }
   async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {
     const link = this.links.get(linkId);
     if (!link) return undefined;
@@ -1723,6 +1725,24 @@ export class DatabaseStorage implements IStorage {
       .from(generatedLinks)
       .where(eq(generatedLinks.productionId, productionId))
       .orderBy(generatedLinks.guestName);
+  }
+
+  async getUniqueReturnFeeds(): Promise<string[]> {
+    const fromLinks = await db
+      .selectDistinct({ returnFeed: generatedLinks.returnFeed })
+      .from(generatedLinks);
+    const fromShortLinks = await db
+      .selectDistinct({ returnFeed: shortLinks.returnFeed })
+      .from(shortLinks);
+    const fromProductions = await db
+      .selectDistinct({ returnFeed: productions.returnFeed })
+      .from(productions);
+    const all = [
+      ...fromLinks.map(r => r.returnFeed),
+      ...fromShortLinks.map(r => r.returnFeed),
+      ...fromProductions.map(r => r.returnFeed),
+    ].filter(Boolean) as string[];
+    return [...new Set(all)].sort();
   }
 
   async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {
