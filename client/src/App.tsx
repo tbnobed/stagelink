@@ -20,6 +20,7 @@ import MobileTest from "@/pages/mobile-test";
 import AuthPage from "@/pages/auth-page";
 import RegisterPage from "@/pages/register-page";
 import AdminPage from "@/pages/admin-page";
+import ConsentAuditPage from "@/pages/consent-audit-page";
 import ProfilePage from "@/pages/profile-page";
 import ResetPasswordPage from "@/pages/reset-password-page";
 import PrivacyPolicy from "@/pages/privacy-policy";
@@ -41,6 +42,7 @@ function Router() {
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/productions" component={Productions} adminOrEngineerOnly />
         <ProtectedRoute path="/admin" component={AdminPage} adminOnly />
+        <ProtectedRoute path="/admin/consent" component={ConsentAuditPage} adminOnly />
         <Route path="/session" component={Session} />
         <Route path="/viewer" component={Viewer} />
         <Route path="/studio-viewer" component={StudioViewer} />
