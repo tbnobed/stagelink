@@ -70,6 +70,7 @@ export const generatedLinks = pgTable("generated_links", {
   url: text("url").notNull(),
   sessionToken: text("session_token").unique(),
   assignedServer: text("assigned_server"),
+  assignedWhepServer: text("assigned_whep_server"),
   productionId: varchar("production_id").references(() => productions.id, { onDelete: 'set null' }),
   guestName: text("guest_name"),
   guestEmail: text("guest_email"),
@@ -95,6 +96,7 @@ export const shortLinks = pgTable("short_links", {
   chatEnabled: boolean("chat_enabled").notNull().default(false),
   sessionToken: text("session_token").unique(),
   assignedServer: text("assigned_server"),
+  assignedWhepServer: text("assigned_whep_server"),
   productionId: varchar("production_id").references(() => productions.id, { onDelete: 'set null' }),
   guestName: text("guest_name"),
   guestEmail: text("guest_email"),
@@ -151,6 +153,7 @@ export const viewerLinks = pgTable("viewer_links", {
   chatEnabled: boolean("chat_enabled").notNull().default(false),
   url: text("url").notNull(),
   sessionToken: text("session_token").unique(), // One-time use token
+  assignedWhepServer: text("assigned_whep_server"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),
@@ -169,6 +172,7 @@ export const shortViewerLinks = pgTable("short_viewer_links", {
   returnFeed: text("return_feed").notNull(),
   chatEnabled: boolean("chat_enabled").notNull().default(false),
   sessionToken: text("session_token").unique(), // One-time use token
+  assignedWhepServer: text("assigned_whep_server"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   expiresAt: timestamp("expires_at"),
   createdBy: integer("created_by").references(() => users.id),
@@ -329,6 +333,23 @@ export const insertConsentRecordSchema = createInsertSchema(consentRecords).omit
 
 export type InsertConsentRecord = z.infer<typeof insertConsentRecordSchema>;
 export type ConsentRecord = typeof consentRecords.$inferSelect;
+
+// WHEP server pool — dedicated servers for return feed delivery to guests
+export const whepServers = pgTable("whep_servers", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  label: text("label").notNull(),
+  address: text("address").notNull(), // host:port
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertWhepServerSchema = createInsertSchema(whepServers).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertWhepServer = z.infer<typeof insertWhepServerSchema>;
+export type WhepServer = typeof whepServers.$inferSelect;
 
 // Return feeds table — configurable list of studio return feeds
 export const returnFeeds = pgTable("return_feeds", {

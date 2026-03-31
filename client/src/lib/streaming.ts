@@ -1,4 +1,4 @@
-import { buildWhipUrl, buildWhepUrl, buildWhipUrlForServer } from "@/lib/srs-config";
+import { buildWhipUrl, buildWhepUrl, buildWhipUrlForServer, buildWhepUrlForServer } from "@/lib/srs-config";
 
 // Global variables for SRS SDK and QR Code library
 declare global {
@@ -92,7 +92,7 @@ export function stopPublishing() {
   }
 }
 
-export async function startPlayback(videoElement: HTMLVideoElement, streamName: string, maxRetries: number = 5) {
+export async function startPlayback(videoElement: HTMLVideoElement, streamName: string, maxRetries: number = 5, serverAddress?: string) {
   if (!window.SrsRtcWhipWhepAsync) {
     console.warn('SRS SDK not loaded, cannot start playback');
     return;
@@ -121,7 +121,9 @@ export async function startPlayback(videoElement: HTMLVideoElement, streamName: 
         console.log(`WHEP ICE connection state: ${player.pc.iceConnectionState}`);
       });
 
-      const url = await buildWhepUrl(config.app, streamName);
+      const url = serverAddress
+        ? await buildWhepUrlForServer(serverAddress, config.app, streamName)
+        : await buildWhepUrl(config.app, streamName);
       console.log(`WHEP URL: ${url}`);
       
       await player.play(url);

@@ -8,6 +8,17 @@ import { generateUniqueShortCode } from "./utils/shortCode";
 import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl, getNextWhipServer, formatServerAddress, getWhipServerList, buildServerWhepUrl, parseServerAddress } from "./utils/srs-config";
 import { sendStreamingInvite, sendViewerInvite } from "./email-service";
 
+// Round-robin counter for WHEP server pool assignment
+let whepRoundRobinIndex = 0;
+
+async function getNextWhepServerAddress(): Promise<string | null> {
+  const servers = await storage.getActiveWhepServers();
+  if (!servers.length) return null;
+  const server = servers[whepRoundRobinIndex % servers.length];
+  whepRoundRobinIndex++;
+  return server.address;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
@@ -367,16 +378,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assignedWhipServer = getNextWhipServer();
       const assignedServerAddr = formatServerAddress(assignedWhipServer);
 
+      // Determine WHEP server: per-feed server address override takes priority, then pool round-robin
+      const returnFeedName = req.body.returnFeed;
+      let assignedWhepServerAddr: string | null = null;
+      if (returnFeedName) {
+        const allFeeds = await storage.getAllReturnFeeds();
+        const matchedFeed = allFeeds.find(f => f.streamName === returnFeedName);
+        assignedWhepServerAddr = matchedFeed?.serverAddress || await getNextWhepServerAddress();
+      } else {
+        assignedWhepServerAddr = await getNextWhepServerAddress();
+      }
+
       const isAbsoluteUrl = req.body.url.startsWith('http');
       const parsedUrl = new URL(req.body.url, isAbsoluteUrl ? undefined : 'http://placeholder');
       parsedUrl.searchParams.set('token', sessionToken.id);
       parsedUrl.searchParams.set('server', assignedServerAddr);
+      if (assignedWhepServerAddr) parsedUrl.searchParams.set('returnServer', assignedWhepServerAddr);
       const finalUrl = isAbsoluteUrl ? parsedUrl.toString() : `${parsedUrl.pathname}${parsedUrl.search}`;
 
       const linkData = {
         ...req.body,
         sessionToken: sessionToken.id,
         assignedServer: assignedServerAddr,
+        assignedWhepServer: assignedWhepServerAddr,
         url: finalUrl
       };
       
@@ -465,15 +489,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create session token for this viewer link
       const linkExpiry = expiresAt ? new Date(expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours default
       const sessionToken = await storage.createSessionToken(id, 'viewer', linkExpiry, userId);
-      
-      // Add session token to the viewer link data and URL
+
+      // Determine WHEP server for return feed delivery
+      let assignedWhepServerAddr: string | null = null;
+      if (returnFeed) {
+        const allFeeds = await storage.getAllReturnFeeds();
+        const matchedFeed = allFeeds.find(f => f.streamName === returnFeed);
+        assignedWhepServerAddr = matchedFeed?.serverAddress || await getNextWhepServerAddress();
+      } else {
+        assignedWhepServerAddr = await getNextWhepServerAddress();
+      }
+
+      // Add session token and WHEP server to the viewer link URL
+      let finalUrl = `${url}&token=${sessionToken.id}`;
+      if (assignedWhepServerAddr) finalUrl += `&server=${encodeURIComponent(assignedWhepServerAddr)}`;
+
       const viewerLinkData = {
         id,
         returnFeed,
         chatEnabled: chatEnabled ?? false,
-        url: `${url}&token=${sessionToken.id}`, // Add token to URL
+        url: finalUrl,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         sessionToken: sessionToken.id,
+        assignedWhepServer: assignedWhepServerAddr,
       };
       
       const viewerLink = await storage.createViewerLink(viewerLinkData, userId);
@@ -521,11 +559,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return !!existing;
       });
 
+      // Determine WHEP server for return feed delivery
+      let assignedWhepServerAddr: string | null = null;
+      if (returnFeed) {
+        const allFeeds = await storage.getAllReturnFeeds();
+        const matchedFeed = allFeeds.find(f => f.streamName === returnFeed);
+        assignedWhepServerAddr = matchedFeed?.serverAddress || await getNextWhepServerAddress();
+      } else {
+        assignedWhepServerAddr = await getNextWhepServerAddress();
+      }
+
       const shortViewerLink = await storage.createShortViewerLink({
         id: `v${shortCode}`,
         returnFeed,
         chatEnabled: chatEnabled ?? false,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        assignedWhepServer: assignedWhepServerAddr,
       }, userId);
 
       res.json(shortViewerLink);
@@ -631,8 +680,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `);
       }
 
-      // Redirect to viewer page with return feed and session token
-      const redirectUrl = `/studio-viewer?return=${encodeURIComponent(shortViewerLink.returnFeed)}&chat=${shortViewerLink.chatEnabled}&token=${matchingViewerLink.sessionToken}`;
+      // Redirect to viewer page with return feed, session token, and WHEP server
+      const whepParam = shortViewerLink.assignedWhepServer ? `&server=${encodeURIComponent(shortViewerLink.assignedWhepServer)}` : '';
+      const redirectUrl = `/studio-viewer?return=${encodeURIComponent(shortViewerLink.returnFeed)}&chat=${shortViewerLink.chatEnabled}&token=${matchingViewerLink.sessionToken}${whepParam}`;
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Error resolving short viewer link:', error);
@@ -655,12 +705,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const assignedWhipServer = getNextWhipServer();
       const assignedServerAddr = formatServerAddress(assignedWhipServer);
 
+      // Determine WHEP server for return feed delivery
+      let assignedWhepServerAddr: string | null = null;
+      if (returnFeed) {
+        const allFeeds = await storage.getAllReturnFeeds();
+        const matchedFeed = allFeeds.find(f => f.streamName === returnFeed);
+        assignedWhepServerAddr = matchedFeed?.serverAddress || await getNextWhepServerAddress();
+      } else {
+        assignedWhepServerAddr = await getNextWhepServerAddress();
+      }
+
       const shortLink = await storage.createShortLink({
         id: shortCode,
         streamName,
         returnFeed,
         chatEnabled: chatEnabled ?? false,
         assignedServer: assignedServerAddr,
+        assignedWhepServer: assignedWhepServerAddr,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         productionId: productionId || null,
         guestName: guestName || null,
@@ -777,7 +838,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const chatParam = shortLink.chatEnabled ? '&chat=true' : '';
       const tokenParam = originalLink.sessionToken ? `&token=${originalLink.sessionToken}` : '';
       const serverParam = (shortLink.assignedServer || originalLink.assignedServer) ? `&server=${encodeURIComponent(shortLink.assignedServer || originalLink.assignedServer || '')}` : '';
-      const redirectUrl = `/session?stream=${encodeURIComponent(shortLink.streamName)}&return=${encodeURIComponent(shortLink.returnFeed)}${chatParam}${tokenParam}${serverParam}`;
+      const returnServerParam = (shortLink.assignedWhepServer || originalLink.assignedWhepServer) ? `&returnServer=${encodeURIComponent(shortLink.assignedWhepServer || originalLink.assignedWhepServer || '')}` : '';
+      const redirectUrl = `/session?stream=${encodeURIComponent(shortLink.streamName)}&return=${encodeURIComponent(shortLink.returnFeed)}${chatParam}${tokenParam}${serverParam}${returnServerParam}`;
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Failed to resolve short link:', error);
@@ -1771,6 +1833,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // WHEP Server Pool — dedicated servers for return feed delivery
+  app.get('/api/whep-servers', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const servers = await storage.getAllWhepServers();
+      res.json(servers);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch WHEP servers' });
+    }
+  });
+
+  app.post('/api/whep-servers', requireAdmin, async (req, res) => {
+    try {
+      const { label, address, isActive, sortOrder } = req.body;
+      if (!label || !address) return res.status(400).json({ error: 'label and address are required' });
+      const server = await storage.createWhepServer({ label, address, isActive: isActive ?? true, sortOrder: sortOrder ?? 0 });
+      res.status(201).json(server);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create WHEP server' });
+    }
+  });
+
+  app.put('/api/whep-servers/:id', requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { label, address, isActive, sortOrder } = req.body;
+      const server = await storage.updateWhepServer(id, { label, address, isActive, sortOrder });
+      if (!server) return res.status(404).json({ error: 'WHEP server not found' });
+      res.json(server);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update WHEP server' });
+    }
+  });
+
+  app.delete('/api/whep-servers/:id', requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteWhepServer(id);
+      if (!deleted) return res.status(404).json({ error: 'WHEP server not found' });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete WHEP server' });
+    }
+  });
+
   // GET unique return feed stream names (used to populate dropdown in production form)
   app.get('/api/stream-names', requireAdminOrEngineer, async (req, res) => {
     try {
@@ -1926,7 +2032,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assignedWhipServer = getNextWhipServer();
         const assignedServerAddr = formatServerAddress(assignedWhipServer);
 
-        const finalUrl = `${baseUrl}&token=${sessionToken.id}&server=${assignedServerAddr}`;
+        // Determine WHEP server for return feed delivery
+        const allFeedsForProd = await storage.getAllReturnFeeds();
+        const matchedFeedForProd = allFeedsForProd.find(f => f.streamName === returnFeed);
+        const assignedWhepServerAddr = matchedFeedForProd?.serverAddress || await getNextWhepServerAddress();
+
+        let finalUrl = `${baseUrl}&token=${sessionToken.id}&server=${assignedServerAddr}`;
+        if (assignedWhepServerAddr) finalUrl += `&returnServer=${encodeURIComponent(assignedWhepServerAddr)}`;
 
         const linkData = {
           id: linkId,
@@ -1936,6 +2048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           url: finalUrl,
           sessionToken: sessionToken.id,
           assignedServer: assignedServerAddr,
+          assignedWhepServer: assignedWhepServerAddr,
           productionId: req.params.id,
           guestName: guest.guestName?.trim() || null,
           guestEmail: guest.guestEmail.trim(),
@@ -1956,6 +2069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             chatEnabled: true,
             sessionToken: undefined,
             assignedServer: assignedServerAddr,
+            assignedWhepServer: assignedWhepServerAddr,
             productionId: req.params.id,
             guestName: guest.guestName?.trim() || null,
             guestEmail: guest.guestEmail.trim(),

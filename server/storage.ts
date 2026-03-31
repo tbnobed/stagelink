@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, productions, returnFeeds, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord, type Production, type InsertProduction, type ReturnFeed, type InsertReturnFeed } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, productions, returnFeeds, whepServers, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord, type Production, type InsertProduction, type ReturnFeed, type InsertReturnFeed, type WhepServer, type InsertWhepServer } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
@@ -111,6 +111,12 @@ export interface IStorage {
   createReturnFeed(feed: InsertReturnFeed): Promise<ReturnFeed>;
   updateReturnFeed(id: number, updates: Partial<InsertReturnFeed>): Promise<ReturnFeed | undefined>;
   deleteReturnFeed(id: number): Promise<boolean>;
+  // WHEP Server Pool
+  getAllWhepServers(): Promise<WhepServer[]>;
+  getActiveWhepServers(): Promise<WhepServer[]>;
+  createWhepServer(server: InsertWhepServer): Promise<WhepServer>;
+  updateWhepServer(id: number, updates: Partial<InsertWhepServer>): Promise<WhepServer | undefined>;
+  deleteWhepServer(id: number): Promise<boolean>;
   updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined>;
   validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string; productionId?: string; guestName?: string; guestEmail?: string }>;
   getSessionTokenLinkId(token: string): Promise<string | null>;
@@ -651,6 +657,11 @@ export class MemStorage implements IStorage {
   async createReturnFeed(feed: InsertReturnFeed): Promise<ReturnFeed> { throw new Error('Not implemented'); }
   async updateReturnFeed(id: number, updates: Partial<InsertReturnFeed>): Promise<ReturnFeed | undefined> { return undefined; }
   async deleteReturnFeed(id: number): Promise<boolean> { return false; }
+  async getAllWhepServers(): Promise<WhepServer[]> { return []; }
+  async getActiveWhepServers(): Promise<WhepServer[]> { return []; }
+  async createWhepServer(server: InsertWhepServer): Promise<WhepServer> { throw new Error('Not implemented'); }
+  async updateWhepServer(id: number, updates: Partial<InsertWhepServer>): Promise<WhepServer | undefined> { return undefined; }
+  async deleteWhepServer(id: number): Promise<boolean> { return false; }
   async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {
     const link = this.links.get(linkId);
     if (!link) return undefined;
@@ -1770,6 +1781,29 @@ export class DatabaseStorage implements IStorage {
 
   async deleteReturnFeed(id: number): Promise<boolean> {
     const result = await db.delete(returnFeeds).where(eq(returnFeeds.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getAllWhepServers(): Promise<WhepServer[]> {
+    return await db.select().from(whepServers).orderBy(whepServers.sortOrder, whepServers.id);
+  }
+
+  async getActiveWhepServers(): Promise<WhepServer[]> {
+    return await db.select().from(whepServers).where(eq(whepServers.isActive, true)).orderBy(whepServers.sortOrder, whepServers.id);
+  }
+
+  async createWhepServer(server: InsertWhepServer): Promise<WhepServer> {
+    const [created] = await db.insert(whepServers).values(server).returning();
+    return created;
+  }
+
+  async updateWhepServer(id: number, updates: Partial<InsertWhepServer>): Promise<WhepServer | undefined> {
+    const [updated] = await db.update(whepServers).set(updates).where(eq(whepServers.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteWhepServer(id: number): Promise<boolean> {
+    const result = await db.delete(whepServers).where(eq(whepServers.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 

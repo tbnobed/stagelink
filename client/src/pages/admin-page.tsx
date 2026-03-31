@@ -13,7 +13,7 @@ import { Loader2, Plus, Trash2, Users, Settings, Mail, Shield, Clock, Globe, Mon
 import { useToast } from "@/hooks/use-toast";
 import { useMobile } from "@/hooks/use-mobile";
 import { InviteDialog } from "@/components/invite-dialog";
-import type { ReturnFeed } from "@shared/schema";
+import type { ReturnFeed, WhepServer } from "@shared/schema";
 
 interface SafeUser {
   id: number;
@@ -99,6 +99,47 @@ export default function AdminPage() {
   const startEditFeed = (feed: ReturnFeed) => {
     setEditingFeedId(feed.id);
     setEditFeedValues({ label: feed.label, streamName: feed.streamName, serverAddress: feed.serverAddress || '' });
+  };
+
+  const { data: whepServers = [], isLoading: whepServersLoading } = useQuery<WhepServer[]>({
+    queryKey: ["/api/whep-servers"],
+  });
+
+  const [editingWhepId, setEditingWhepId] = useState<number | null>(null);
+  const [editWhepValues, setEditWhepValues] = useState({ label: '', address: '', isActive: true });
+  const [showAddWhep, setShowAddWhep] = useState(false);
+  const [newWhep, setNewWhep] = useState({ label: '', address: '' });
+
+  const createWhepMutation = useMutation({
+    mutationFn: async (data: { label: string; address: string; isActive: boolean; sortOrder: number }) => {
+      const res = await apiRequest('POST', '/api/whep-servers', data);
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/whep-servers'] }); setShowAddWhep(false); setNewWhep({ label: '', address: '' }); toast({ title: 'WHEP server added' }); },
+    onError: () => toast({ title: 'Failed to add server', variant: 'destructive' }),
+  });
+
+  const updateWhepMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: Partial<WhepServer> }) => {
+      const res = await apiRequest('PUT', `/api/whep-servers/${id}`, updates);
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/whep-servers'] }); setEditingWhepId(null); toast({ title: 'WHEP server updated' }); },
+    onError: () => toast({ title: 'Failed to update server', variant: 'destructive' }),
+  });
+
+  const deleteWhepMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('DELETE', `/api/whep-servers/${id}`, undefined);
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/whep-servers'] }); toast({ title: 'WHEP server removed' }); },
+    onError: () => toast({ title: 'Failed to remove server', variant: 'destructive' }),
+  });
+
+  const startEditWhep = (s: WhepServer) => {
+    setEditingWhepId(s.id);
+    setEditWhepValues({ label: s.label, address: s.address, isActive: s.isActive });
   };
 
   const createUserMutation = useMutation({
@@ -691,6 +732,90 @@ export default function AdminPage() {
                     <div className="flex gap-1 justify-end">
                       <Button size="sm" className="h-7 px-2" onClick={() => { if (newFeed.label && newFeed.streamName) createFeedMutation.mutate({ label: newFeed.label, streamName: newFeed.streamName, serverAddress: newFeed.serverAddress || null, sortOrder: 999 }); }}><Check className="h-3 w-3" /></Button>
                       <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => { setShowAddFeed(false); setNewFeed({ label: '', streamName: '', serverAddress: '' }); }}><X className="h-3 w-3" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* WHEP Server Pool Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              <div>
+                <CardTitle>Return Feed WHEP Servers</CardTitle>
+                <CardDescription>Dedicated servers for delivering the studio return feed to guests. Links are assigned round-robin across active servers. Per-feed server overrides (in Return Feeds above) take priority.</CardDescription>
+              </div>
+            </div>
+            {!showAddWhep && (
+              <Button size="sm" onClick={() => setShowAddWhep(true)} className="gap-2">
+                <Plus className="h-4 w-4" /> Add Server
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Label</TableHead>
+                <TableHead>Address (host:port)</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {whepServersLoading ? (
+                <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading…</TableCell></TableRow>
+              ) : whepServers.length === 0 && !showAddWhep ? (
+                <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground italic text-sm">No dedicated WHEP servers configured — links will use the global default SRS server.</TableCell></TableRow>
+              ) : whepServers.map(s => (
+                <TableRow key={s.id}>
+                  {editingWhepId === s.id ? (
+                    <>
+                      <TableCell><Input value={editWhepValues.label} onChange={e => setEditWhepValues(v => ({ ...v, label: e.target.value }))} className="h-8 text-sm" /></TableCell>
+                      <TableCell><Input value={editWhepValues.address} onChange={e => setEditWhepValues(v => ({ ...v, address: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port" /></TableCell>
+                      <TableCell>
+                        <Button size="sm" variant={editWhepValues.isActive ? 'default' : 'outline'} className="h-7 text-xs" onClick={() => setEditWhepValues(v => ({ ...v, isActive: !v.isActive }))}>
+                          {editWhepValues.isActive ? 'Active' : 'Inactive'}
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button size="sm" className="h-7 px-2" onClick={() => updateWhepMutation.mutate({ id: s.id, updates: editWhepValues })}><Check className="h-3 w-3" /></Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingWhepId(null)}><X className="h-3 w-3" /></Button>
+                        </div>
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell className="font-medium">{s.label}</TableCell>
+                      <TableCell className="font-mono text-sm text-muted-foreground">{s.address}</TableCell>
+                      <TableCell><Badge variant={s.isActive ? 'default' : 'secondary'}>{s.isActive ? 'Active' : 'Inactive'}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => startEditWhep(s)}><Pencil className="h-3 w-3" /></Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => deleteWhepMutation.mutate(s.id)}><Trash2 className="h-3 w-3" /></Button>
+                        </div>
+                      </TableCell>
+                    </>
+                  )}
+                </TableRow>
+              ))}
+              {showAddWhep && (
+                <TableRow>
+                  <TableCell><Input value={newWhep.label} onChange={e => setNewWhep(v => ({ ...v, label: e.target.value }))} className="h-8 text-sm" placeholder="e.g. WHEP East" autoFocus /></TableCell>
+                  <TableCell><Input value={newWhep.address} onChange={e => setNewWhep(v => ({ ...v, address: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port" /></TableCell>
+                  <TableCell><span className="text-sm text-muted-foreground">Active</span></TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-1 justify-end">
+                      <Button size="sm" className="h-7 px-2" onClick={() => { if (newWhep.label && newWhep.address) createWhepMutation.mutate({ label: newWhep.label, address: newWhep.address, isActive: true, sortOrder: 999 }); }}><Check className="h-3 w-3" /></Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => { setShowAddWhep(false); setNewWhep({ label: '', address: '' }); }}><X className="h-3 w-3" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>

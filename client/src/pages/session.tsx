@@ -253,12 +253,13 @@ export default function Session() {
     const returnStream = urlParams.get('return');
     const stream = urlParams.get('stream');
     const feedStream = returnStream || stream || 'obed2';
+    const returnServer = urlParams.get('returnServer') || undefined;
     
     setReturnFeedStatus('connecting');
     setIsReturnFeedStarted(true);
     
     try {
-      await startPlayback(targetRef.current, feedStream);
+      await startPlayback(targetRef.current, feedStream, 5, returnServer);
       setReturnFeedStatus('connected');
       toast({
         title: "Return Feed Connected",
