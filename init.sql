@@ -1,6 +1,8 @@
--- Virtual Audience Platform v2.5 with Authentication, Session Tokens, Multi-Server Load Balancing, and Consent System
--- Clean initialization for Docker deployment
--- Includes: assigned_server columns for WHIP server load balancing, TBN Adult Likeness Authorization and Release
+-- Virtual Audience Platform v2.6
+-- Clean initialization for Docker deployment (fresh install)
+-- Includes: Productions & Capacity Management, Email Campaign (invite_status),
+--           Return Feeds (configurable), WHEP Server Pool (round-robin return feed delivery),
+--           Multi-server WHIP load balancing, TBN Adult Likeness Authorization consent system
 
 -- Create database if not exists
 SELECT 'CREATE DATABASE virtual_audience'
@@ -23,26 +25,33 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO postgres;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres;
 
--- Create full database schema for Virtual Audience Platform v2.5
+-- ============================================================
+-- ENUMS
+-- ============================================================
 
--- Create enums first (safe creation)
 DO $$ BEGIN
     CREATE TYPE user_role AS ENUM ('admin', 'engineer', 'user');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 DO $$ BEGIN
     CREATE TYPE message_type AS ENUM ('individual', 'broadcast', 'system');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 DO $$ BEGIN
     CREATE TYPE consent_type AS ENUM ('camera_microphone', 'recording', 'broadcast', 'privacy_policy', 'arbitration_class_waiver');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE production_status AS ENUM ('draft', 'active', 'ended');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE invite_status AS ENUM ('pending', 'sent', 'failed');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- ============================================================
+-- CORE TABLES
+-- ============================================================
 
 -- Session storage table for authentication sessions
 CREATE TABLE IF NOT EXISTS "session" (
@@ -63,8 +72,32 @@ CREATE TABLE IF NOT EXISTS "users" (
         CONSTRAINT "users_username_unique" UNIQUE("username")
 );
 
--- Generated links table for streaming session management (main table)
--- assigned_server: stores the WHIP server host:port for multi-server load balancing
+-- ============================================================
+-- PRODUCTIONS (named live events with capacity management)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS "productions" (
+        "id" varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        "name" text NOT NULL,
+        "description" text,
+        "scheduled_at" timestamp,
+        "status" production_status NOT NULL DEFAULT 'draft',
+        "max_live_participants" integer NOT NULL DEFAULT 128,
+        "return_feed" text NOT NULL DEFAULT '',
+        "assigned_server" text,
+        "created_at" timestamp NOT NULL DEFAULT now(),
+        "updated_at" timestamp NOT NULL DEFAULT now(),
+        "created_by" integer REFERENCES "users"("id")
+);
+
+-- ============================================================
+-- LINK TABLES
+-- All 4 link tables carry:
+--   assigned_server       = WHIP server for multi-server load balancing
+--   assigned_whep_server  = dedicated WHEP server for return feed delivery
+-- ============================================================
+
+-- Generated links table (main streaming guest links)
 CREATE TABLE IF NOT EXISTS "generated_links" (
         "id" text PRIMARY KEY NOT NULL,
         "stream_name" text NOT NULL,
@@ -73,13 +106,18 @@ CREATE TABLE IF NOT EXISTS "generated_links" (
         "url" text NOT NULL,
         "session_token" text UNIQUE,
         "assigned_server" text,
+        "assigned_whep_server" text,
+        "production_id" varchar REFERENCES "productions"("id") ON DELETE SET NULL,
+        "guest_name" text,
+        "guest_email" text,
+        "invite_status" invite_status,
+        "invited_at" timestamp,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "expires_at" timestamp,
         "created_by" integer REFERENCES "users"("id")
 );
 
--- Short links table for URL shortening
--- assigned_server: mirrors parent generated_link's assigned server
+-- Short links table (URL shortening for guest links)
 CREATE TABLE IF NOT EXISTS "short_links" (
         "id" text PRIMARY KEY NOT NULL,
         "stream_name" text NOT NULL,
@@ -87,35 +125,44 @@ CREATE TABLE IF NOT EXISTS "short_links" (
         "chat_enabled" boolean DEFAULT false NOT NULL,
         "session_token" text UNIQUE,
         "assigned_server" text,
+        "assigned_whep_server" text,
+        "production_id" varchar REFERENCES "productions"("id") ON DELETE SET NULL,
+        "guest_name" text,
+        "guest_email" text,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "expires_at" timestamp,
         "created_by" integer REFERENCES "users"("id")
 );
 
--- Viewer links table for studio monitoring
+-- Viewer links table (studio monitoring links)
 CREATE TABLE IF NOT EXISTS "viewer_links" (
         "id" text PRIMARY KEY NOT NULL,
         "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
         "url" text NOT NULL,
         "session_token" text UNIQUE,
+        "assigned_whep_server" text,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "expires_at" timestamp,
         "created_by" integer REFERENCES "users"("id")
 );
 
--- Short viewer links table for URL shortening
+-- Short viewer links table (URL shortening for viewer links)
 CREATE TABLE IF NOT EXISTS "short_viewer_links" (
         "id" text PRIMARY KEY NOT NULL,
         "return_feed" text NOT NULL,
         "chat_enabled" boolean DEFAULT false NOT NULL,
         "session_token" text UNIQUE,
+        "assigned_whep_server" text,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "expires_at" timestamp,
         "created_by" integer REFERENCES "users"("id")
 );
 
--- Session tokens table for reusable link security
+-- ============================================================
+-- SESSION TOKENS
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS "session_tokens" (
         "id" text PRIMARY KEY NOT NULL,
         "link_id" text,
@@ -125,7 +172,10 @@ CREATE TABLE IF NOT EXISTS "session_tokens" (
         "created_by" integer REFERENCES "users"("id")
 );
 
--- Chat system tables
+-- ============================================================
+-- CHAT SYSTEM
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS "chat_messages" (
         "id" integer PRIMARY KEY GENERATED BY DEFAULT AS IDENTITY,
         "session_id" text NOT NULL,
@@ -148,7 +198,10 @@ CREATE TABLE IF NOT EXISTS "chat_participants" (
         "last_seen_at" timestamp DEFAULT now() NOT NULL
 );
 
--- Room system tables for multi-participant streaming
+-- ============================================================
+-- ROOM SYSTEM (multi-participant streaming)
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS "rooms" (
         "id" varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         "name" text NOT NULL,
@@ -183,7 +236,10 @@ CREATE TABLE IF NOT EXISTS "room_stream_assignments" (
         "created_by" integer REFERENCES "users"("id")
 );
 
--- Password reset tokens table
+-- ============================================================
+-- AUTH TOKENS
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
         "id" text PRIMARY KEY NOT NULL,
         "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
@@ -193,7 +249,6 @@ CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
         "used" boolean DEFAULT false NOT NULL
 );
 
--- Registration tokens table for user invites
 CREATE TABLE IF NOT EXISTS "registration_tokens" (
         "id" varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         "email" text NOT NULL UNIQUE,
@@ -205,8 +260,10 @@ CREATE TABLE IF NOT EXISTS "registration_tokens" (
         "used" boolean DEFAULT false NOT NULL
 );
 
--- Consent records for US broadcast compliance (CCPA, BIPA, FCC)
--- Records TBN Adult Likeness Authorization and Release consent
+-- ============================================================
+-- CONSENT RECORDS (CCPA / BIPA / FCC / TBN Adult Likeness)
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS "consent_records" (
         "id" integer PRIMARY KEY GENERATED BY DEFAULT AS IDENTITY,
         "session_id" text,
@@ -222,13 +279,44 @@ CREATE TABLE IF NOT EXISTS "consent_records" (
         "revoked_at" timestamp
 );
 
--- Create indexes for performance
+-- ============================================================
+-- RETURN FEEDS (configurable studio return feed list)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS "return_feeds" (
+        "id" integer PRIMARY KEY GENERATED BY DEFAULT AS IDENTITY,
+        "label" text NOT NULL,
+        "stream_name" text NOT NULL,
+        "server_address" text,
+        "sort_order" integer NOT NULL DEFAULT 0,
+        "created_at" timestamp NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- WHEP SERVER POOL (dedicated servers for return feed delivery)
+-- Assigned round-robin at link generation time.
+-- Per-feed server_address override in return_feeds takes priority.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS "whep_servers" (
+        "id" integer PRIMARY KEY GENERATED BY DEFAULT AS IDENTITY,
+        "label" text NOT NULL,
+        "address" text NOT NULL,
+        "is_active" boolean NOT NULL DEFAULT true,
+        "sort_order" integer NOT NULL DEFAULT 0,
+        "created_at" timestamp NOT NULL DEFAULT now()
+);
+
+-- ============================================================
+-- INDEXES
+-- ============================================================
+
 CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+
 CREATE INDEX IF NOT EXISTS "session_tokens_link_id_idx" ON "session_tokens" ("link_id");
 CREATE INDEX IF NOT EXISTS "session_tokens_link_type_idx" ON "session_tokens" ("link_type");
 CREATE INDEX IF NOT EXISTS "session_tokens_expires_at_idx" ON "session_tokens" ("expires_at");
 
--- Chat system indexes
 CREATE INDEX IF NOT EXISTS "chat_messages_session_id_idx" ON "chat_messages" ("session_id");
 CREATE INDEX IF NOT EXISTS "chat_messages_sender_id_idx" ON "chat_messages" ("sender_id");
 CREATE INDEX IF NOT EXISTS "chat_messages_created_at_idx" ON "chat_messages" ("created_at");
@@ -236,30 +324,28 @@ CREATE INDEX IF NOT EXISTS "chat_participants_session_id_idx" ON "chat_participa
 CREATE INDEX IF NOT EXISTS "chat_participants_user_id_idx" ON "chat_participants" ("user_id");
 CREATE INDEX IF NOT EXISTS "chat_participants_is_online_idx" ON "chat_participants" ("is_online");
 
--- Link table indexes for performance
 CREATE INDEX IF NOT EXISTS "generated_links_expires_at_idx" ON "generated_links" ("expires_at");
 CREATE INDEX IF NOT EXISTS "generated_links_created_by_idx" ON "generated_links" ("created_by");
+CREATE INDEX IF NOT EXISTS "generated_links_production_id_idx" ON "generated_links" ("production_id");
 CREATE INDEX IF NOT EXISTS "short_links_expires_at_idx" ON "short_links" ("expires_at");
 CREATE INDEX IF NOT EXISTS "short_links_created_by_idx" ON "short_links" ("created_by");
+CREATE INDEX IF NOT EXISTS "short_links_production_id_idx" ON "short_links" ("production_id");
 CREATE INDEX IF NOT EXISTS "viewer_links_expires_at_idx" ON "viewer_links" ("expires_at");
 CREATE INDEX IF NOT EXISTS "viewer_links_created_by_idx" ON "viewer_links" ("created_by");
 CREATE INDEX IF NOT EXISTS "short_viewer_links_expires_at_idx" ON "short_viewer_links" ("expires_at");
 CREATE INDEX IF NOT EXISTS "short_viewer_links_created_by_idx" ON "short_viewer_links" ("created_by");
 
--- Password reset and registration token indexes
 CREATE INDEX IF NOT EXISTS "password_reset_tokens_user_id_idx" ON "password_reset_tokens" ("user_id");
 CREATE INDEX IF NOT EXISTS "password_reset_tokens_token_idx" ON "password_reset_tokens" ("token");
 CREATE INDEX IF NOT EXISTS "registration_tokens_email_idx" ON "registration_tokens" ("email");
 CREATE INDEX IF NOT EXISTS "registration_tokens_token_idx" ON "registration_tokens" ("token");
 
--- Consent system indexes
 CREATE INDEX IF NOT EXISTS "consent_records_user_id_idx" ON "consent_records" ("user_id");
 CREATE INDEX IF NOT EXISTS "consent_records_guest_identifier_idx" ON "consent_records" ("guest_identifier");
 CREATE INDEX IF NOT EXISTS "consent_records_stream_name_idx" ON "consent_records" ("stream_name");
 CREATE INDEX IF NOT EXISTS "consent_records_consent_type_idx" ON "consent_records" ("consent_type");
 CREATE INDEX IF NOT EXISTS "consent_records_granted_at_idx" ON "consent_records" ("granted_at");
 
--- Room system indexes
 CREATE INDEX IF NOT EXISTS "rooms_created_by_idx" ON "rooms" ("created_by");
 CREATE INDEX IF NOT EXISTS "rooms_is_active_idx" ON "rooms" ("is_active");
 CREATE INDEX IF NOT EXISTS "room_participants_room_id_idx" ON "room_participants" ("room_id");
@@ -268,11 +354,67 @@ CREATE INDEX IF NOT EXISTS "room_participants_is_streaming_idx" ON "room_partici
 CREATE INDEX IF NOT EXISTS "room_stream_assignments_room_id_idx" ON "room_stream_assignments" ("room_id");
 CREATE INDEX IF NOT EXISTS "room_stream_assignments_stream_name_idx" ON "room_stream_assignments" ("stream_name");
 
--- Create default admin user (password: password - MUST be changed in production)
+CREATE INDEX IF NOT EXISTS "productions_status_idx" ON "productions" ("status");
+CREATE INDEX IF NOT EXISTS "productions_created_by_idx" ON "productions" ("created_by");
+
+CREATE INDEX IF NOT EXISTS "return_feeds_sort_order_idx" ON "return_feeds" ("sort_order");
+CREATE INDEX IF NOT EXISTS "whep_servers_is_active_idx" ON "whep_servers" ("is_active");
+CREATE INDEX IF NOT EXISTS "whep_servers_sort_order_idx" ON "whep_servers" ("sort_order");
+
+-- ============================================================
+-- DEFAULT DATA
+-- ============================================================
+
+-- Default admin user (password: password — MUST be changed in production)
 INSERT INTO "users" ("username", "email", "password", "role")
 VALUES ('admin', 'admin@stagelinq.com', 'd50f2345138be5a9d2e393d0d35bc3e79b6e0de2ef0fcbb2e6420cbbc637db4e25cfbb47c1e3079f805a84dc9379c559747529728eb0d1c35b92b1b07fb0d68c.2dc356427cd6587959802211b6e98ace', 'admin')
 ON CONFLICT ("username") DO NOTHING;
 
--- Notify successful initialization
-\echo 'Virtual Audience Platform v2.5 database initialized successfully'
-\echo 'Features: rooms, consent system (TBN Adult Likeness Authorization), multi-server WHIP load balancing, US broadcast compliance'
+-- Default return feeds (Socal 1–6 and Plex 1–8)
+INSERT INTO "return_feeds" ("label", "stream_name", "sort_order") VALUES
+  ('Socal 1', 'Socal1',      1),
+  ('Socal 2', 'Socal2',      2),
+  ('Socal 3', 'Socal3',      3),
+  ('Socal 4', 'Socal4',      4),
+  ('Socal 5', 'Socal5',      5),
+  ('Socal 6', 'Socal6',      6),
+  ('Plex 1',  'livestream',  7),
+  ('Plex 2',  'livestream2', 8),
+  ('Plex 3',  'livestream3', 9),
+  ('Plex 4',  'livestream4', 10),
+  ('Plex 5',  'livestream5', 11),
+  ('Plex 6',  'livestream6', 12),
+  ('Plex 7',  'livestream7', 13),
+  ('Plex 8',  'livestream8', 14)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- VERIFICATION
+-- ============================================================
+
+SELECT
+    'Virtual Audience Platform v2.6 — Fresh Install Verification' AS status,
+    CASE
+        WHEN (
+            SELECT COUNT(*) FROM information_schema.tables
+            WHERE table_schema = 'public'
+            AND table_name IN (
+                'session', 'users',
+                'productions',
+                'generated_links', 'short_links', 'viewer_links', 'short_viewer_links',
+                'session_tokens',
+                'chat_messages', 'chat_participants',
+                'rooms', 'room_participants', 'room_stream_assignments',
+                'password_reset_tokens', 'registration_tokens',
+                'consent_records',
+                'return_feeds', 'whep_servers'
+            )
+        ) = 18
+        THEN 'SUCCESS: All 18 tables present'
+        ELSE 'ERROR: Missing tables — check output above'
+    END AS result;
+
+\echo 'Virtual Audience Platform v2.6 database initialized successfully'
+\echo 'Features: Productions & Capacity, Email Campaigns, Return Feeds (configurable),'
+\echo '          WHEP Server Pool, Multi-server WHIP load balancing,'
+\echo '          TBN Adult Likeness Authorization, US broadcast compliance'
