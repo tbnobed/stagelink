@@ -384,27 +384,12 @@ CREATE INDEX IF NOT EXISTS "whep_servers_is_active_idx"            ON "whep_serv
 CREATE INDEX IF NOT EXISTS "whep_servers_sort_order_idx"           ON "whep_servers"           ("sort_order");
 
 -- ============================================================
--- DEFAULT RETURN FEEDS SEED (only if table is currently empty)
+-- NO SEED DATA HERE — this script runs on every container start.
+-- Default return feeds (Socal 1-6, Plex 1-8) are seeded exactly once:
+--   • Fresh installs  → init.sql  (runs via docker-entrypoint-initdb.d on new volumes)
+--   • Legacy upgrades → migrations/0003_return_feeds_whep_servers.sql (run manually once)
+-- Any return feeds you add or remove in the Admin UI are safe across rebuilds.
 -- ============================================================
-
-INSERT INTO "return_feeds" ("label", "stream_name", "sort_order")
-SELECT label, stream_name, sort_order FROM (VALUES
-  ('Socal 1', 'Socal1',      1),
-  ('Socal 2', 'Socal2',      2),
-  ('Socal 3', 'Socal3',      3),
-  ('Socal 4', 'Socal4',      4),
-  ('Socal 5', 'Socal5',      5),
-  ('Socal 6', 'Socal6',      6),
-  ('Plex 1',  'livestream',  7),
-  ('Plex 2',  'livestream2', 8),
-  ('Plex 3',  'livestream3', 9),
-  ('Plex 4',  'livestream4', 10),
-  ('Plex 5',  'livestream5', 11),
-  ('Plex 6',  'livestream6', 12),
-  ('Plex 7',  'livestream7', 13),
-  ('Plex 8',  'livestream8', 14)
-) AS v(label, stream_name, sort_order)
-WHERE NOT EXISTS (SELECT 1 FROM "return_feeds" LIMIT 1);
 
 -- ============================================================
 -- VERIFICATION
