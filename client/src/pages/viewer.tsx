@@ -21,9 +21,10 @@ export default function Viewer() {
     const urlParams = new URLSearchParams(window.location.search);
     const stream = urlParams.get('stream');
     
+    const server = urlParams.get('server');
     if (stream) {
       setStreamName(stream);
-      startStream(stream);
+      startStream(stream, server || undefined);
     } else {
       toast({
         title: "Error",
@@ -53,11 +54,11 @@ export default function Viewer() {
     }
   );
 
-  const startStream = async (stream: string) => {
+  const startStream = async (stream: string, serverAddress?: string) => {
     if (!videoRef.current) return;
 
     try {
-      await startPlayback(videoRef.current, stream);
+      await startPlayback(videoRef.current, stream, 5, serverAddress);
       setIsConnected(true);
       toast({
         title: "Stream Connected",

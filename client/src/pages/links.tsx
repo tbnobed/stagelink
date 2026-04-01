@@ -36,6 +36,7 @@ interface GeneratedLink {
   expiresAt?: string | Date | null;
   shortLink?: string | null;
   shortCode?: string | null;
+  assignedServer?: string | null;
   type: 'guest' | 'viewer'; // Add type to distinguish link types
   roomAssignments?: RoomAssignment[];
 }
@@ -273,7 +274,7 @@ export default function Links() {
           // Small delay then restart
           setTimeout(() => {
             console.log(`Starting fresh preview for ${streamName}`);
-            previewStream(streamName, restartNeeded);
+            previewStream(streamName, restartNeeded, link.assignedServer);
           }, 300);
         }
       }
@@ -401,7 +402,7 @@ export default function Links() {
     }
   };
 
-  const previewStream = async (streamName: string, linkId: string) => {
+  const previewStream = async (streamName: string, linkId: string, serverAddress?: string | null) => {
     console.log(`Starting preview for stream: ${streamName}`);
     console.log('SRS SDK available:', !!window.SrsRtcWhipWhepAsync);
 
@@ -426,7 +427,7 @@ export default function Links() {
 
     try {
       console.log('Calling startPlayback...');
-      await startPlayback(videoElement, streamName);
+      await startPlayback(videoElement, streamName, 5, serverAddress || undefined);
       console.log('Preview started successfully, checking video element stream...');
       
       // Add debugging for video element
@@ -1056,7 +1057,7 @@ export default function Links() {
                             <Button 
                               onClick={() => {
                                 const streamName = link.type === 'guest' ? link.streamName! : link.returnFeed!;
-                                previewStream(streamName, link.id);
+                                previewStream(streamName, link.id, link.type === 'guest' ? link.assignedServer : undefined);
                               }}
                               variant="outline"
                               size="sm"
