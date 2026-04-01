@@ -26,26 +26,45 @@ export interface SRSServerConfig {
   };
 }
 
+// Returns the value if non-empty, otherwise undefined (treats '' same as unset).
+function envStr(key: string): string | undefined {
+  const v = process.env[key];
+  return v !== undefined && v !== '' ? v : undefined;
+}
+
 export function getSRSConfig(): SRSServerConfig {
-  const legacyHost = process.env.SRS_HOST || '';
-  const legacyUseHttps = process.env.SRS_USE_HTTPS === 'true';
+  // Legacy single-server fallback (SRS_HOST / SRS_USE_HTTPS).
+  const legacyHost = envStr('SRS_HOST') || '';
+  const legacyUseHttps = envStr('SRS_USE_HTTPS') !== undefined
+    ? process.env.SRS_USE_HTTPS === 'true'
+    : true; // default to HTTPS
+
+  // When SRS_WHIP_HOST is not set but SRS_WHIP_SERVERS is, extract the first
+  // server's host as the fallback so WHEP URLs are never blank.
+  const firstPoolHost = (() => {
+    if (!envStr('SRS_WHIP_HOST') && envStr('SRS_WHIP_SERVERS')) {
+      const first = process.env.SRS_WHIP_SERVERS!.split(',')[0].trim();
+      return first.split(':')[0] || '';
+    }
+    return '';
+  })();
 
   // Resolve WHIP values first — WHEP falls back to these when not explicitly set.
-  const whipHost = process.env.SRS_WHIP_HOST || legacyHost;
-  const whipPort = parseInt(process.env.SRS_WHIP_PORT || '1990');
-  const whipUseHttps = process.env.SRS_WHIP_USE_HTTPS !== undefined
+  const whipHost = envStr('SRS_WHIP_HOST') || legacyHost || firstPoolHost;
+  const whipPort = parseInt(envStr('SRS_WHIP_PORT') || '1990');
+  const whipUseHttps = envStr('SRS_WHIP_USE_HTTPS') !== undefined
     ? process.env.SRS_WHIP_USE_HTTPS === 'true'
     : legacyUseHttps;
-  const whipApiPort = parseInt(process.env.SRS_WHIP_API_PORT || '1985');
+  const whipApiPort = parseInt(envStr('SRS_WHIP_API_PORT') || '1985');
   const whipApiUseHttps = process.env.SRS_WHIP_API_USE_HTTPS === 'true';
 
   // WHEP falls back to WHIP settings when not explicitly configured.
-  const whepHost = process.env.SRS_WHEP_HOST || whipHost;
-  const whepPort = parseInt(process.env.SRS_WHEP_PORT || String(whipPort));
-  const whepUseHttps = process.env.SRS_WHEP_USE_HTTPS !== undefined
+  const whepHost = envStr('SRS_WHEP_HOST') || whipHost;
+  const whepPort = parseInt(envStr('SRS_WHEP_PORT') || String(whipPort));
+  const whepUseHttps = envStr('SRS_WHEP_USE_HTTPS') !== undefined
     ? process.env.SRS_WHEP_USE_HTTPS === 'true'
     : whipUseHttps;
-  const whepApiPort = parseInt(process.env.SRS_WHEP_API_PORT || String(whipApiPort));
+  const whepApiPort = parseInt(envStr('SRS_WHEP_API_PORT') || String(whipApiPort));
   const whepApiUseHttps = process.env.SRS_WHEP_API_USE_HTTPS === 'true';
 
   return {
@@ -76,9 +95,9 @@ export function getSRSConfig(): SRSServerConfig {
       }
     },
     studio: {
-      host: process.env.SRS_STUDIO_HOST || whepHost,
-      port: parseInt(process.env.SRS_STUDIO_PORT || String(whepPort)),
-      useHttps: process.env.SRS_STUDIO_USE_HTTPS !== undefined
+      host: envStr('SRS_STUDIO_HOST') || whepHost,
+      port: parseInt(envStr('SRS_STUDIO_PORT') || String(whepPort)),
+      useHttps: envStr('SRS_STUDIO_USE_HTTPS') !== undefined
         ? process.env.SRS_STUDIO_USE_HTTPS === 'true'
         : whepUseHttps,
       api: {
