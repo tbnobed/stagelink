@@ -716,8 +716,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return !!existing;
       });
 
-      const assignedWhipServer = getNextWhipServer();
-      const assignedServerAddr = formatServerAddress(assignedWhipServer);
+      // Use the assignedServer passed from the regular link creation if provided.
+      // This ensures both the short link and the regular link share the same
+      // round-robin slot and are always routed to the same WHIP server.
+      const assignedServerAddr = req.body.assignedServer
+        ? (req.body.assignedServer as string)
+        : formatServerAddress(getNextWhipServer());
 
       // Determine WHEP server for return feed delivery
       let assignedWhepServerAddr: string | null = null;

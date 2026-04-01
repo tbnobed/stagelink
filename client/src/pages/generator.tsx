@@ -90,49 +90,44 @@ export default function Generator() {
     }
     
     try {
-      // Create both regular link and short link
-      const [regularResponse, shortResponse] = await Promise.all([
-        // Save regular link
-        fetch('/api/links', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: Date.now().toString(),
-            streamName: streamName.trim(),
-            returnFeed: returnFeed,
-            chatEnabled: enableChat,
-            url: url,
-            expiresAt: expiresAt || null,
-            productionId: selectedProductionId || null,
-            guestName: guestName.trim() || null,
-            guestEmail: guestEmail.trim() || null,
-          }),
+      // Create the regular link first so we get the round-robin assigned server,
+      // then pass that same server to the short link so both share the same slot.
+      const regularResponse = await fetch('/api/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: Date.now().toString(),
+          streamName: streamName.trim(),
+          returnFeed: returnFeed,
+          chatEnabled: enableChat,
+          url: url,
+          expiresAt: expiresAt || null,
+          productionId: selectedProductionId || null,
+          guestName: guestName.trim() || null,
+          guestEmail: guestEmail.trim() || null,
         }),
-        // Create short link
-        fetch('/api/short-links', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            streamName: streamName.trim(),
-            returnFeed: returnFeed,
-            chatEnabled: enableChat,
-            expiresAt: expiresAt || null,
-            productionId: selectedProductionId || null,
-            guestName: guestName.trim() || null,
-            guestEmail: guestEmail.trim() || null,
-          }),
-        })
-      ]);
+      });
 
-      if (!regularResponse.ok || !shortResponse.ok) {
-        throw new Error('Failed to save link');
-      }
-
+      if (!regularResponse.ok) throw new Error('Failed to save link');
       const regularLinkData = await regularResponse.json();
+
+      // Pass the same assignedServer so no extra round-robin slot is consumed.
+      const shortResponse = await fetch('/api/short-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          streamName: streamName.trim(),
+          returnFeed: returnFeed,
+          chatEnabled: enableChat,
+          expiresAt: expiresAt || null,
+          productionId: selectedProductionId || null,
+          guestName: guestName.trim() || null,
+          guestEmail: guestEmail.trim() || null,
+          assignedServer: regularLinkData.assignedServer || null,
+        }),
+      });
+
+      if (!shortResponse.ok) throw new Error('Failed to save short link');
       const shortLinkData = await shortResponse.json();
       const shortUrl = `${window.location.protocol}//${window.location.host}/s/${shortLinkData.id}`;
 
