@@ -1901,9 +1901,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/return-feeds', requireAdmin, async (req, res) => {
     try {
-      const { label, streamName, serverAddress, sortOrder } = req.body;
+      const { label, streamName, serverAddress, fallbackServerAddress, sortOrder } = req.body;
       if (!label || !streamName) return res.status(400).json({ error: 'label and streamName are required' });
-      const feed = await storage.createReturnFeed({ label, streamName, serverAddress: serverAddress || null, sortOrder: sortOrder ?? 0 });
+      const feed = await storage.createReturnFeed({ label, streamName, serverAddress: serverAddress || null, fallbackServerAddress: fallbackServerAddress || null, sortOrder: sortOrder ?? 0 });
       res.status(201).json(feed);
     } catch (error) {
       res.status(500).json({ error: 'Failed to create return feed' });
@@ -1913,8 +1913,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/return-feeds/:id', requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { label, streamName, serverAddress, sortOrder } = req.body;
-      const feed = await storage.updateReturnFeed(id, { label, streamName, serverAddress: serverAddress || null, sortOrder });
+      const { label, streamName, serverAddress, fallbackServerAddress, sortOrder } = req.body;
+      const feed = await storage.updateReturnFeed(id, { label, streamName, serverAddress: serverAddress || null, fallbackServerAddress: fallbackServerAddress || null, sortOrder });
       if (!feed) return res.status(404).json({ error: 'Return feed not found' });
       res.json(feed);
     } catch (error) {
