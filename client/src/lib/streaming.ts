@@ -92,7 +92,7 @@ export function stopPublishing() {
   }
 }
 
-export async function startPlayback(videoElement: HTMLVideoElement, streamName: string, maxRetries: number = 5, serverAddress?: string) {
+export async function startPlayback(videoElement: HTMLVideoElement, streamName: string, maxRetries: number = 5, serverAddress?: string, fallbackServerAddress?: string) {
   if (!window.SrsRtcWhipWhepAsync) {
     console.warn('SRS SDK not loaded, cannot start playback');
     return;
@@ -216,6 +216,10 @@ export async function startPlayback(videoElement: HTMLVideoElement, streamName: 
         return attemptPlayback();
       } else {
         console.error(`WHEP playback failed after ${maxRetries + 1} attempts for stream: ${streamName}`);
+        if (fallbackServerAddress) {
+          console.log(`Primary server exhausted, switching to fallback: ${fallbackServerAddress}`);
+          return startPlayback(videoElement, streamName, 3, fallbackServerAddress);
+        }
         throw err;
       }
     }

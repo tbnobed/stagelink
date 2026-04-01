@@ -357,6 +357,7 @@ export const returnFeeds = pgTable("return_feeds", {
   label: text("label").notNull(),
   streamName: text("stream_name").notNull(),
   serverAddress: text("server_address"),
+  fallbackServerAddress: text("fallback_server_address"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

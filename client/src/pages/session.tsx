@@ -276,17 +276,18 @@ export default function Session() {
     const stream = urlParams.get('stream');
     const feedStream = returnStream || stream || 'obed2';
     const returnServer = urlParams.get('returnServer') || undefined;
+    const returnFallbackServer = urlParams.get('returnFallbackServer') || undefined;
     // Use the DB-looked-up assigned WHIP server (stored in ref on mount).
     // Falls back to the URL param for backward compat with old links.
     const assignedServer = assignedWhipServerRef.current || urlParams.get('server') || undefined;
     const serverForPlayback = returnServer || (!returnStream ? assignedServer : undefined);
-    console.log('startReturnFeed: assignedServer=', assignedServer, 'returnServer=', returnServer, 'serverForPlayback=', serverForPlayback);
+    console.log('startReturnFeed: assignedServer=', assignedServer, 'returnServer=', returnServer, 'serverForPlayback=', serverForPlayback, 'fallback=', returnFallbackServer);
 
     setReturnFeedStatus('connecting');
     setIsReturnFeedStarted(true);
     
     try {
-      await startPlayback(targetRef.current, feedStream, 5, serverForPlayback);
+      await startPlayback(targetRef.current, feedStream, 5, serverForPlayback, returnFallbackServer);
       setReturnFeedStatus('connected');
       toast({
         title: "Return Feed Connected",

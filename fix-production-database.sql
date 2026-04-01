@@ -221,6 +221,7 @@ CREATE TABLE IF NOT EXISTS "return_feeds" (
         "label" text NOT NULL,
         "stream_name" text NOT NULL,
         "server_address" text,
+        "fallback_server_address" text,
         "sort_order" integer NOT NULL DEFAULT 0,
         "created_at" timestamp NOT NULL DEFAULT now()
 );
@@ -333,6 +334,11 @@ DO $$ BEGIN
     -- short_viewer_links: dedicated WHEP server (v2.6)
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='short_viewer_links' AND column_name='assigned_whep_server') THEN
         ALTER TABLE "short_viewer_links" ADD COLUMN "assigned_whep_server" text;
+    END IF;
+
+    -- return_feeds: fallback server address (v2.7)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='return_feeds' AND column_name='fallback_server_address') THEN
+        ALTER TABLE "return_feeds" ADD COLUMN "fallback_server_address" text;
     END IF;
 
 END $$;
