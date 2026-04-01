@@ -1,0 +1,56 @@
+http miss file=./objs/nginx/html/rtc/v1/whep/index.html, pattern=/, upath=/rtc/v1/whep/
+[2026-04-01 17:05:57.162][INFO][25243][4583iw99] RTC: before dispose resource(HttpsConn)(0x50d000002190), conns=3, zombies=0, ign=0, inz=0, ind=0
+[2026-04-01 17:05:57.162][ERROR][25243][4583iw99][0] serve error code=3009(HttpParseHeader)(HTTP parse header failed) : parse message : parse message : parse 7044B, nparsed=0, err=6/HPE_INVALID_METHOD Invalid method encountered
+thread [25243][4583iw99]: process_requests() [./src/app/srs_app_http_conn.cpp:182][errno=0]
+thread [25243][4583iw99]: parse_message() [./src/protocol/srs_protocol_http_conn.cpp:104][errno=0]
+thread [25243][4583iw99]: parse_message_imp() [./src/protocol/srs_protocol_http_conn.cpp:154][errno=0]
+[2026-04-01 17:05:57.162][INFO][25243][0584u768] RTC: clear zombies=1 resources, conns=3, removing=0, unsubs=0
+[2026-04-01 17:05:57.162][INFO][25243][4583iw99] RTC: disposing #0 resource(HttpsConn)(0x50d000002190), conns=3, disposing=1, zombies=0
+[2026-04-01 17:05:57.521][INFO][25243][z3o0p225] <- CPB time=20008161, okbps=0,0,0, ikbps=0,0,0, mr=0/350, p1stpt=20000, pnt=5000
+[2026-04-01 17:05:57.615][INFO][25243][7943894g] SRS: cpu=9.99%,102MB, cid=5,2, timer=62,0,0, clock=0,40,7,1,0,0,0,0,0, free=1, objs=(pkt:179,raw:110,fua:68,msg:307,oth:1,buf:50)
+[2026-04-01 17:05:59.310][INFO][25243][2152g630] RTC: before dispose resource(HttpsConn)(0x50d000002400), conns=3, zombies=0, ign=0, inz=0, ind=0
+[2026-04-01 17:05:59.310][ERROR][25243][2152g630][0] serve error code=4042(TlsHandshake)(Failed to do tls handshake) : start : handshake : handshake r0=-1, r1=1
+thread [25243][2152g630]: do_cycle() [./src/app/srs_app_http_conn.cpp:153][errno=0]
+thread [25243][2152g630]: on_start() [./src/app/srs_app_http_conn.cpp:382][errno=0]
+thread [25243][2152g630]: handshake() [./src/app/srs_app_conn.cpp:833][errno=0]
+[2026-04-01 17:05:59.310][INFO][25243][0584u768] RTC: clear zombies=1 resources, conns=3, removing=0, unsubs=0
+[2026-04-01 17:05:59.310][INFO][25243][2152g630] RTC: disposing #0 resource(HttpsConn)(0x50d000002400), conns=3, disposing=1, zombies=0
+[2026-04-01 17:05:59.406][INFO][25243][27x11360] https: stream server done, use key /home/ubuntu/srs/certs/privkey.pem and cert /home/ubuntu/srs/certs/fullchain.pem, cost=50ms
+[2026-04-01 17:05:59.450][INFO][25243][27x11360] HTTP #0 136.52.20.30:53215 POST https://wsvr1.stagelinq.io:8088/rtc/v1/whep/?app=live&stream=Tustin1&schema=https, content-length=7044
+[2026-04-01 17:05:59.451][WARN][25243][27x11360][2] http miss file=./objs/nginx/html/rtc/v1/whep/index.html, pattern=/, upath=/rtc/v1/whep/
+[2026-04-01 17:05:59.451][INFO][25243][27x11360] RTC: before dispose resource(HttpsConn)(0x50d0000025a0), conns=3, zombies=0, ign=0, inz=0, ind=0
+[2026-04-01 17:05:59.452][ERROR][25243][27x11360][0] serve error code=3009(HttpParseHeader)(HTTP parse header failed) : parse message : parse message : parse 7044B, nparsed=0, err=6/HPE_INVALID_METHOD Invalid method encountered
+thread [25243][27x11360]: process_requests() [./src/app/srs_app_http_conn.cpp:182][errno=0]
+thread [25243][27x11360]: parse_message() [./src/protocol/srs_protocol_http_conn.cpp:104][errno=0]
+thread [25243][27x11360]: parse_message_imp() [./src/protocol/srs_protocol_http_conn.cpp:154][errno=0]
+[2026-04-01 17:05:59.452][INFO][25243][0584u768] RTC: clear zombies=1 resources, conns=3, removing=0, unsubs=0
+[2026-04-01 17:05:59.452][INFO][25243][27x11360] RTC: disposing #0 resource(HttpsConn)(0x50d0000025a0), conns=3, disposing=1, zombies=0
+[2026-04-01 17:06:01.600][INFO][25243][53029x14] RTC: before dispose resource(HttpsConn)(0x50d000002810), conns=3, zombies=0, ign=0, inz=0, ind=0
+[2026-04-01 17:06:01.600][ERROR][25243][53029x14][0] serve error code=4042(TlsHandshake)(Failed to do tls handshake) : start : handshake : handshake r0=-1, r1=1
+thread [25243][53029x14]: do_cycle() [./src/app/srs_app_http_conn.cpp:153][errno=0]
+thread [25243][53029x14]: on_start() [./src/app/srs_app_http_conn.cpp:382][errno=0]
+thread [25243][53029x14]: handshake() [./src/app/srs_app_conn.cpp:833][errno=0]
+[2026-04-01 17:06:01.600][INFO][25243][0584u768] RTC: clear zombies=1 resources, conns=3, removing=0, unsubs=0
+[2026-04-01 17:06:01.600][INFO][25243][53029x14] RTC: disposing #0 resource(HttpsConn)(0x50d000002810), conns=3, disposing=1, zombies=0
+[2026-04-01 17:06:01.700][INFO][25243][361v2605] https: stream server done, use key /home/ubuntu/srs/certs/privkey.pem and cert /home/ubuntu/srs/certs/fullchain.pem, cost=53ms
+[2026-04-01 17:06:01.747][INFO][25243][361v2605] HTTP #0 136.52.20.30:61411 POST https://wsvr1.stagelinq.io:8088/rtc/v1/whep/?app=live&stream=Tustin1&schema=https, content-length=7044
+[2026-04-01 17:06:01.747][WARN][25243][361v2605][2] http miss file=./objs/nginx/html/rtc/v1/whep/index.html, pattern=/, upath=/rtc/v1/whep/
+[2026-04-01 17:06:01.748][INFO][25243][361v2605] RTC: before dispose resource(HttpsConn)(0x50d0000029b0), conns=3, zombies=0, ign=0, inz=0, ind=0
+[2026-04-01 17:06:01.748][ERROR][25243][361v2605][0] serve error code=3009(HttpParseHeader)(HTTP parse header failed) : parse message : parse message : parse 7044B, nparsed=0, err=6/HPE_INVALID_METHOD Invalid method encountered
+thread [25243][361v2605]: process_requests() [./src/app/srs_app_http_conn.cpp:182][errno=0]
+thread [25243][361v2605]: parse_message() [./src/protocol/srs_protocol_http_conn.cpp:104][errno=0]
+thread [25243][361v2605]: parse_message_imp() [./src/protocol/srs_protocol_http_conn.cpp:154][errno=0]
+[2026-04-01 17:06:01.748][INFO][25243][0584u768] RTC: clear zombies=1 resources, conns=3, removing=0, unsubs=0
+[2026-04-01 17:06:01.748][INFO][25243][361v2605] RTC: disposing #0 resource(HttpsConn)(0x50d0000029b0), conns=3, disposing=1, zombies=0
+[2026-04-01 17:06:02.617][INFO][25243][7943894g] SRS: cpu=11.00%,118MB, cid=12,6, timer=62,0,0, clock=0,40,7,1,0,0,0,0,0, free=1, objs=(pkt:178,raw:110,fua:68,msg:307,oth:1,buf:50)
+[2026-04-01 17:06:02.996][INFO][25243][z3o0p225] -> HLS time=49638008ms, sno=2, ts=block3-1.ts, dur=14047ms, dva=0p
+[2026-04-01 17:06:04.310][INFO][25243][k1h4vt63] -> PLA time=50604690, msgs=28, okbps=0,2461,0, ikbps=0,0,0, mw=350/8
+[2026-04-01 17:06:07.620][INFO][25243][7943894g] SRS: cpu=9.97%,130MB, cid=12,6, timer=62,0,0, clock=0,40,7,1,0,0,0,0,0, free=1, objs=(pkt:178,raw:110,fua:68,msg:307,oth:1,buf:50)
+[2026-04-01 17:06:12.522][INFO][25243][z3o0p225] <- CPB time=35005562, okbps=0,0,0, ikbps=0,0,0, mr=0/350, p1stpt=20000, pnt=5000
+[2026-04-01 17:06:12.624][INFO][25243][7943894g] SRS: cpu=8.99%,141MB, cid=1,0, timer=62,0,0, clock=0,41,7,0,0,0,0,0,0, objs=(pkt:178,raw:110,fua:68,msg:307,oth:1,buf:50)
+[2026-04-01 17:06:13.006][INFO][25243][z3o0p225] -> HLS time=59652041ms, sno=3, ts=block3-2.ts, dur=8041ms, dva=0p
+[2026-04-01 17:06:14.257][INFO][25243][k1h4vt63] -> PLA time=60844281, msgs=5, okbps=0,2461,0, ikbps=0,0,0, mw=350/8
+[2026-04-01 17:06:17.625][INFO][25243][7943894g] SRS: cpu=11.00%,152MB, cid=1,0, timer=62,0,0, clock=0,41,7,0,0,0,0,0,0, objs=(pkt:178,raw:110,fua:68,msg:307,oth:1,buf:50)
+[2026-04-01 17:06:22.630][INFO][25243][7943894g] SRS: cpu=9.98%,163MB, cid=1,0, timer=62,0,0, clock=0,41,7,0,0,0,0,0,0, objs=(pkt:178,raw:110,fua:68,msg:307,oth:1,buf:50)
+[2026-04-01 17:06:23.013][INFO][25243][z3o0p225] -> HLS time=69654815ms, sno=4, ts=block3-3.ts, dur=2035ms, dva=0p
+[2026-04-01 17:06:24.848][INFO][25243][k1h4vt63] -> PLA time=71140885, msgs=27, okbps=0,2461,0, ikbps=0,0,0, mw=350/8
