@@ -22,19 +22,19 @@ services:
       - PGDATABASE=virtual_audience
       - SESSION_SECRET=virtual-audience-production-secret-change-in-production
       # SRS Server Configuration - Separate WHIP/WHEP/Studio server support
-      - SRS_WHIP_HOST=${SRS_WHIP_HOST:-cdn2.obedtv.live}
+      - SRS_WHIP_HOST=${SRS_WHIP_HOST:-}
       - SRS_WHIP_PORT=${SRS_WHIP_PORT:-1990}
       - SRS_WHIP_USE_HTTPS=${SRS_WHIP_USE_HTTPS:-true}
       - SRS_WHIP_API_PORT=${SRS_WHIP_API_PORT:-1985}
       - SRS_WHIP_API_USE_HTTPS=${SRS_WHIP_API_USE_HTTPS:-false}
-      - SRS_WHEP_HOST=${SRS_WHEP_HOST:-cdn2.obedtv.live}
-      - SRS_WHEP_PORT=${SRS_WHEP_PORT:-8080}
-      - SRS_WHEP_USE_HTTPS=${SRS_WHEP_USE_HTTPS:-true}
-      - SRS_WHEP_API_PORT=${SRS_WHEP_API_PORT:-1985}
-      - SRS_WHEP_API_USE_HTTPS=${SRS_WHEP_API_USE_HTTPS:-false}
-      - SRS_API_HOST=${SRS_API_HOST:-cdn2.obedtv.live}
-      - SRS_API_PORT=${SRS_API_PORT:-1985}
-      - SRS_API_USE_HTTPS=${SRS_API_USE_HTTPS:-false}
+      - SRS_WHEP_HOST=${SRS_WHEP_HOST:-}
+      - SRS_WHEP_PORT=${SRS_WHEP_PORT:-}
+      - SRS_WHEP_USE_HTTPS=${SRS_WHEP_USE_HTTPS:-}
+      - SRS_WHEP_API_PORT=${SRS_WHEP_API_PORT:-}
+      - SRS_WHEP_API_USE_HTTPS=${SRS_WHEP_API_USE_HTTPS:-}
+      - SRS_API_HOST=${SRS_API_HOST:-}
+      - SRS_API_PORT=${SRS_API_PORT:-}
+      - SRS_API_USE_HTTPS=${SRS_API_USE_HTTPS:-}
       # Studio server (return feed playback) - falls back to WHEP settings if not set
       - SRS_STUDIO_HOST=${SRS_STUDIO_HOST:-}
       - SRS_STUDIO_PORT=${SRS_STUDIO_PORT:-}
@@ -44,8 +44,8 @@ services:
       # Multi-server WHIP load balancing (comma-separated host:port list)
       - SRS_WHIP_SERVERS=${SRS_WHIP_SERVERS:-}
       # Legacy configuration for backward compatibility
-      - SRS_HOST=${SRS_HOST:-cdn2.obedtv.live}
-      - SRS_USE_HTTPS=${SRS_USE_HTTPS:-true}
+      - SRS_HOST=${SRS_HOST:-}
+      - SRS_USE_HTTPS=${SRS_USE_HTTPS:-}
       # Email Configuration
       - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
       - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-alerts@obedtv.com}

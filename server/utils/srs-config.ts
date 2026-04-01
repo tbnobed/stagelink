@@ -27,56 +27,70 @@ export interface SRSServerConfig {
 }
 
 export function getSRSConfig(): SRSServerConfig {
-  // Default values from .env.example
-  const legacyHost = process.env.SRS_HOST || 'cdn2.obedtv.live';
-  const legacyUseHttps = process.env.SRS_USE_HTTPS === 'true' || process.env.SRS_USE_HTTPS === undefined;
-  
+  const legacyHost = process.env.SRS_HOST || '';
+  const legacyUseHttps = process.env.SRS_USE_HTTPS === 'true';
+
+  // Resolve WHIP values first — WHEP falls back to these when not explicitly set.
+  const whipHost = process.env.SRS_WHIP_HOST || legacyHost;
+  const whipPort = parseInt(process.env.SRS_WHIP_PORT || '1990');
+  const whipUseHttps = process.env.SRS_WHIP_USE_HTTPS !== undefined
+    ? process.env.SRS_WHIP_USE_HTTPS === 'true'
+    : legacyUseHttps;
+  const whipApiPort = parseInt(process.env.SRS_WHIP_API_PORT || '1985');
+  const whipApiUseHttps = process.env.SRS_WHIP_API_USE_HTTPS === 'true';
+
+  // WHEP falls back to WHIP settings when not explicitly configured.
+  const whepHost = process.env.SRS_WHEP_HOST || whipHost;
+  const whepPort = parseInt(process.env.SRS_WHEP_PORT || String(whipPort));
+  const whepUseHttps = process.env.SRS_WHEP_USE_HTTPS !== undefined
+    ? process.env.SRS_WHEP_USE_HTTPS === 'true'
+    : whipUseHttps;
+  const whepApiPort = parseInt(process.env.SRS_WHEP_API_PORT || String(whipApiPort));
+  const whepApiUseHttps = process.env.SRS_WHEP_API_USE_HTTPS === 'true';
+
   return {
     // Legacy properties for backward compatibility
-    host: legacyHost,
-    whipPort: parseInt(process.env.SRS_WHIP_PORT || '1990'),
-    apiPort: parseInt(process.env.SRS_API_PORT || '1985'),
-    useHttps: legacyUseHttps,
-    
-    // New separate server configurations with .env.example defaults
+    host: whipHost,
+    whipPort,
+    apiPort: parseInt(process.env.SRS_API_PORT || String(whipApiPort)),
+    useHttps: whipUseHttps,
+
     whip: {
-      host: process.env.SRS_WHIP_HOST || 'cdn2.obedtv.live',
-      port: parseInt(process.env.SRS_WHIP_PORT || '1990'),
-      useHttps: process.env.SRS_WHIP_USE_HTTPS === 'true' || 
-                (process.env.SRS_WHIP_USE_HTTPS === undefined),
+      host: whipHost,
+      port: whipPort,
+      useHttps: whipUseHttps,
       api: {
-        host: process.env.SRS_WHIP_HOST || 'cdn2.obedtv.live',
-        port: parseInt(process.env.SRS_WHIP_API_PORT || '1985'),
-        useHttps: process.env.SRS_WHIP_API_USE_HTTPS === 'true' || false,
+        host: whipHost,
+        port: whipApiPort,
+        useHttps: whipApiUseHttps,
       }
     },
     whep: {
-      host: process.env.SRS_WHEP_HOST || 'cdn2.obedtv.live',
-      port: parseInt(process.env.SRS_WHEP_PORT || '1990'),
-      useHttps: process.env.SRS_WHEP_USE_HTTPS === 'true' || 
-                (process.env.SRS_WHEP_USE_HTTPS === undefined),
+      host: whepHost,
+      port: whepPort,
+      useHttps: whepUseHttps,
       api: {
-        host: process.env.SRS_WHEP_HOST || 'cdn2.obedtv.live',
-        port: parseInt(process.env.SRS_WHEP_API_PORT || '1985'),
-        useHttps: process.env.SRS_WHEP_API_USE_HTTPS === 'true' || false,
+        host: whepHost,
+        port: whepApiPort,
+        useHttps: whepApiUseHttps,
       }
     },
     studio: {
-      host: process.env.SRS_STUDIO_HOST || process.env.SRS_WHEP_HOST || 'cdn2.obedtv.live',
-      port: parseInt(process.env.SRS_STUDIO_PORT || process.env.SRS_WHEP_PORT || '1990'),
+      host: process.env.SRS_STUDIO_HOST || whepHost,
+      port: parseInt(process.env.SRS_STUDIO_PORT || String(whepPort)),
       useHttps: process.env.SRS_STUDIO_USE_HTTPS !== undefined
         ? process.env.SRS_STUDIO_USE_HTTPS === 'true'
-        : (process.env.SRS_WHEP_USE_HTTPS === 'true' || process.env.SRS_WHEP_USE_HTTPS === undefined),
+        : whepUseHttps,
       api: {
-        host: process.env.SRS_STUDIO_HOST || process.env.SRS_WHEP_HOST || 'cdn2.obedtv.live',
-        port: parseInt(process.env.SRS_STUDIO_API_PORT || process.env.SRS_WHEP_API_PORT || '1985'),
-        useHttps: process.env.SRS_STUDIO_API_USE_HTTPS === 'true' || false,
+        host: process.env.SRS_STUDIO_HOST || whepHost,
+        port: parseInt(process.env.SRS_STUDIO_API_PORT || String(whepApiPort)),
+        useHttps: process.env.SRS_STUDIO_API_USE_HTTPS === 'true',
       }
     },
     api: {
-      host: process.env.SRS_API_HOST || 'cdn2.obedtv.live',
-      port: parseInt(process.env.SRS_API_PORT || '1985'),
-      useHttps: process.env.SRS_API_USE_HTTPS === 'true' || false,
+      host: process.env.SRS_API_HOST || whipHost,
+      port: parseInt(process.env.SRS_API_PORT || String(whipApiPort)),
+      useHttps: process.env.SRS_API_USE_HTTPS === 'true',
     },
   };
 }
