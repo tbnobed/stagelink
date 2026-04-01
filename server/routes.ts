@@ -716,12 +716,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return !!existing;
       });
 
-      // Use the assignedServer passed from the regular link creation if provided.
-      // This ensures both the short link and the regular link share the same
-      // round-robin slot and are always routed to the same WHIP server.
-      const assignedServerAddr = req.body.assignedServer
-        ? (req.body.assignedServer as string)
-        : formatServerAddress(getNextWhipServer());
+      // Determine WHIP server: prefer the value passed from the frontend (which
+      // already created the regular link). If not provided, try to look it up
+      // from the regular link that was just created for the same streamName.
+      // Only fall back to round-robin if neither source has it.
+      let assignedServerAddr: string;
+      if (req.body.assignedServer) {
+        assignedServerAddr = req.body.assignedServer as string;
+      } else {
+        const existingLink = await storage.getLinkByStreamName(streamName);
+        if (existingLink?.assignedServer) {
+          assignedServerAddr = existingLink.assignedServer;
+        } else {
+          assignedServerAddr = formatServerAddress(getNextWhipServer());
+        }
+      }
 
       // Determine WHEP server for return feed delivery
       let assignedWhepServerAddr: string | null = null;
