@@ -114,7 +114,8 @@ export async function buildWhepUrlForServer(serverAddress: string, app: string, 
   const config = await getSRSConfig();
   const { host, port, useHttps } = parseServerAddressStr(trimmed, config.whipPort, config.useHttps);
   const protocol = useHttps ? 'https' : 'http';
-  return `${protocol}://${host}:${port}/rtc/v1/whep/?app=${app}&stream=${stream}`;
+  // Append schema= so SRS knows which protocol to use for ICE/signaling.
+  return `${protocol}://${host}:${port}/rtc/v1/whep/?app=${app}&stream=${stream}&schema=${protocol}`;
 }
 
 export function clearSRSConfigCache(): void {
