@@ -64,19 +64,40 @@ export function buildStudioWhepUrl(app: string, stream: string): Promise<string>
   );
 }
 
+// Parse a server address that may be "host:port", "http://host:port", or
+// "https://host:port". Returns { host, port, protocol }.
+function parseServerAddressStr(serverAddress: string, fallbackPort: number, fallbackUseHttps: boolean) {
+  let raw = serverAddress.trim();
+  let protocol: string | null = null;
+  if (raw.startsWith('https://')) {
+    protocol = 'https';
+    raw = raw.slice(8);
+  } else if (raw.startsWith('http://')) {
+    protocol = 'http';
+    raw = raw.slice(7);
+  }
+  // Remove any trailing path component (e.g. accidental /rtc/...)
+  const slashIdx = raw.indexOf('/');
+  if (slashIdx !== -1) raw = raw.slice(0, slashIdx);
+  const colonIdx = raw.lastIndexOf(':');
+  const host = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
+  const portStr = colonIdx !== -1 ? raw.slice(colonIdx + 1) : '';
+  const port = portStr ? parseInt(portStr, 10) : fallbackPort;
+  const useHttps = protocol !== null ? protocol === 'https' : fallbackUseHttps;
+  return { host, port, useHttps };
+}
+
 export async function buildWhipUrlForServer(serverAddress: string, app: string, stream: string): Promise<string> {
   const config = await getSRSConfig();
-  const [host, portStr] = serverAddress.split(':');
-  const port = portStr || config.whipPort;
-  const protocol = config.useHttps ? 'https' : 'http';
+  const { host, port, useHttps } = parseServerAddressStr(serverAddress, config.whipPort, config.useHttps);
+  const protocol = useHttps ? 'https' : 'http';
   return `${protocol}://${host}:${port}/rtc/v1/whip/?app=${app}&stream=${stream}`;
 }
 
 export async function buildWhepUrlForServer(serverAddress: string, app: string, stream: string): Promise<string> {
   const config = await getSRSConfig();
-  const [host, portStr] = serverAddress.split(':');
-  const port = portStr || config.whipPort;
-  const protocol = config.useHttps ? 'https' : 'http';
+  const { host, port, useHttps } = parseServerAddressStr(serverAddress, config.whipPort, config.useHttps);
+  const protocol = useHttps ? 'https' : 'http';
   return `${protocol}://${host}:${port}/rtc/v1/whep/?app=${app}&stream=${stream}`;
 }
 

@@ -193,13 +193,34 @@ export function formatServerAddress(server: SRSServerEntry): string {
 
 export function parseServerAddress(address: string): SRSServerEntry | null {
   if (!address) return null;
-  const [host, portStr] = address.split(':');
+
+  // Accept "host:port", "http://host:port", or "https://host:port".
+  // An explicit scheme overrides the global SRS_WHIP_USE_HTTPS setting.
+  let raw = address.trim();
+  let explicitHttps: boolean | null = null;
+  if (raw.startsWith('https://')) {
+    explicitHttps = true;
+    raw = raw.slice(8);
+  } else if (raw.startsWith('http://')) {
+    explicitHttps = false;
+    raw = raw.slice(7);
+  }
+  // Strip any trailing path (e.g. accidental /rtc/... suffix)
+  const slashIdx = raw.indexOf('/');
+  if (slashIdx !== -1) raw = raw.slice(0, slashIdx);
+
+  const colonIdx = raw.lastIndexOf(':');
+  const host = colonIdx !== -1 ? raw.slice(0, colonIdx) : raw;
+  const portStr = colonIdx !== -1 ? raw.slice(colonIdx + 1) : '';
   if (!host) return null;
+
+  const globalUseHttps = envStr('SRS_WHIP_USE_HTTPS') !== undefined
+    ? process.env.SRS_WHIP_USE_HTTPS === 'true'
+    : true;
+
   return {
     host,
-    port: parseInt(portStr || envStr('SRS_WHIP_PORT') || '1990'),
-    useHttps: envStr('SRS_WHIP_USE_HTTPS') !== undefined
-      ? process.env.SRS_WHIP_USE_HTTPS === 'true'
-      : true, // default to HTTPS
+    port: portStr ? parseInt(portStr, 10) : parseInt(envStr('SRS_WHIP_PORT') || '1990'),
+    useHttps: explicitHttps !== null ? explicitHttps : globalUseHttps,
   };
 }
