@@ -1179,7 +1179,8 @@ export default function Links() {
                     <Button 
                       onClick={() => {
                         if (link.type === 'guest') {
-                          window.open(`/viewer?stream=${encodeURIComponent(link.streamName || '')}`, '_blank');
+                          const serverParam = link.assignedServer ? `&server=${encodeURIComponent(link.assignedServer)}` : '';
+                          window.open(`/viewer?stream=${encodeURIComponent(link.streamName || '')}${serverParam}`, '_blank');
                         } else {
                           window.open(link.url, '_blank');
                         }
