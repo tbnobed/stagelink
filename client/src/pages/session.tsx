@@ -254,12 +254,16 @@ export default function Session() {
     const stream = urlParams.get('stream');
     const feedStream = returnStream || stream || 'obed2';
     const returnServer = urlParams.get('returnServer') || undefined;
-    
+    // If no dedicated return-feed server is assigned, fall back to the guest's
+    // assigned WHIP server — the stream only exists on that SRS instance.
+    const assignedServer = urlParams.get('server') || undefined;
+    const serverForPlayback = returnServer || (!returnStream ? assignedServer : undefined);
+
     setReturnFeedStatus('connecting');
     setIsReturnFeedStarted(true);
     
     try {
-      await startPlayback(targetRef.current, feedStream, 5, returnServer);
+      await startPlayback(targetRef.current, feedStream, 5, serverForPlayback);
       setReturnFeedStatus('connected');
       toast({
         title: "Return Feed Connected",
