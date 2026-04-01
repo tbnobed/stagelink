@@ -19,6 +19,7 @@ export interface IStorage {
   // Generated Links
   getAllLinks(): Promise<GeneratedLink[]>;
   getLink(id: string): Promise<GeneratedLink | undefined>;
+  getLinkByStreamName(streamName: string): Promise<GeneratedLink | undefined>;
   createLink(link: InsertGeneratedLink, userId?: number): Promise<GeneratedLink>;
   deleteLink(id: string): Promise<boolean>;
   deleteExpiredLinks(): Promise<number>;
@@ -219,6 +220,11 @@ export class MemStorage implements IStorage {
     }
     
     return link;
+  }
+
+  async getLinkByStreamName(streamName: string): Promise<GeneratedLink | undefined> {
+    const allLinks = Array.from(this.links.values());
+    return allLinks.find(l => l.streamName === streamName);
   }
 
   async createLink(insertLink: InsertGeneratedLink, userId?: number): Promise<GeneratedLink> {
@@ -803,6 +809,19 @@ export class DatabaseStorage implements IStorage {
       return link;
     } catch (error) {
       console.error('Error fetching link:', error);
+      return undefined;
+    }
+  }
+
+  async getLinkByStreamName(streamName: string): Promise<GeneratedLink | undefined> {
+    try {
+      const [link] = await db.select()
+        .from(generatedLinks)
+        .where(eq(generatedLinks.streamName, streamName))
+        .limit(1);
+      return link ?? undefined;
+    } catch (error) {
+      console.error('Error fetching link by stream name:', error);
       return undefined;
     }
   }

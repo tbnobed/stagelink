@@ -41,6 +41,8 @@ export default function Session() {
   const waitingReturnFeedRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const initializationRef = useRef(false);
+  // Looked-up from the database on mount — the WHIP server this stream was assigned to.
+  const assignedWhipServerRef = useRef<string | null>(null);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { isMobile } = useMobile();
@@ -62,8 +64,28 @@ export default function Session() {
       setChatEnabled(chatEnabledParam);
       console.log('Stream name from URL:', stream);
       console.log('Chat enabled from URL:', chatEnabledParam);
-      if (assignedServer) {
-        console.log('Assigned WHIP server from URL:', assignedServer);
+
+      // Look up the assigned WHIP server from the database — this is the
+      // authoritative source, not the URL param which may be missing on old links.
+      if (stream) {
+        try {
+          const srvRes = await fetch(`/api/links/assigned-server?stream=${encodeURIComponent(stream)}`);
+          if (srvRes.ok) {
+            const srvData = await srvRes.json();
+            if (srvData.assignedServer) {
+              assignedWhipServerRef.current = srvData.assignedServer;
+              console.log('Assigned WHIP server (from DB):', srvData.assignedServer);
+            }
+          }
+        } catch (e) {
+          // Non-fatal — fall back to URL param if lookup fails
+          console.warn('Could not look up assigned WHIP server:', e);
+        }
+      }
+      // URL param fallback for links generated before DB lookup was added
+      if (!assignedWhipServerRef.current && assignedServer) {
+        assignedWhipServerRef.current = assignedServer;
+        console.log('Assigned WHIP server (from URL param):', assignedServer);
       }
       
       // Show chat by default if enabled
@@ -254,10 +276,11 @@ export default function Session() {
     const stream = urlParams.get('stream');
     const feedStream = returnStream || stream || 'obed2';
     const returnServer = urlParams.get('returnServer') || undefined;
-    // If no dedicated return-feed server is assigned, fall back to the guest's
-    // assigned WHIP server — the stream only exists on that SRS instance.
-    const assignedServer = urlParams.get('server') || undefined;
+    // Use the DB-looked-up assigned WHIP server (stored in ref on mount).
+    // Falls back to the URL param for backward compat with old links.
+    const assignedServer = assignedWhipServerRef.current || urlParams.get('server') || undefined;
     const serverForPlayback = returnServer || (!returnStream ? assignedServer : undefined);
+    console.log('startReturnFeed: assignedServer=', assignedServer, 'returnServer=', returnServer, 'serverForPlayback=', serverForPlayback);
 
     setReturnFeedStatus('connecting');
     setIsReturnFeedStarted(true);

@@ -331,6 +331,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Links API routes (authenticated users)
+  // Public endpoint — session page uses this to find the assigned WHIP server for a stream.
+  // No auth required: guests don't have accounts.
+  app.get('/api/links/assigned-server', async (req, res) => {
+    try {
+      const streamName = req.query.stream as string;
+      if (!streamName) return res.status(400).json({ error: 'stream param required' });
+      const link = await storage.getLinkByStreamName(streamName);
+      res.json({ assignedServer: link?.assignedServer || null });
+    } catch (err) {
+      console.error('Error looking up assigned server:', err);
+      res.status(500).json({ error: 'Failed to look up assigned server' });
+    }
+  });
+
   app.get('/api/links', requireAuth, async (req, res) => {
     try {
       console.log('Fetching all links...');
