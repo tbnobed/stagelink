@@ -95,8 +95,24 @@ export async function buildWhipUrlForServer(serverAddress: string, app: string, 
 }
 
 export async function buildWhepUrlForServer(serverAddress: string, app: string, stream: string): Promise<string> {
+  const trimmed = serverAddress.trim();
+
+  // If the stored value is a complete URL with a path (e.g. the full player URL
+  // that a non-standard server requires), use it exactly as entered.
+  // A full URL is detected by an http(s):// prefix AND a non-trivial path.
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.pathname && parsed.pathname !== '/') {
+        return trimmed;
+      }
+    } catch {
+      // fall through to the standard builder below
+    }
+  }
+
   const config = await getSRSConfig();
-  const { host, port, useHttps } = parseServerAddressStr(serverAddress, config.whipPort, config.useHttps);
+  const { host, port, useHttps } = parseServerAddressStr(trimmed, config.whipPort, config.useHttps);
   const protocol = useHttps ? 'https' : 'http';
   return `${protocol}://${host}:${port}/rtc/v1/whep/?app=${app}&stream=${stream}`;
 }
