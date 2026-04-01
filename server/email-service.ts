@@ -11,7 +11,7 @@ if (EMAIL_ENABLED) {
   console.warn('SENDGRID_API_KEY not set - email functionality disabled');
 }
 
-const FROM_EMAIL = 'alerts@obedtv.com';
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'alerts@obedtv.com';
 
 interface EmailParams {
   to: string;
