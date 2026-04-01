@@ -2045,23 +2045,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const platformUrl = `${req.protocol}://${req.get('host')}`;
       const createdLinks = [];
 
+      // Fetch return feeds once for the whole batch (avoids N+1 queries)
+      const returnFeed = prod.returnFeed;
+      const allFeedsForProd = await storage.getAllReturnFeeds();
+      const matchedFeedForProd = allFeedsForProd.find(f => f.streamName === returnFeed);
+
       for (const guest of guests) {
         if (!guest.guestEmail || !guest.guestEmail.trim()) continue;
 
         const linkId = Date.now().toString() + Math.random().toString(36).slice(2, 6);
         const streamName = `prod-${req.params.id.slice(0, 8)}-${Math.random().toString(36).slice(2, 8)}`;
-        const returnFeed = prod.returnFeed;
         const baseUrl = `${platformUrl}/session?stream=${encodeURIComponent(streamName)}&return=${encodeURIComponent(returnFeed)}&chat=true`;
 
         const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
         const sessionToken = await storage.createSessionToken(linkId, 'guest', expiresAt, userId);
 
+        // Round-robin called once per guest; same server used for both
+        // the regular link and the short link below.
         const assignedWhipServer = getNextWhipServer();
         const assignedServerAddr = formatServerAddress(assignedWhipServer);
 
         // Determine WHEP server for return feed delivery
-        const allFeedsForProd = await storage.getAllReturnFeeds();
-        const matchedFeedForProd = allFeedsForProd.find(f => f.streamName === returnFeed);
         const assignedWhepServerAddr = matchedFeedForProd?.serverAddress || await getNextWhepServerAddress();
 
         let finalUrl = `${baseUrl}&token=${sessionToken.id}&server=${assignedServerAddr}`;
