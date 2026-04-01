@@ -162,8 +162,10 @@ export function getWhipServerList(): SRSServerEntry[] {
     const [host, portStr] = trimmed.split(':');
     return {
       host: host,
-      port: parseInt(portStr || process.env.SRS_WHIP_PORT || '1990'),
-      useHttps: process.env.SRS_WHIP_USE_HTTPS === 'true' || process.env.SRS_WHIP_USE_HTTPS === undefined,
+      port: parseInt(portStr || envStr('SRS_WHIP_PORT') || '1990'),
+      useHttps: envStr('SRS_WHIP_USE_HTTPS') !== undefined
+        ? process.env.SRS_WHIP_USE_HTTPS === 'true'
+        : true, // default to HTTPS
     };
   });
 }
@@ -195,7 +197,9 @@ export function parseServerAddress(address: string): SRSServerEntry | null {
   if (!host) return null;
   return {
     host,
-    port: parseInt(portStr || process.env.SRS_WHIP_PORT || '1990'),
-    useHttps: process.env.SRS_WHIP_USE_HTTPS === 'true' || process.env.SRS_WHIP_USE_HTTPS === undefined,
+    port: parseInt(portStr || envStr('SRS_WHIP_PORT') || '1990'),
+    useHttps: envStr('SRS_WHIP_USE_HTTPS') !== undefined
+      ? process.env.SRS_WHIP_USE_HTTPS === 'true'
+      : true, // default to HTTPS
   };
 }
