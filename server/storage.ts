@@ -107,6 +107,7 @@ export interface IStorage {
   deleteProduction(id: string): Promise<boolean>;
   getLinksByProduction(productionId: string): Promise<GeneratedLink[]>;
   getUniqueReturnFeeds(): Promise<string[]>;
+  getLastWhepServerForFeed(streamName: string): Promise<string | null>;
   // Return Feed Settings
   getAllReturnFeeds(): Promise<ReturnFeed[]>;
   createReturnFeed(feed: InsertReturnFeed): Promise<ReturnFeed>;
@@ -659,6 +660,7 @@ export class MemStorage implements IStorage {
   async deleteProduction(id: string): Promise<boolean> { return false; }
   async getLinksByProduction(productionId: string): Promise<GeneratedLink[]> { return []; }
   async getUniqueReturnFeeds(): Promise<string[]> { return []; }
+  async getLastWhepServerForFeed(streamName: string): Promise<string | null> { return null; }
   async getAllReturnFeeds(): Promise<ReturnFeed[]> { return []; }
   async createReturnFeed(feed: InsertReturnFeed): Promise<ReturnFeed> { throw new Error('Not implemented'); }
   async updateReturnFeed(id: number, updates: Partial<InsertReturnFeed>): Promise<ReturnFeed | undefined> { return undefined; }
@@ -1786,6 +1788,15 @@ export class DatabaseStorage implements IStorage {
 
   async getAllReturnFeeds(): Promise<ReturnFeed[]> {
     return await db.select().from(returnFeeds).orderBy(returnFeeds.sortOrder, returnFeeds.id);
+  }
+
+  async getLastWhepServerForFeed(streamName: string): Promise<string | null> {
+    const [last] = await db.select({ whep: generatedLinks.assignedWhepServer })
+      .from(generatedLinks)
+      .where(eq(generatedLinks.returnFeed, streamName))
+      .orderBy(desc(generatedLinks.createdAt))
+      .limit(1);
+    return last?.whep ?? null;
   }
 
   async createReturnFeed(feed: InsertReturnFeed): Promise<ReturnFeed> {

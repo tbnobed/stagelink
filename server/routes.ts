@@ -10,8 +10,6 @@ import { sendStreamingInvite, sendViewerInvite } from "./email-service";
 
 // Round-robin counter for WHEP server pool assignment
 let whepRoundRobinIndex = 0;
-// Per-feed round-robin counters keyed by feed id
-const feedWhepCounters = new Map<number, number>();
 
 async function getNextWhepServers(): Promise<{ primary: string | null; fallback: string | null }> {
   const servers = await storage.getActiveWhepServers();
@@ -29,14 +27,15 @@ async function getNextWhepServerAddress(): Promise<string | null> {
   return (await getNextWhepServers()).primary;
 }
 
-function getNextFeedServers(feed: ReturnFeed): { primary: string | null; fallback: string | null } {
+async function getNextFeedServers(feed: ReturnFeed): Promise<{ primary: string | null; fallback: string | null }> {
   const addrs = [feed.serverAddress, feed.fallbackServerAddress].filter(Boolean) as string[];
   if (addrs.length === 0) return { primary: null, fallback: null };
   if (addrs.length === 1) return { primary: addrs[0], fallback: null };
-  const idx = feedWhepCounters.get(feed.id) ?? 0;
-  feedWhepCounters.set(feed.id, idx + 1);
+  // Use the last assigned server in DB to determine which server is next — restart-safe
+  const lastServer = await storage.getLastWhepServerForFeed(feed.streamName);
+  const idx = lastServer === addrs[0] ? 1 : 0;
   return {
-    primary: addrs[idx % addrs.length],
+    primary: addrs[idx],
     fallback: addrs[(idx + 1) % addrs.length],
   };
 }
@@ -422,7 +421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const allFeeds = await storage.getAllReturnFeeds();
         const matchedFeed = allFeeds.find(f => f.streamName === returnFeedName);
         if (matchedFeed?.serverAddress) {
-          const feedServers = getNextFeedServers(matchedFeed);
+          const feedServers = await getNextFeedServers(matchedFeed);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
         } else {
@@ -545,7 +544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const allFeeds = await storage.getAllReturnFeeds();
         const matchedFeed = allFeeds.find(f => f.streamName === returnFeed);
         if (matchedFeed?.serverAddress) {
-          const feedServers = getNextFeedServers(matchedFeed);
+          const feedServers = await getNextFeedServers(matchedFeed);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
         } else {
@@ -626,7 +625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const allFeeds = await storage.getAllReturnFeeds();
         const matchedFeed = allFeeds.find(f => f.streamName === returnFeed);
         if (matchedFeed?.serverAddress) {
-          const feedServers = getNextFeedServers(matchedFeed);
+          const feedServers = await getNextFeedServers(matchedFeed);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
         } else {
@@ -796,7 +795,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const allFeeds = await storage.getAllReturnFeeds();
         const matchedFeed = allFeeds.find(f => f.streamName === returnFeed);
         if (matchedFeed?.serverAddress) {
-          const feedServers = getNextFeedServers(matchedFeed);
+          const feedServers = await getNextFeedServers(matchedFeed);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
         } else {
@@ -2142,7 +2141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let assignedWhepServerAddr: string | null = null;
         let assignedWhepFallbackAddr: string | null = null;
         if (matchedFeedForProd?.serverAddress) {
-          const feedServers = getNextFeedServers(matchedFeedForProd);
+          const feedServers = await getNextFeedServers(matchedFeedForProd);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
         } else {
