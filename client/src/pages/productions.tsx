@@ -267,7 +267,7 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
     <div className="bg-gray-800/50 rounded-lg px-3 py-2">
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-white text-sm font-medium truncate">{p.guestName || '(unnamed)'}</p>
+          <p className="text-white text-sm font-medium truncate">{p.guestName || p.streamName || '(unnamed)'}</p>
           <p className="text-gray-400 text-xs truncate">{p.guestEmail || p.id}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -550,7 +550,7 @@ function InviteParticipantsPanel({ production }: { production: Production }) {
             {participants.map(p => (
               <div key={p.id} className="flex items-center justify-between bg-gray-800/50 rounded-lg px-3 py-2.5 gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-white text-sm font-medium truncate">{p.guestName || '(unnamed)'}</p>
+                  <p className="text-white text-sm font-medium truncate">{p.guestName || p.streamName || '(unnamed)'}</p>
                   <p className="text-gray-400 text-xs truncate">{p.guestEmail || <span className="italic text-gray-600">no email</span>}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

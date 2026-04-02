@@ -60,7 +60,7 @@ interface ProductionState {
 }
 
 // How long (ms) a live slot is held open after a WebSocket drops before freeing it
-const LIVE_SLOT_GRACE_MS = 30_000;
+const LIVE_SLOT_GRACE_MS = 8_000;
 
 class ChatWebSocketServer {
   private wss: WebSocketServer;
