@@ -129,7 +129,7 @@ class ChatWebSocketServer {
 
     ws.on('close', async (code, reason) => {
       console.log(`WebSocket closed: ${code} ${reason}`);
-      await this.handleDisconnection(ws);
+      await this.handleDisconnection(ws, code);
     });
 
     ws.on('error', (error) => {
@@ -258,8 +258,8 @@ class ChatWebSocketServer {
     console.log(`User ${message.userId} left session ${message.sessionId}`);
   }
 
-  private async handleDisconnection(ws: WebSocket) {
-    this.handleProductionDisconnectByWs(ws);
+  private async handleDisconnection(ws: WebSocket, closeCode?: number) {
+    this.handleProductionDisconnectByWs(ws, closeCode);
     
     // Check if it's a notification listener
     for (const [listenerKey, listener] of Array.from(this.notificationListeners.entries())) {
@@ -460,7 +460,7 @@ class ChatWebSocketServer {
     state.liveParticipants.delete(clientKey);
     state.disconnectTimers.delete(clientKey);
     this.clientProductionMap.delete(clientKey);
-    console.log(`Production ${productionId}: live ${linkId} evicted after grace period. ${state.liveParticipants.size}/${state.maxLive} live`);
+    console.log(`Production ${productionId}: live ${linkId} evicted. ${state.liveParticipants.size}/${state.maxLive} live`);
 
     while (state.liveParticipants.size < state.maxLive && state.waitingQueue.length > 0) {
       const nextWaiter = state.waitingQueue.shift()!;
@@ -478,7 +478,7 @@ class ChatWebSocketServer {
     });
   }
 
-  private handleProductionDisconnectByWs(ws: WebSocket) {
+  private handleProductionDisconnectByWs(ws: WebSocket, closeCode?: number) {
     const clientKey = this.wsToProductionClientKey.get(ws);
     if (!clientKey) return;
     this.wsToProductionClientKey.delete(ws);
@@ -508,18 +508,28 @@ class ChatWebSocketServer {
       return;
     }
 
-    // For live participants: hold the slot for LIVE_SLOT_GRACE_MS to allow reconnects
+    // For live participants: only apply grace period for abnormal network drops.
+    // Code 1005 = no close frame (network hiccup), 1006 = abnormal closure.
+    // Code 1001 = "Going Away" (user closed the tab / navigated away) → free immediately.
+    const isAbnormalDrop = closeCode === 1005 || closeCode === 1006;
     if (state.liveParticipants.has(clientKey)) {
       // Cancel any existing timer (shouldn't happen, but be safe)
       const existing = state.disconnectTimers.get(clientKey);
       if (existing) clearTimeout(existing);
 
-      console.log(`Production ${productionId}: live ${entry.linkId} WS dropped — holding slot for ${LIVE_SLOT_GRACE_MS / 1000}s`);
-      const timer = setTimeout(() => {
-        this.evictLiveParticipant(productionId, clientKey, state);
-      }, LIVE_SLOT_GRACE_MS);
-      state.disconnectTimers.set(clientKey, timer);
-      // Do NOT delete from clientProductionMap yet — needed when they reconnect
+      if (isAbnormalDrop) {
+        console.log(`Production ${productionId}: live ${entry.linkId} network drop (${closeCode}) — holding slot for ${LIVE_SLOT_GRACE_MS / 1000}s`);
+        const timer = setTimeout(() => {
+          this.evictLiveParticipant(productionId, clientKey, state);
+        }, LIVE_SLOT_GRACE_MS);
+        state.disconnectTimers.set(clientKey, timer);
+        // Do NOT delete from clientProductionMap yet — needed when they reconnect
+        return;
+      }
+
+      // Intentional close (1001, 1000, or unknown) — free the slot right away
+      console.log(`Production ${productionId}: live ${entry.linkId} closed intentionally (${closeCode}) — freeing slot`);
+      this.evictLiveParticipant(productionId, clientKey, state);
       return;
     }
 
