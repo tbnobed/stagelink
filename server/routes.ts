@@ -2138,7 +2138,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const streamName = `prod-${req.params.id.slice(0, 8)}-${Math.random().toString(36).slice(2, 8)}`;
         const baseUrl = `${platformUrl}/session?stream=${encodeURIComponent(streamName)}&return=${encodeURIComponent(returnFeed)}&chat=true`;
 
-        const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
+        // Expire 3 days after the production's scheduled date; fall back to 90 days from now
+        const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+        const expiresAt = prod.scheduledAt
+          ? new Date(new Date(prod.scheduledAt).getTime() + THREE_DAYS_MS)
+          : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
         const sessionToken = await storage.createSessionToken(linkId, 'guest', expiresAt, userId);
 
         // Round-robin called once per guest; same server used for both
