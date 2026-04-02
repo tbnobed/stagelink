@@ -309,81 +309,75 @@ function RoomCard({ room }: { room: Room }) {
 
   return (
     <Card className="hover:shadow-md transition-shadow">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg" data-testid={`room-title-${room.id}`}>
+      <CardHeader className="px-3 py-2.5">
+        <div className="flex items-center justify-between gap-1">
+          <div className="min-w-0">
+            <CardTitle className="text-sm truncate" data-testid={`room-title-${room.id}`}>
               {room.name}
             </CardTitle>
             {room.description && (
-              <CardDescription className="mt-1">{room.description}</CardDescription>
+              <CardDescription className="text-[11px] truncate">{room.description}</CardDescription>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {room.isActive ? (
-              <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
+              <Badge variant="default" className="bg-green-100 text-green-800 text-[10px] px-1.5 py-0">Active</Badge>
             ) : (
-              <Badge variant="secondary">Inactive</Badge>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inactive</Badge>
             )}
             {canManage && (
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-6 w-6 p-0"
                 onClick={() => deleteRoomMutation.mutate()}
                 disabled={deleteRoomMutation.isPending}
                 data-testid={`delete-room-${room.id}`}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3 h-3" />
               </Button>
             )}
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="px-3 pb-2.5 pt-0">
+        <div className="space-y-2">
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-1">
-                <Users className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="text-lg font-semibold">{assignedSlots}</div>
-              <div className="text-xs text-muted-foreground">/{room.maxParticipants} slots</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-1">
-                <Video className="w-4 h-4 text-green-600" />
-              </div>
-              <div className="text-lg font-semibold">{assignedSlots}</div>
-              <div className="text-xs text-muted-foreground">Assigned</div>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-1">
-                <MessageCircle className="w-4 h-4 text-purple-600" />
-              </div>
-              <div className="text-lg font-semibold">{room.chatEnabled ? "On" : "Off"}</div>
-              <div className="text-xs text-muted-foreground">Chat</div>
-            </div>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Users className="w-3 h-3 text-blue-600" />
+              {assignedSlots}/{room.maxParticipants}
+            </span>
+            <span className="flex items-center gap-1">
+              <Video className="w-3 h-3 text-green-600" />
+              {assignedSlots}
+            </span>
+            <span className="flex items-center gap-1">
+              <MessageCircle className="w-3 h-3 text-purple-600" />
+              {room.chatEnabled ? "On" : "Off"}
+            </span>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <Button
-              className="flex-1"
+              size="sm"
+              className="flex-1 h-7 text-xs"
               onClick={() => window.open(`/room/${room.id}`, '_blank')}
               data-testid={`join-room-${room.id}`}
             >
-              <i className="fas fa-external-link-alt mr-2 text-xs"></i>
-              Open Room
+              <i className="fas fa-external-link-alt mr-1 text-[10px]"></i>
+              Open
             </Button>
             {canManage && (
               <Button
                 variant="outline"
                 size="sm"
+                className="h-7 w-7 p-0"
                 onClick={() => window.open(`/room/${room.id}/manage`, '_blank')}
                 data-testid={`manage-room-${room.id}`}
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-3 h-3" />
               </Button>
             )}
           </div>
@@ -503,7 +497,7 @@ export default function Rooms() {
           {activeRooms.length > 0 && (
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-4">Active Rooms</h2>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="active-rooms-grid">
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6" data-testid="active-rooms-grid">
                 {activeRooms.map(room => (
                   <RoomCard key={room.id} room={room} />
                 ))}
@@ -515,7 +509,7 @@ export default function Rooms() {
           {inactiveRooms.length > 0 && (
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-4">Inactive Rooms</h2>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="inactive-rooms-grid">
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6" data-testid="inactive-rooms-grid">
                 {inactiveRooms.map(room => (
                   <RoomCard key={room.id} room={room} />
                 ))}
