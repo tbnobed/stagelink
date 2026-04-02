@@ -135,9 +135,10 @@ function ProductionForm({ initial, onSave, onCancel }: {
       </div>
       <div>
         <Label htmlFor="prod-scheduled" className="va-text-primary">Scheduled At (optional)</Label>
-        <Input id="prod-scheduled" type="datetime-local" value={scheduledAt}
+        <input id="prod-scheduled" type="datetime-local" value={scheduledAt}
           onChange={e => setScheduledAt(e.target.value)}
-          className="bg-gray-900 border-gray-700 text-white mt-1" />
+          style={{ colorScheme: 'dark' }}
+          className="w-full h-10 rounded-md border border-gray-700 bg-gray-900 text-white mt-1 px-3 text-sm" />
       </div>
       <div className="flex gap-3 pt-2">
         <Button type="submit" className="bg-va-primary hover:bg-va-primary/90 text-white">
