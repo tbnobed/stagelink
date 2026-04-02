@@ -387,6 +387,102 @@ function RoomCard({ room }: { room: Room }) {
   );
 }
 
+function RoomTableRow({ room }: { room: Room }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const { data: assignments } = useQuery({
+    queryKey: [`/api/rooms/${room.id}/streams`],
+    refetchInterval: 5000,
+    staleTime: 2000,
+  });
+
+  const deleteRoomMutation = useMutation({
+    mutationFn: () => apiRequest('DELETE', `/api/rooms/${room.id}`),
+    onSuccess: () => {
+      toast({ title: "Room deleted" });
+      queryClient.invalidateQueries({ queryKey: ['/api/rooms'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to delete room",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const assignedSlots = Array.isArray(assignments) ? assignments.length : 0;
+  const canManage = user?.role === 'admin' || user?.role === 'engineer';
+
+  return (
+    <tr className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+      <td className="px-3 py-2">
+        <div className="font-medium text-sm" data-testid={`room-title-${room.id}`}>{room.name}</div>
+        {room.description && <div className="text-xs text-muted-foreground truncate max-w-[200px]">{room.description}</div>}
+      </td>
+      <td className="px-3 py-2">
+        {room.isActive ? (
+          <Badge variant="default" className="bg-green-100 text-green-800 text-[10px] px-1.5">Active</Badge>
+        ) : (
+          <Badge variant="secondary" className="text-[10px] px-1.5">Inactive</Badge>
+        )}
+      </td>
+      <td className="px-3 py-2 text-center text-xs text-muted-foreground">
+        <span className="flex items-center justify-center gap-1">
+          <Users className="w-3 h-3" />
+          {assignedSlots}/{room.maxParticipants}
+        </span>
+      </td>
+      <td className="px-3 py-2 text-center">
+        {room.chatEnabled
+          ? <MessageCircle className="w-3.5 h-3.5 text-blue-500 mx-auto" />
+          : <span className="text-xs text-muted-foreground">—</span>
+        }
+      </td>
+      <td className="px-3 py-2">
+        <div className="flex items-center justify-end gap-1.5">
+          <Button
+            size="sm"
+            className="h-7 text-xs px-2"
+            onClick={() => window.open(`/room/${room.id}`, '_blank')}
+            data-testid={`join-room-${room.id}`}
+          >
+            <i className="fas fa-external-link-alt mr-1 text-[10px]"></i>
+            Open
+          </Button>
+          {canManage && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 w-7 p-0"
+                onClick={() => window.open(`/room/${room.id}/manage`, '_blank')}
+                data-testid={`manage-room-${room.id}`}
+                title="Manage room"
+              >
+                <Settings className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                onClick={() => deleteRoomMutation.mutate()}
+                disabled={deleteRoomMutation.isPending}
+                data-testid={`delete-room-${room.id}`}
+                title="Delete room"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export default function Rooms() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { user } = useAuth();
@@ -491,32 +587,28 @@ export default function Rooms() {
       )}
 
       {/* Management Section — admin/engineer only */}
-      {canCreateRooms && (
-        <>
-          {/* Active Rooms */}
-          {activeRooms.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">Active Rooms</h2>
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6" data-testid="active-rooms-grid">
-                {activeRooms.map(room => (
-                  <RoomCard key={room.id} room={room} />
+      {canCreateRooms && rooms && rooms.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Room Management</h2>
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 border-b text-xs text-muted-foreground uppercase tracking-wide">
+                  <th className="px-3 py-2 text-left">Room</th>
+                  <th className="px-3 py-2 text-left">Status</th>
+                  <th className="px-3 py-2 text-center">Slots</th>
+                  <th className="px-3 py-2 text-center">Chat</th>
+                  <th className="px-3 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rooms.map(room => (
+                  <RoomTableRow key={room.id} room={room} />
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* Inactive Rooms */}
-          {inactiveRooms.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">Inactive Rooms</h2>
-              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6" data-testid="inactive-rooms-grid">
-                {inactiveRooms.map(room => (
-                  <RoomCard key={room.id} room={room} />
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* Empty State */}
