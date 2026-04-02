@@ -526,63 +526,69 @@ export default function Session() {
       {/* Waiting Room Overlay — rendered on top when capacity is full; session layout stays mounted */}
       {isInWaitingRoom && (
         <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
-          <div className="text-center max-w-lg w-full">
-            <div className="relative mx-auto w-24 h-24 mb-6">
-              <div className="absolute inset-0 rounded-full bg-yellow-500/20 animate-ping" />
-              <div className="relative rounded-full bg-yellow-500/10 border-2 border-yellow-500/50 w-full h-full flex items-center justify-center">
-                <svg className="w-10 h-10 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+          <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center gap-6">
+
+            {/* Left panel: status info */}
+            <div className="text-center lg:text-left lg:w-72 flex-shrink-0">
+              <div className="relative mx-auto lg:mx-0 w-20 h-20 mb-4">
+                <div className="absolute inset-0 rounded-full bg-yellow-500/20 animate-ping" />
+                <div className="relative rounded-full bg-yellow-500/10 border-2 border-yellow-500/50 w-full h-full flex items-center justify-center">
+                  <svg className="w-9 h-9 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold va-text-primary mb-2">You're in the waiting room</h2>
+              <p className="va-text-secondary mb-4 text-sm">
+                {guestName ? `Hi ${guestName}!` : 'Hi there!'} The live session is currently full.
+              </p>
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
+                <p className="text-yellow-300 text-sm font-medium">Your position in queue</p>
+                <p className="text-5xl font-bold text-yellow-400 mt-1">#{waitingPosition}</p>
+              </div>
+              <p className="va-text-secondary text-xs">
+                You'll automatically go live when a spot opens up. Keep this page open.
+              </p>
+            </div>
+
+            {/* Right panel: return feed video — 2× larger */}
+            <div className="flex-1 w-full min-w-0">
+              <div className="rounded-xl overflow-hidden border va-border-dark relative" style={{ aspectRatio: '16/9' }}>
+                <video
+                  ref={waitingReturnFeedRef}
+                  autoPlay
+                  playsInline
+                  muted={isWaitingFeedMuted}
+                  className="w-full h-full object-cover bg-black"
+                />
+                {isReturnFeedStarted && (
+                  <button
+                    onClick={() => {
+                      setIsWaitingFeedMuted(m => {
+                        const next = !m;
+                        if (waitingReturnFeedRef.current) waitingReturnFeedRef.current.muted = next;
+                        return next;
+                      });
+                    }}
+                    className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition"
+                    title={isWaitingFeedMuted ? 'Unmute return feed' : 'Mute return feed'}
+                  >
+                    <i className={`fas ${isWaitingFeedMuted ? 'fa-volume-mute' : 'fa-volume-up'} text-sm`} />
+                  </button>
+                )}
+              </div>
+              <div className="mt-2 text-center">
+                {!isReturnFeedStarted && (
+                  <Button variant="outline" size="sm" onClick={startReturnFeed}>
+                    Watch Return Feed While You Wait
+                  </Button>
+                )}
+                {isReturnFeedStarted && (
+                  <p className="text-sm text-green-400">Return feed is playing {isWaitingFeedMuted ? '(muted — click 🔇 to unmute)' : ''}</p>
+                )}
               </div>
             </div>
-            <h2 className="text-2xl font-bold va-text-primary mb-2">You're in the waiting room</h2>
-            <p className="va-text-secondary mb-4">
-              {guestName ? `Hi ${guestName}!` : 'Hi there!'} The live session is currently full.
-            </p>
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
-              <p className="text-yellow-300 text-sm font-medium">Your position in queue</p>
-              <p className="text-5xl font-bold text-yellow-400 mt-1">#{waitingPosition}</p>
-            </div>
-            <p className="va-text-secondary text-sm mb-6">
-              You'll automatically go live when a spot opens up. Keep this page open.
-            </p>
-            {/* Return feed shown prominently while waiting — uses dedicated ref separate from main player */}
-            <div className="rounded-xl overflow-hidden border va-border-dark mb-3 relative" style={{ aspectRatio: '16/9' }}>
-              <video
-                ref={waitingReturnFeedRef}
-                autoPlay
-                playsInline
-                muted={isWaitingFeedMuted}
-                className="w-full h-full object-cover bg-black"
-              />
-              {isReturnFeedStarted && (
-                <button
-                  onClick={() => {
-                    setIsWaitingFeedMuted(m => {
-                      const next = !m;
-                      if (waitingReturnFeedRef.current) waitingReturnFeedRef.current.muted = next;
-                      return next;
-                    });
-                  }}
-                  className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition"
-                  title={isWaitingFeedMuted ? 'Unmute return feed' : 'Mute return feed'}
-                >
-                  <i className={`fas ${isWaitingFeedMuted ? 'fa-volume-mute' : 'fa-volume-up'} text-sm`} />
-                </button>
-              )}
-            </div>
-            {!isReturnFeedStarted && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={startReturnFeed}
-              >
-                Watch Return Feed While You Wait
-              </Button>
-            )}
-            {isReturnFeedStarted && (
-              <p className="text-sm text-green-400 mt-1">Return feed is playing {isWaitingFeedMuted ? '(muted)' : ''}</p>
-            )}
+
           </div>
         </div>
       )}
