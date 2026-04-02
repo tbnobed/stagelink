@@ -480,7 +480,7 @@ export async function sendProductionInvite({
   const text = [
     `Hello ${guestName},`,
     '',
-    `You have been invited to participate in a live broadcast on TBN Virtual Audience.`,
+    `You have been invited to participate in a live broadcast on TBN as a virtual audience member.`,
     '',
     `Production: ${productionName}`,
     ...(scheduledText ? [`Date & Time: ${scheduledText}`] : []),
@@ -530,7 +530,7 @@ export async function sendProductionInvite({
 </td></tr>
 <tr><td style="background-color:#111827;padding:36px 40px;">
   <p style="font-size:16px;color:#d1d5db;margin:0 0 8px 0;">Hello <strong style="color:#ffffff;">${guestName}</strong>,</p>
-  <p style="font-size:16px;color:#d1d5db;margin:0 0 28px 0;">You have been invited to participate in a live broadcast on TBN Virtual Audience.</p>
+  <p style="font-size:16px;color:#d1d5db;margin:0 0 28px 0;">You have been invited to participate in a live broadcast on TBN as a virtual audience member.</p>
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#1f2937;border-radius:8px;border:1px solid #374151;margin-bottom:28px;">
     <tr><td style="padding:20px 24px;">
       <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:#7c3aed;text-transform:uppercase;margin-bottom:6px;">Production</div>
