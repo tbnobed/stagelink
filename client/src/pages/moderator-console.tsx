@@ -212,6 +212,21 @@ export default function ModeratorConsole() {
     return map;
   }, [allParticipants]);
 
+  // Deduplicate broadcast messages — one broadcast sends a copy to every guest,
+  // but we only want to show a single entry for it in the unified feed.
+  const deduplicatedMessages = useMemo(() => {
+    const seen = new Set<string>();
+    return allMessages.filter(msg => {
+      if (msg.messageType !== 'broadcast') return true;
+      // Key = sender + content + minute-bucket (broadcasts happen within a second)
+      const bucket = new Date(msg.createdAt).toISOString().slice(0, 16);
+      const key = `${msg.senderId}|${msg.content}|${bucket}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [allMessages]);
+
   return (
     <div className="flex h-[calc(100vh-60px)] bg-gray-900 overflow-hidden">
 
@@ -428,7 +443,7 @@ export default function ModeratorConsole() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {allMessages.length === 0 && (
+              {deduplicatedMessages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center pt-12">
                   <MessageSquare className="w-12 h-12 text-gray-700 mb-3" />
                   <p className="text-gray-400 text-base font-medium">No messages yet</p>
@@ -437,7 +452,7 @@ export default function ModeratorConsole() {
                   </p>
                 </div>
               )}
-              {allMessages.map(msg => {
+              {deduplicatedMessages.map(msg => {
                 const fromModerator = msg.senderId !== null;
                 const isBroadcast = msg.messageType === 'broadcast';
                 const participant = participantLookup[msg.sessionId];
