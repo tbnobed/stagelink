@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import type { ChatMessage } from '@shared/schema';
 import { format } from 'date-fns';
@@ -22,14 +21,15 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = messagesContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
   // Connect to WebSocket when enabled
@@ -210,7 +210,7 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
       )}
 
       {/* Messages */}
-      <ScrollArea className="flex-1 min-h-0">
+      <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto">
         <div className="p-3 space-y-3">
           {messages.filter(shouldShowMessage).map((message) => {
             const isMyMessage = message.senderId === guestUser.id;
@@ -262,9 +262,8 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
               </div>
             );
           })}
-          <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Message Input */}
       {isConnected && (

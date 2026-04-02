@@ -1424,12 +1424,13 @@ export class DatabaseStorage implements IStorage {
 
   // Chat System Methods
   async getChatMessages(sessionId: string, limit: number = 50): Promise<ChatMessage[]> {
-    return await db
+    const rows = await db
       .select()
       .from(chatMessages)
       .where(eq(chatMessages.sessionId, sessionId))
       .orderBy(desc(chatMessages.createdAt))
       .limit(limit);
+    return rows.reverse(); // chronological order so newest appears at bottom
   }
 
   async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
