@@ -27,6 +27,7 @@ export default function Session() {
   const [guestUser, setGuestUser] = useState<any>(null);
   const [linkId, setLinkId] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [isWaitingFeedMuted, setIsWaitingFeedMuted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [consentGranted, setConsentGranted] = useState(false);
   // Production capacity management state
@@ -546,14 +547,29 @@ export default function Session() {
               You'll automatically go live when a spot opens up. Keep this page open.
             </p>
             {/* Return feed shown prominently while waiting — uses dedicated ref separate from main player */}
-            <div className="rounded-xl overflow-hidden border va-border-dark mb-3" style={{ aspectRatio: '16/9' }}>
+            <div className="rounded-xl overflow-hidden border va-border-dark mb-3 relative" style={{ aspectRatio: '16/9' }}>
               <video
                 ref={waitingReturnFeedRef}
                 autoPlay
                 playsInline
-                muted={isMuted}
+                muted={isWaitingFeedMuted}
                 className="w-full h-full object-cover bg-black"
               />
+              {isReturnFeedStarted && (
+                <button
+                  onClick={() => {
+                    setIsWaitingFeedMuted(m => {
+                      const next = !m;
+                      if (waitingReturnFeedRef.current) waitingReturnFeedRef.current.muted = next;
+                      return next;
+                    });
+                  }}
+                  className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition"
+                  title={isWaitingFeedMuted ? 'Unmute return feed' : 'Mute return feed'}
+                >
+                  <i className={`fas ${isWaitingFeedMuted ? 'fa-volume-mute' : 'fa-volume-up'} text-sm`} />
+                </button>
+              )}
             </div>
             {!isReturnFeedStarted && (
               <Button
@@ -565,7 +581,7 @@ export default function Session() {
               </Button>
             )}
             {isReturnFeedStarted && (
-              <p className="text-sm text-green-400 mt-1">Return feed is playing</p>
+              <p className="text-sm text-green-400 mt-1">Return feed is playing {isWaitingFeedMuted ? '(muted)' : ''}</p>
             )}
           </div>
         </div>
