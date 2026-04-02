@@ -1,11 +1,19 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Send, Radio, Users, Search, MessageSquare, ChevronLeft } from 'lucide-react';
+import { ArrowLeft, Send, Radio, Users, Search, MessageSquare, ChevronLeft, QrCode, ImageIcon, Upload } from 'lucide-react';
+import QRCode from 'qrcode';
 
 type ParticipantStatus = 'live' | 'waiting' | 'offline';
 type StatusFilter = ParticipantStatus | 'all';
@@ -59,6 +67,24 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function isImageContent(content: string) {
+  return content.startsWith('data:image/') || /\.(png|jpg|jpeg|gif|webp|svg)(\?|$)/i.test(content);
+}
+
+function MessageContent({ content }: { content: string }) {
+  if (isImageContent(content)) {
+    return (
+      <img
+        src={content}
+        alt="Shared image"
+        className="max-w-full rounded-lg mt-1 border border-white/10"
+        style={{ maxHeight: 280 }}
+      />
+    );
+  }
+  return <p className="text-sm leading-relaxed break-words">{content}</p>;
+}
+
 export default function ModeratorConsole() {
   const { id: productionId } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -69,8 +95,14 @@ export default function ModeratorConsole() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [chatInput, setChatInput] = useState('');
   const [broadcastInput, setBroadcastInput] = useState('');
+  const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
+  const [qrUrl, setQrUrl] = useState('');
+  const [qrPreview, setQrPreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const allMessagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: participantsData } = useQuery<ParticipantsResponse>({
     queryKey: ['/api/productions', productionId, 'participants'],
@@ -83,7 +115,6 @@ export default function ModeratorConsole() {
     enabled: !!productionId,
   });
 
-  // Unified feed — all messages from all guests
   const { data: allMessages = [] } = useQuery<ChatMessage[]>({
     queryKey: ['/api/productions', productionId, 'messages'],
     queryFn: async () => {
@@ -95,7 +126,6 @@ export default function ModeratorConsole() {
     enabled: !!productionId && !selectedGuest,
   });
 
-  // Private 1-on-1 messages for a selected guest
   const { data: privateMessages = [] } = useQuery<ChatMessage[]>({
     queryKey: ['/api/chat/messages', selectedGuest?.id],
     queryFn: async () => {
@@ -107,22 +137,13 @@ export default function ModeratorConsole() {
     enabled: !!selectedGuest,
   });
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    allMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [allMessages]);
+  useEffect(() => { allMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [allMessages]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [privateMessages]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [privateMessages]);
-
-  // Keep selectedGuest status in sync
   useEffect(() => {
     if (selectedGuest && participantsData) {
       const updated = participantsData.participants.find(p => p.id === selectedGuest.id);
-      if (updated && updated.status !== selectedGuest.status) {
-        setSelectedGuest(updated);
-      }
+      if (updated && updated.status !== selectedGuest.status) setSelectedGuest(updated);
     }
   }, [participantsData]);
 
@@ -168,14 +189,16 @@ export default function ModeratorConsole() {
     },
     onSuccess: (data) => {
       setBroadcastInput('');
+      setMediaDialogOpen(false);
+      setQrPreview(null);
+      setQrUrl('');
+      setImagePreview(null);
       toast({
         title: 'Broadcast Sent',
         description: `Message delivered to ${data.sent} guest${data.sent !== 1 ? 's' : ''}`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/productions', productionId, 'messages'] });
-      if (selectedGuest) {
-        queryClient.invalidateQueries({ queryKey: ['/api/chat/messages', selectedGuest.id] });
-      }
+      if (selectedGuest) queryClient.invalidateQueries({ queryKey: ['/api/chat/messages', selectedGuest.id] });
     },
     onError: () => toast({ title: 'Error', description: 'Failed to broadcast', variant: 'destructive' }),
   });
@@ -192,6 +215,33 @@ export default function ModeratorConsole() {
     broadcastMutation.mutate(msg);
   };
 
+  const generateQr = useCallback(async () => {
+    if (!qrUrl.trim()) return;
+    setIsGeneratingQr(true);
+    try {
+      const dataUrl = await QRCode.toDataURL(qrUrl.trim(), {
+        width: 400,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' },
+      });
+      setQrPreview(dataUrl);
+    } catch {
+      toast({ title: 'Error', description: 'Failed to generate QR code', variant: 'destructive' });
+    } finally {
+      setIsGeneratingQr(false);
+    }
+  }, [qrUrl]);
+
+  const handleImageFile = (file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Image too large', description: 'Please use an image under 2MB', variant: 'destructive' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => setImagePreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const production = participantsData?.production;
   const allParticipants = participantsData?.participants ?? [];
   const liveCount = allParticipants.filter(p => p.status === 'live').length;
@@ -205,20 +255,16 @@ export default function ModeratorConsole() {
     offline: allParticipants.filter(p => p.status === 'offline').length,
   };
 
-  // Build a quick lookup for participant status when displaying unified messages
   const participantLookup = useMemo(() => {
     const map: Record<string, Participant> = {};
     allParticipants.forEach(p => { map[p.id] = p; });
     return map;
   }, [allParticipants]);
 
-  // Deduplicate broadcast messages — one broadcast sends a copy to every guest,
-  // but we only want to show a single entry for it in the unified feed.
   const deduplicatedMessages = useMemo(() => {
     const seen = new Set<string>();
     return allMessages.filter(msg => {
       if (msg.messageType !== 'broadcast') return true;
-      // Key = sender + content + minute-bucket (broadcasts happen within a second)
       const bucket = new Date(msg.createdAt).toISOString().slice(0, 16);
       const key = `${msg.senderId}|${msg.content}|${bucket}`;
       if (seen.has(key)) return false;
@@ -230,10 +276,8 @@ export default function ModeratorConsole() {
   return (
     <div className="flex h-[calc(100vh-60px)] bg-gray-900 overflow-hidden">
 
-      {/* ── LEFT SIDEBAR: Guest list ── */}
+      {/* ── LEFT SIDEBAR ── */}
       <div className="w-72 border-r border-gray-700 flex flex-col shrink-0 bg-gray-900">
-
-        {/* Header */}
         <div className="p-4 border-b border-gray-700">
           <button
             onClick={() => window.location.href = '/productions'}
@@ -257,7 +301,6 @@ export default function ModeratorConsole() {
           </div>
         </div>
 
-        {/* Search */}
         <div className="px-3 pt-3 pb-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-500" />
@@ -270,7 +313,6 @@ export default function ModeratorConsole() {
           </div>
         </div>
 
-        {/* Status filter pills */}
         <div className="flex gap-1 px-3 pb-2 border-b border-gray-700 flex-wrap">
           {(['all', 'live', 'waiting', 'offline'] as StatusFilter[]).map(s => (
             <button
@@ -278,15 +320,13 @@ export default function ModeratorConsole() {
               onClick={() => setStatusFilter(s)}
               className={`text-xs px-2 py-0.5 rounded-full capitalize transition-colors ${statusFilter === s
                 ? 'bg-blue-600 text-white'
-                : 'text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700'
-                }`}
+                : 'text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700'}`}
             >
               {s} {statusFilterCounts[s] > 0 && <span className="opacity-70">({statusFilterCounts[s]})</span>}
             </button>
           ))}
         </div>
 
-        {/* Guest list */}
         <div className="flex-1 overflow-y-auto">
           {filteredGuests.length === 0 && (
             <div className="p-6 text-center text-gray-500 text-xs">
@@ -298,9 +338,8 @@ export default function ModeratorConsole() {
               key={guest.id}
               onClick={() => { setSelectedGuest(guest); setChatInput(''); }}
               className={`w-full text-left px-4 py-3 border-b border-gray-800/60 hover:bg-gray-800 transition-colors ${selectedGuest?.id === guest.id
-                  ? 'bg-gray-800 border-l-2 border-l-blue-500'
-                  : 'border-l-2 border-l-transparent'
-                }`}
+                ? 'bg-gray-800 border-l-2 border-l-blue-500'
+                : 'border-l-2 border-l-transparent'}`}
             >
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotClass(guest.status)}`} />
@@ -322,7 +361,7 @@ export default function ModeratorConsole() {
       {/* ── RIGHT: Chat area ── */}
       <div className="flex-1 flex flex-col min-w-0 bg-gray-950">
 
-        {/* Broadcast bar (always visible) */}
+        {/* Broadcast bar */}
         <div className="px-4 py-3 border-b border-gray-700 bg-gray-900/80">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 shrink-0">
@@ -336,6 +375,16 @@ export default function ModeratorConsole() {
               placeholder={`Send to all ${totalCount} guests in this production…`}
               className="flex-1 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 h-9 text-sm focus:border-orange-500"
             />
+            {/* QR / Image button */}
+            <Button
+              onClick={() => setMediaDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 bg-gray-800 hover:bg-gray-700 shrink-0"
+              title="Send QR code or image to all guests"
+            >
+              <QrCode className="w-4 h-4" />
+            </Button>
             <Button
               onClick={handleBroadcast}
               disabled={!broadcastInput.trim() || broadcastMutation.isPending}
@@ -389,17 +438,14 @@ export default function ModeratorConsole() {
                 return (
                   <div key={msg.id} className={`flex ${fromModerator ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[72%] rounded-2xl px-4 py-2.5 ${fromModerator
-                        ? isBroadcast
-                          ? 'bg-orange-600/90 text-white rounded-br-sm'
-                          : 'bg-blue-600 text-white rounded-br-sm'
-                        : 'bg-gray-800 text-gray-100 rounded-bl-sm'
-                      }`}>
+                      ? isBroadcast ? 'bg-orange-600/90 text-white rounded-br-sm' : 'bg-blue-600 text-white rounded-br-sm'
+                      : 'bg-gray-800 text-gray-100 rounded-bl-sm'}`}>
                       {fromModerator && isBroadcast && (
                         <div className="flex items-center gap-1 text-xs text-orange-200 font-medium mb-1">
                           <Radio className="w-3 h-3" /> Broadcast
                         </div>
                       )}
-                      <p className="text-sm leading-relaxed break-words">{msg.content}</p>
+                      <MessageContent content={msg.content} />
                       <div className={`text-xs mt-1 ${fromModerator ? 'text-white/50 text-right' : 'text-gray-500'}`}>
                         {fromModerator && <span className="mr-1">{msg.senderName}</span>}
                         {formatTime(msg.createdAt)}
@@ -459,14 +505,13 @@ export default function ModeratorConsole() {
                 const displayName = msg.guestName || participant?.guestName || msg.senderName;
 
                 if (fromModerator) {
-                  // Moderator / broadcast messages — show full-width orange banner
                   return (
                     <div key={msg.id} className="flex justify-end">
                       <div className="max-w-[80%] bg-orange-600/90 text-white rounded-2xl rounded-br-sm px-4 py-2.5">
                         <div className="flex items-center gap-1 text-xs text-orange-200 font-medium mb-1">
                           <Radio className="w-3 h-3" /> {isBroadcast ? 'Broadcast to All' : `To ${displayName}`}
                         </div>
-                        <p className="text-sm leading-relaxed break-words">{msg.content}</p>
+                        <MessageContent content={msg.content} />
                         <div className="text-xs mt-1 text-white/50 text-right">
                           {msg.senderName} · {formatTime(msg.createdAt)}
                         </div>
@@ -477,7 +522,6 @@ export default function ModeratorConsole() {
 
                 return (
                   <div key={msg.id} className="flex justify-start gap-2.5">
-                    {/* Avatar circle with first letter */}
                     <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0 mt-0.5">
                       {(displayName || '?')[0].toUpperCase()}
                     </div>
@@ -498,7 +542,7 @@ export default function ModeratorConsole() {
                         <span className="text-gray-600 text-xs">{formatTime(msg.createdAt)}</span>
                       </div>
                       <div className="bg-gray-800 text-gray-100 rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[500px]">
-                        <p className="text-sm leading-relaxed break-words">{msg.content}</p>
+                        <MessageContent content={msg.content} />
                       </div>
                     </div>
                   </div>
@@ -509,6 +553,121 @@ export default function ModeratorConsole() {
           </>
         )}
       </div>
+
+      {/* ── QR / Image Broadcast Dialog ── */}
+      <Dialog open={mediaDialogOpen} onOpenChange={setMediaDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-orange-400" />
+              Send QR Code or Image to All Guests
+            </DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="qr">
+            <TabsList className="bg-gray-800 border border-gray-700 w-full">
+              <TabsTrigger value="qr" className="flex-1 data-[state=active]:bg-gray-700 data-[state=active]:text-white">
+                <QrCode className="w-4 h-4 mr-2" /> QR Code
+              </TabsTrigger>
+              <TabsTrigger value="image" className="flex-1 data-[state=active]:bg-gray-700 data-[state=active]:text-white">
+                <ImageIcon className="w-4 h-4 mr-2" /> Upload Image
+              </TabsTrigger>
+            </TabsList>
+
+            {/* QR Code tab */}
+            <TabsContent value="qr" className="mt-4 space-y-4">
+              <div>
+                <label className="text-sm text-gray-300 mb-1.5 block">Survey or website URL</label>
+                <div className="flex gap-2">
+                  <Input
+                    value={qrUrl}
+                    onChange={e => { setQrUrl(e.target.value); setQrPreview(null); }}
+                    onKeyDown={e => e.key === 'Enter' && generateQr()}
+                    placeholder="https://your-survey.com/link"
+                    className="flex-1 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-orange-500"
+                  />
+                  <Button
+                    onClick={generateQr}
+                    disabled={!qrUrl.trim() || isGeneratingQr}
+                    variant="outline"
+                    className="border-gray-600 text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 shrink-0"
+                  >
+                    {isGeneratingQr ? 'Generating…' : 'Generate'}
+                  </Button>
+                </div>
+              </div>
+
+              {qrPreview && (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="bg-white p-3 rounded-xl">
+                    <img src={qrPreview} alt="QR Code preview" className="w-48 h-48" />
+                  </div>
+                  <p className="text-gray-400 text-xs text-center max-w-xs">
+                    Guests will see this QR code they can scan to open the survey
+                  </p>
+                  <Button
+                    onClick={() => broadcastMutation.mutate(qrPreview)}
+                    disabled={broadcastMutation.isPending}
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    <Radio className="w-4 h-4 mr-2" />
+                    {broadcastMutation.isPending ? 'Sending…' : `Send QR Code to All ${totalCount} Guests`}
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Image upload tab */}
+            <TabsContent value="image" className="mt-4 space-y-4">
+              <div>
+                <label className="text-sm text-gray-300 mb-1.5 block">Upload an image (max 2MB)</label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files[0];
+                    if (file) handleImageFile(file);
+                  }}
+                  className="border-2 border-dashed border-gray-600 hover:border-gray-400 rounded-xl p-8 text-center cursor-pointer transition-colors"
+                >
+                  <Upload className="w-8 h-8 text-gray-500 mx-auto mb-2" />
+                  <p className="text-gray-400 text-sm">Click to browse or drag & drop</p>
+                  <p className="text-gray-600 text-xs mt-1">PNG, JPG, GIF, WebP</p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageFile(file);
+                  }}
+                />
+              </div>
+
+              {imagePreview && (
+                <div className="flex flex-col items-center gap-3">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="max-w-full max-h-48 rounded-xl border border-gray-700 object-contain"
+                  />
+                  <Button
+                    onClick={() => broadcastMutation.mutate(imagePreview)}
+                    disabled={broadcastMutation.isPending}
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    <Radio className="w-4 h-4 mr-2" />
+                    {broadcastMutation.isPending ? 'Sending…' : `Send Image to All ${totalCount} Guests`}
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

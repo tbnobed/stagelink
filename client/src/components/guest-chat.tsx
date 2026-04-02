@@ -247,7 +247,16 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
                         {format(new Date(message.createdAt), 'HH:mm')}
                       </span>
                     </div>
-                    <p className="text-sm leading-relaxed">{message.content}</p>
+                    {message.content.startsWith('data:image/') ? (
+                      <img
+                        src={message.content}
+                        alt="Shared image"
+                        className="max-w-full rounded-lg mt-1"
+                        style={{ maxHeight: 260 }}
+                      />
+                    ) : (
+                      <p className="text-sm leading-relaxed">{message.content}</p>
+                    )}
                   </div>
                 </div>
               </div>
