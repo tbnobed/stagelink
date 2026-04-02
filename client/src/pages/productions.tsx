@@ -179,6 +179,18 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
     },
   });
 
+  const deleteParticipantMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      const res = await apiRequest('DELETE', `/api/links/${linkId}`);
+      if (!res.ok) throw new Error('Failed to delete');
+    },
+    onSuccess: () => {
+      toast({ title: 'Participant removed' });
+      queryClient.invalidateQueries({ queryKey: ['/api/productions', productionId, 'participants'] });
+    },
+    onError: () => toast({ title: 'Failed to remove participant', variant: 'destructive' }),
+  });
+
   if (isLoading) return <div className="text-gray-400 py-8 text-center">Loading participants...</div>;
   if (!data) return null;
 
@@ -298,6 +310,18 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
               disabled={promoteMutation.isPending}
             >Promote</Button>
           )}
+          <Button size="sm" variant="ghost"
+            className="h-7 w-7 p-0 text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+            title="Remove participant"
+            onClick={() => {
+              if (confirm(`Remove ${p.guestName || p.streamName || 'this participant'}?`)) {
+                deleteParticipantMutation.mutate(p.id);
+              }
+            }}
+            disabled={deleteParticipantMutation.isPending}
+          >
+            <i className="fas fa-trash-alt text-xs" />
+          </Button>
         </div>
       </div>
       {p.guestEmail && (
@@ -455,6 +479,18 @@ function InviteParticipantsPanel({ production }: { production: Production }) {
       refetch();
     },
     onError: () => toast({ title: 'Failed to send invites', variant: 'destructive' }),
+  });
+
+  const deleteParticipantMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      const res = await apiRequest('DELETE', `/api/links/${linkId}`);
+      if (!res.ok) throw new Error('Failed to delete');
+    },
+    onSuccess: () => {
+      toast({ title: 'Participant removed' });
+      queryClient.invalidateQueries({ queryKey: ['/api/productions', production.id, 'participants'] });
+    },
+    onError: () => toast({ title: 'Failed to remove participant', variant: 'destructive' }),
   });
 
   const handleAddSingle = () => {
@@ -617,6 +653,20 @@ function InviteParticipantsPanel({ production }: { production: Production }) {
                       {sendingIds.has(p.id) ? '...' : (p.inviteStatus === 'sent' ? 'Resend' : 'Send')}
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+                    title="Remove participant"
+                    onClick={() => {
+                      if (confirm(`Remove ${p.guestName || p.streamName || 'this participant'}?`)) {
+                        deleteParticipantMutation.mutate(p.id);
+                      }
+                    }}
+                    disabled={deleteParticipantMutation.isPending}
+                  >
+                    <i className="fas fa-trash-alt text-xs" />
+                  </Button>
                 </div>
               </div>
             ))}
