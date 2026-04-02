@@ -1,7 +1,7 @@
 import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, productions, returnFeeds, whepServers, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord, type Production, type InsertProduction, type ReturnFeed, type InsertReturnFeed, type WhepServer, type InsertWhepServer } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, lt, and, isNotNull, isNull, desc, like } from "drizzle-orm";
+import { eq, lt, and, isNotNull, isNull, desc, like, inArray } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -107,6 +107,7 @@ export interface IStorage {
   updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined>;
   deleteProduction(id: string): Promise<boolean>;
   getLinksByProduction(productionId: string): Promise<GeneratedLink[]>;
+  getProductionMessages(productionId: string, limit?: number): Promise<(ChatMessage & { guestName: string | null; guestEmail: string | null })[]>;
   getUniqueReturnFeeds(): Promise<string[]>;
   getLastWhepServerForFeed(streamName: string): Promise<string | null>;
   // Return Feed Settings
@@ -664,6 +665,7 @@ export class MemStorage implements IStorage {
   async updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined> { return undefined; }
   async deleteProduction(id: string): Promise<boolean> { return false; }
   async getLinksByProduction(productionId: string): Promise<GeneratedLink[]> { return []; }
+  async getProductionMessages(productionId: string, limit = 200): Promise<(ChatMessage & { guestName: string | null; guestEmail: string | null })[]> { return []; }
   async getUniqueReturnFeeds(): Promise<string[]> { return []; }
   async getLastWhepServerForFeed(streamName: string): Promise<string | null> { return null; }
   async getAllReturnFeeds(): Promise<ReturnFeed[]> { return []; }
@@ -1823,6 +1825,25 @@ export class DatabaseStorage implements IStorage {
       .from(generatedLinks)
       .where(eq(generatedLinks.productionId, productionId))
       .orderBy(generatedLinks.guestName);
+  }
+
+  async getProductionMessages(productionId: string, limit = 200): Promise<(ChatMessage & { guestName: string | null; guestEmail: string | null })[]> {
+    const links = await this.getLinksByProduction(productionId);
+    if (links.length === 0) return [];
+    const linkIds = links.map(l => l.id);
+    const meta: Record<string, { guestName: string | null; guestEmail: string | null }> = {};
+    links.forEach(l => { meta[l.id] = { guestName: l.guestName, guestEmail: l.guestEmail }; });
+    const rows = await db
+      .select()
+      .from(chatMessages)
+      .where(inArray(chatMessages.sessionId, linkIds))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(limit);
+    return rows.reverse().map(m => ({
+      ...m,
+      guestName: meta[m.sessionId]?.guestName ?? null,
+      guestEmail: meta[m.sessionId]?.guestEmail ?? null,
+    }));
   }
 
   async getUniqueReturnFeeds(): Promise<string[]> {

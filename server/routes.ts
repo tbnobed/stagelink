@@ -2109,6 +2109,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET all chat messages for all guests in a production (unified feed)
+  app.get('/api/productions/:id/messages', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 200;
+      const messages = await storage.getProductionMessages(req.params.id, limit);
+      res.json(messages);
+    } catch (error) {
+      console.error('Failed to fetch production messages:', error);
+      res.status(500).json({ error: 'Failed to fetch production messages' });
+    }
+  });
+
   // POST broadcast a message to all guest chat sessions in a production
   app.post('/api/productions/:id/broadcast', requireAdminOrEngineer, async (req, res) => {
     try {

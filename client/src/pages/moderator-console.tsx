@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Send, Radio, Users, Search, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Send, Radio, Users, Search, MessageSquare, ChevronLeft } from 'lucide-react';
 
 type ParticipantStatus = 'live' | 'waiting' | 'offline';
 type StatusFilter = ParticipantStatus | 'all';
@@ -28,6 +28,8 @@ interface ChatMessage {
   content: string;
   messageType: 'individual' | 'broadcast' | 'system';
   createdAt: string;
+  guestName?: string | null;
+  guestEmail?: string | null;
 }
 
 interface ParticipantsResponse {
@@ -68,7 +70,7 @@ export default function ModeratorConsole() {
   const [chatInput, setChatInput] = useState('');
   const [broadcastInput, setBroadcastInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatPanelRef = useRef<HTMLDivElement>(null);
+  const allMessagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: participantsData } = useQuery<ParticipantsResponse>({
     queryKey: ['/api/productions', productionId, 'participants'],
@@ -81,7 +83,20 @@ export default function ModeratorConsole() {
     enabled: !!productionId,
   });
 
-  const { data: messages = [] } = useQuery<ChatMessage[]>({
+  // Unified feed — all messages from all guests
+  const { data: allMessages = [] } = useQuery<ChatMessage[]>({
+    queryKey: ['/api/productions', productionId, 'messages'],
+    queryFn: async () => {
+      const r = await fetch(`/api/productions/${productionId}/messages?limit=300`);
+      if (!r.ok) throw new Error('Failed to fetch messages');
+      return r.json();
+    },
+    refetchInterval: 3000,
+    enabled: !!productionId && !selectedGuest,
+  });
+
+  // Private 1-on-1 messages for a selected guest
+  const { data: privateMessages = [] } = useQuery<ChatMessage[]>({
     queryKey: ['/api/chat/messages', selectedGuest?.id],
     queryFn: async () => {
       const r = await fetch(`/api/chat/messages/${selectedGuest!.id}?limit=100`);
@@ -92,10 +107,16 @@ export default function ModeratorConsole() {
     enabled: !!selectedGuest,
   });
 
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    allMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [allMessages]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [privateMessages]);
 
+  // Keep selectedGuest status in sync
   useEffect(() => {
     if (selectedGuest && participantsData) {
       const updated = participantsData.participants.find(p => p.id === selectedGuest.id);
@@ -151,6 +172,7 @@ export default function ModeratorConsole() {
         title: 'Broadcast Sent',
         description: `Message delivered to ${data.sent} guest${data.sent !== 1 ? 's' : ''}`,
       });
+      queryClient.invalidateQueries({ queryKey: ['/api/productions', productionId, 'messages'] });
       if (selectedGuest) {
         queryClient.invalidateQueries({ queryKey: ['/api/chat/messages', selectedGuest.id] });
       }
@@ -182,6 +204,13 @@ export default function ModeratorConsole() {
     waiting: waitingCount,
     offline: allParticipants.filter(p => p.status === 'offline').length,
   };
+
+  // Build a quick lookup for participant status when displaying unified messages
+  const participantLookup = useMemo(() => {
+    const map: Record<string, Participant> = {};
+    allParticipants.forEach(p => { map[p.id] = p; });
+    return map;
+  }, [allParticipants]);
 
   return (
     <div className="flex h-[calc(100vh-60px)] bg-gray-900 overflow-hidden">
@@ -305,9 +334,16 @@ export default function ModeratorConsole() {
         </div>
 
         {selectedGuest ? (
+          /* ── PRIVATE CHAT VIEW ── */
           <>
-            {/* Selected guest header */}
             <div className="px-5 py-3 border-b border-gray-800 bg-gray-900/40 flex items-center gap-3">
+              <button
+                onClick={() => setSelectedGuest(null)}
+                className="text-gray-400 hover:text-white transition-colors mr-1"
+                title="Back to all chats"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
               <span className={`w-2.5 h-2.5 rounded-full ${statusDotClass(selectedGuest.status)}`} />
               <div className="min-w-0 flex-1">
                 <h2 className="text-white font-semibold text-sm truncate">
@@ -321,18 +357,18 @@ export default function ModeratorConsole() {
                 {statusLabel(selectedGuest.status)}
                 {selectedGuest.status === 'waiting' && selectedGuest.position != null && ` #${selectedGuest.position}`}
               </Badge>
+              <span className="text-gray-500 text-xs">Private Chat</span>
             </div>
 
-            {/* Messages */}
-            <div ref={chatPanelRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-              {messages.length === 0 && (
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {privateMessages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center pt-12">
                   <MessageSquare className="w-10 h-10 text-gray-700 mb-3" />
                   <p className="text-gray-500 text-sm">No messages yet</p>
                   <p className="text-gray-600 text-xs mt-1">Send a message below to start the conversation</p>
                 </div>
               )}
-              {messages.map(msg => {
+              {privateMessages.map(msg => {
                 const fromModerator = msg.senderId !== null;
                 const isBroadcast = msg.messageType === 'broadcast';
                 return (
@@ -343,9 +379,6 @@ export default function ModeratorConsole() {
                           : 'bg-blue-600 text-white rounded-br-sm'
                         : 'bg-gray-800 text-gray-100 rounded-bl-sm'
                       }`}>
-                      {!fromModerator && (
-                        <p className="text-xs text-gray-400 font-medium mb-1">{msg.senderName}</p>
-                      )}
                       {fromModerator && isBroadcast && (
                         <div className="flex items-center gap-1 text-xs text-orange-200 font-medium mb-1">
                           <Radio className="w-3 h-3" /> Broadcast
@@ -363,7 +396,6 @@ export default function ModeratorConsole() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Private message input */}
             <div className="p-4 border-t border-gray-800 bg-gray-900/40">
               <div className="flex gap-2 items-center">
                 <Input
@@ -387,16 +419,79 @@ export default function ModeratorConsole() {
             </div>
           </>
         ) : (
-          /* No guest selected */
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 select-none">
-            <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mb-4">
-              <Users className="w-7 h-7 text-gray-600" />
+          /* ── UNIFIED ALL-CHATS VIEW ── */
+          <>
+            <div className="px-5 py-2.5 border-b border-gray-800 bg-gray-900/40 flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-400" />
+              <span className="text-gray-300 text-sm font-medium">All Participant Messages</span>
+              <span className="text-gray-600 text-xs ml-auto">Click a guest in the sidebar to chat privately</span>
             </div>
-            <h3 className="text-gray-300 font-medium mb-1">Select a guest to chat privately</h3>
-            <p className="text-gray-600 text-sm max-w-xs">
-              Click any guest in the sidebar to open their private chat. Use the broadcast bar above to message everyone.
-            </p>
-          </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {allMessages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-center pt-12">
+                  <MessageSquare className="w-12 h-12 text-gray-700 mb-3" />
+                  <p className="text-gray-400 text-base font-medium">No messages yet</p>
+                  <p className="text-gray-600 text-sm mt-1 max-w-xs">
+                    Guest messages will appear here as participants chat. Use the broadcast bar above to message everyone.
+                  </p>
+                </div>
+              )}
+              {allMessages.map(msg => {
+                const fromModerator = msg.senderId !== null;
+                const isBroadcast = msg.messageType === 'broadcast';
+                const participant = participantLookup[msg.sessionId];
+                const displayName = msg.guestName || participant?.guestName || msg.senderName;
+
+                if (fromModerator) {
+                  // Moderator / broadcast messages — show full-width orange banner
+                  return (
+                    <div key={msg.id} className="flex justify-end">
+                      <div className="max-w-[80%] bg-orange-600/90 text-white rounded-2xl rounded-br-sm px-4 py-2.5">
+                        <div className="flex items-center gap-1 text-xs text-orange-200 font-medium mb-1">
+                          <Radio className="w-3 h-3" /> {isBroadcast ? 'Broadcast to All' : `To ${displayName}`}
+                        </div>
+                        <p className="text-sm leading-relaxed break-words">{msg.content}</p>
+                        <div className="text-xs mt-1 text-white/50 text-right">
+                          {msg.senderName} · {formatTime(msg.createdAt)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={msg.id} className="flex justify-start gap-2.5">
+                    {/* Avatar circle with first letter */}
+                    <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0 mt-0.5">
+                      {(displayName || '?')[0].toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="flex items-baseline gap-2 mb-0.5">
+                        <button
+                          onClick={() => {
+                            const p = participant || allParticipants.find(ap => ap.id === msg.sessionId);
+                            if (p) { setSelectedGuest(p); setChatInput(''); }
+                          }}
+                          className="text-xs font-semibold text-blue-300 hover:text-blue-200 transition-colors hover:underline"
+                        >
+                          {displayName || 'Guest'}
+                        </button>
+                        {participant && (
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusDotClass(participant.status)}`} />
+                        )}
+                        <span className="text-gray-600 text-xs">{formatTime(msg.createdAt)}</span>
+                      </div>
+                      <div className="bg-gray-800 text-gray-100 rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[500px]">
+                        <p className="text-sm leading-relaxed break-words">{msg.content}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={allMessagesEndRef} />
+            </div>
+          </>
         )}
       </div>
     </div>
