@@ -1734,10 +1734,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProduction(production: InsertProduction, userId?: number): Promise<Production> {
+    const { scheduledAt, ...rest } = production;
     const [newProduction] = await db
       .insert(productions)
       .values({
-        ...production,
+        ...rest,
+        scheduledAt: scheduledAt ? new Date(scheduledAt as string) : null,
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: userId || null,
@@ -1747,9 +1749,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProduction(id: string, updates: Partial<InsertProduction>): Promise<Production | undefined> {
+    const { scheduledAt, ...rest } = updates;
+    const setData: Record<string, any> = { ...rest, updatedAt: new Date() };
+    if (scheduledAt !== undefined) {
+      setData.scheduledAt = scheduledAt ? new Date(scheduledAt as string) : null;
+    }
     const [production] = await db
       .update(productions)
-      .set({ ...updates, updatedAt: new Date() })
+      .set(setData)
       .where(eq(productions.id, id))
       .returning();
     return production || undefined;

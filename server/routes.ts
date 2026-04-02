@@ -2035,7 +2035,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(prod);
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
-      res.status(500).json({ error: 'Failed to update production' });
+      console.error('Failed to update production:', error);
+      res.status(500).json({ error: 'Failed to update production', detail: error?.message });
     }
   });
 
