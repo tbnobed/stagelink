@@ -26,7 +26,7 @@ export default function Session() {
   const [isReturnFeedStarted, setIsReturnFeedStarted] = useState(false);
   const [guestUser, setGuestUser] = useState<any>(null);
   const [linkId, setLinkId] = useState<string | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isWaitingFeedMuted, setIsWaitingFeedMuted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [consentGranted, setConsentGranted] = useState(false);
@@ -416,13 +416,9 @@ export default function Session() {
   };
 
   const toggleMute = () => {
-    if (publisherVideoRef.current) {
-      publisherVideoRef.current.muted = !publisherVideoRef.current.muted;
-      setIsMuted(publisherVideoRef.current.muted);
-    }
-    if (playerVideoRef.current) {
-      playerVideoRef.current.muted = !playerVideoRef.current.muted;
-    }
+    const next = !isMuted;
+    setIsMuted(next);
+    if (playerVideoRef.current) playerVideoRef.current.muted = next;
   };
 
   const toggleFullscreen = async () => {
@@ -564,11 +560,9 @@ export default function Session() {
                 {isReturnFeedStarted && (
                   <button
                     onClick={() => {
-                      setIsWaitingFeedMuted(m => {
-                        const next = !m;
-                        if (waitingReturnFeedRef.current) waitingReturnFeedRef.current.muted = next;
-                        return next;
-                      });
+                      const next = !isWaitingFeedMuted;
+                      setIsWaitingFeedMuted(next);
+                      if (waitingReturnFeedRef.current) waitingReturnFeedRef.current.muted = next;
                     }}
                     className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition"
                     title={isWaitingFeedMuted ? 'Unmute return feed' : 'Mute return feed'}
@@ -783,13 +777,20 @@ export default function Session() {
               <div className="relative bg-black rounded-lg overflow-hidden flex-1 min-h-0 mb-4">
                 <video 
                   ref={playerVideoRef}
-                  autoPlay 
-                  muted 
-                  controls 
+                  autoPlay
+                  muted={isMuted}
                   playsInline 
                   className="w-full h-full object-cover"
                   data-testid="video-player"
                 />
+                <button
+                  onClick={toggleMute}
+                  className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition"
+                  title={isMuted ? 'Unmute return feed' : 'Mute return feed'}
+                  data-testid="button-toggle-mute"
+                >
+                  <i className={`fas ${isMuted ? 'fa-volume-mute' : 'fa-volume-up'} text-sm`} />
+                </button>
               </div>
 
             {/* Chat Container */}
