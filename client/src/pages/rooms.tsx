@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -44,6 +44,114 @@ interface StreamAssignment {
   assignedUserId?: number;
   assignedGuestName?: string;
   position: number;
+  url?: string;
+  whepUrl?: string;
+}
+
+function RoomPreviewCard({ room }: { room: Room }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playerRef = useRef<any>(null);
+
+  const { data: roomData } = useQuery<{ whepUrls: StreamAssignment[] }>({
+    queryKey: [`/api/rooms/${room.id}/public`],
+    refetchInterval: 10000,
+  });
+
+  const streams = roomData?.whepUrls ?? [];
+  const firstStream = streams[0];
+
+  const startHoverPreview = () => {
+    if (!firstStream?.url) return;
+    hoverTimerRef.current = setTimeout(async () => {
+      if (!videoRef.current) return;
+      try {
+        const player = new (window as any).SrsRtcWhipWhepAsync();
+        playerRef.current = player;
+        await player.play(firstStream.url);
+        if (videoRef.current) {
+          videoRef.current.srcObject = player.stream;
+          await videoRef.current.play().catch(() => {});
+        }
+      } catch { }
+    }, 600);
+  };
+
+  const stopHoverPreview = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (videoRef.current) {
+      if (videoRef.current.srcObject instanceof MediaStream) {
+        (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+      }
+      videoRef.current.srcObject = null;
+    }
+    playerRef.current = null;
+  };
+
+  return (
+    <div
+      className="va-bg-dark-surface rounded-xl border va-border-dark hover:border-va-primary/60 transition-all duration-200 cursor-pointer group overflow-hidden"
+      onMouseEnter={startHoverPreview}
+      onMouseLeave={stopHoverPreview}
+      onClick={() => window.open(`/room/${room.id}`, '_blank')}
+    >
+      <div className="relative bg-black aspect-video">
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className="w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        />
+        <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-300">
+          <div className="text-center">
+            <i className="fas fa-users text-3xl text-gray-500 mb-1"></i>
+            <p className="text-xs text-gray-500">
+              {streams.length > 0 ? `${streams.length} stream${streams.length !== 1 ? 's' : ''}` : 'No streams'}
+            </p>
+          </div>
+        </div>
+        <div className="absolute top-2 left-2">
+          {room.isActive ? (
+            <Badge className="bg-green-500/90 text-white text-[10px] px-1.5 py-0.5 border-0">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-white mr-1 animate-pulse"></span>
+              LIVE
+            </Badge>
+          ) : (
+            <Badge className="bg-gray-700/90 text-gray-300 text-[10px] px-1.5 py-0.5 border-0">OFFLINE</Badge>
+          )}
+        </div>
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="bg-black/60 rounded-md px-2 py-1 text-xs text-white flex items-center gap-1">
+            <i className="fas fa-external-link-alt text-[10px]"></i>
+            Open
+          </div>
+        </div>
+      </div>
+      <div className="px-3 py-2.5">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold va-text-primary text-sm truncate group-hover:va-text-green transition-colors">
+            {room.name}
+          </h3>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              <i className="fas fa-video text-[10px]"></i>
+              {streams.length}/{room.maxParticipants}
+            </span>
+            {room.chatEnabled && (
+              <i className="fas fa-comments text-blue-400 text-[10px]" title="Chat enabled"></i>
+            )}
+          </div>
+        </div>
+        {room.description && (
+          <p className="text-xs text-gray-500 truncate mt-0.5">{room.description}</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function CreateRoomDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -262,16 +370,17 @@ function RoomCard({ room }: { room: Room }) {
           <div className="flex gap-2">
             <Button
               className="flex-1"
-              onClick={() => setLocation(`/room/${room.id}`)}
+              onClick={() => window.open(`/room/${room.id}`, '_blank')}
               data-testid={`join-room-${room.id}`}
             >
-              Join Room
+              <i className="fas fa-external-link-alt mr-2 text-xs"></i>
+              Open Room
             </Button>
             {canManage && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setLocation(`/room/${room.id}/manage`)}
+                onClick={() => window.open(`/room/${room.id}/manage`, '_blank')}
                 data-testid={`manage-room-${room.id}`}
               >
                 <Settings className="w-4 h-4" />
@@ -366,28 +475,54 @@ export default function Rooms() {
         )}
       </div>
 
-      {/* Active Rooms */}
-      {activeRooms.length > 0 && (
+      {/* Preview Grid — all rooms, hover to preview stream */}
+      {rooms && rooms.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Active Rooms</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="active-rooms-grid">
-            {activeRooms.map(room => (
-              <RoomCard key={room.id} room={room} />
+          <div className="flex items-center gap-3 mb-3">
+            <h2 className="text-lg font-semibold">All Rooms</h2>
+            {activeRooms.length > 0 && (
+              <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-1.5 animate-pulse"></span>
+                {activeRooms.length} active
+              </Badge>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-2">
+            {rooms.map(room => (
+              <RoomPreviewCard key={room.id} room={room} />
             ))}
           </div>
+          <p className="text-xs text-gray-500">Hover a card to preview its live stream. Click to open in a new tab.</p>
         </div>
       )}
 
-      {/* Inactive Rooms */}
-      {inactiveRooms.length > 0 && canCreateRooms && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Inactive Rooms</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="inactive-rooms-grid">
-            {inactiveRooms.map(room => (
-              <RoomCard key={room.id} room={room} />
-            ))}
-          </div>
-        </div>
+      {/* Management Section — admin/engineer only */}
+      {canCreateRooms && (
+        <>
+          {/* Active Rooms */}
+          {activeRooms.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Active Rooms</h2>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="active-rooms-grid">
+                {activeRooms.map(room => (
+                  <RoomCard key={room.id} room={room} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Inactive Rooms */}
+          {inactiveRooms.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Inactive Rooms</h2>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="inactive-rooms-grid">
+                {inactiveRooms.map(room => (
+                  <RoomCard key={room.id} room={room} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Empty State */}

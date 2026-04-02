@@ -2,7 +2,6 @@ import { Link } from "wouter";
 import SRSMonitoring from "@/components/srs-monitoring";
 
 export default function Home() {
-
   return (
     <div className="min-h-screen py-8 px-4">
       <div className="max-w-7xl mx-auto">
@@ -86,7 +85,8 @@ export default function Home() {
               Open Link Generator
             </Link>
           </div>
-          {/* Quick Stats/Admin Card - Only on larger screens */}
+
+          {/* Quick Access Card */}
           <div className="hidden xl:block va-bg-dark-surface rounded-2xl p-6 border va-border-dark">
             <div className="flex items-center mb-4">
               <div className="bg-va-primary/20 p-3 rounded-lg mr-4">

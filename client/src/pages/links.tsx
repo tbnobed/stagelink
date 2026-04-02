@@ -85,6 +85,13 @@ export default function Links() {
   const [previewModal, setPreviewModal] = useState<GeneratedLink | null>(null);
   const [chatModal, setChatModal] = useState<GeneratedLink | null>(null);
 
+  // Hover preview state
+  const [hoverLink, setHoverLink] = useState<GeneratedLink | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hoverVideoRef = useRef<HTMLVideoElement>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverPlayerRef = useRef<any>(null);
+
   const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const chatScrollRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const { toast } = useToast();
@@ -540,6 +547,69 @@ export default function Links() {
     setChatModal(null);
   };
 
+  // Auto-start preview as soon as the modal opens
+  useEffect(() => {
+    if (!previewModal) return;
+    const streamName = previewModal.type === 'guest' ? previewModal.streamName : previewModal.returnFeed;
+    if (!streamName) return;
+    // Small delay to let the dialog/video element mount
+    const t = setTimeout(() => {
+      previewStream(streamName, previewModal.id, previewModal.type === 'guest' ? previewModal.assignedServer : undefined);
+    }, 150);
+    return () => clearTimeout(t);
+  }, [previewModal?.id]);
+
+  // Hover preview helpers
+  const startHoverPreview = (link: GeneratedLink, e: React.MouseEvent) => {
+    if (link.type !== 'guest' || !link.streamName) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setHoverPos({ x: rect.right + 8, y: rect.top });
+    setHoverLink(link);
+
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(async () => {
+      if (!hoverVideoRef.current || !link.streamName) return;
+      try {
+        if (hoverPlayerRef.current) {
+          try { hoverPlayerRef.current.close?.(); } catch { }
+          hoverPlayerRef.current = null;
+        }
+        const { buildWhepUrlForServer, buildWhepUrl } = await import('@/lib/srs-config');
+        const config = await import('@/lib/srs-config').then(m => m.getSRSConfig());
+        const url = link.assignedServer
+          ? await buildWhepUrlForServer(link.assignedServer, config.app, link.streamName)
+          : await buildWhepUrl(config.app, link.streamName);
+
+        if (!window.SrsRtcWhipWhepAsync) return;
+        const player = new window.SrsRtcWhipWhepAsync();
+        hoverPlayerRef.current = player;
+        await player.play(url);
+        if (hoverVideoRef.current) {
+          hoverVideoRef.current.srcObject = player.stream;
+          await hoverVideoRef.current.play().catch(() => {});
+        }
+      } catch { }
+    }, 700);
+  };
+
+  const stopHoverPreview = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (hoverVideoRef.current) {
+      if (hoverVideoRef.current.srcObject instanceof MediaStream) {
+        hoverVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
+      }
+      hoverVideoRef.current.srcObject = null;
+    }
+    if (hoverPlayerRef.current) {
+      try { hoverPlayerRef.current.close?.(); } catch { }
+      hoverPlayerRef.current = null;
+    }
+    setHoverLink(null);
+  };
+
   return (
     <div className={`min-h-screen ${isMobile ? 'py-4 px-3' : 'py-6 px-6'}`}>
       <div className="w-full max-w-none">
@@ -715,9 +785,13 @@ export default function Links() {
                         </td>
 
                         {/* Participant */}
-                        <td className="px-3 py-2.5 max-w-[180px]">
+                        <td
+                          className="px-3 py-2.5 max-w-[180px]"
+                          onMouseEnter={link.type === 'guest' && link.streamName ? (e) => startHoverPreview(link, e) : undefined}
+                          onMouseLeave={link.type === 'guest' && link.streamName ? stopHoverPreview : undefined}
+                        >
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium va-text-primary truncate" data-testid={`text-stream-${link.id}`}>
+                            <span className={`font-medium va-text-primary truncate ${link.type === 'guest' && link.streamName ? 'cursor-default' : ''}`} data-testid={`text-stream-${link.id}`}>
                               {displayName}
                             </span>
                             {link.chatEnabled && (
@@ -918,23 +992,8 @@ export default function Links() {
             ) : (
               <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
                 <div className="text-center">
-                  <i className="fas fa-eye text-3xl text-gray-500 mb-3"></i>
-                  <p className="va-text-secondary text-sm mb-3">
-                    {previewModal?.type === 'guest' ? previewModal?.streamName : previewModal?.returnFeed}
-                  </p>
-                  {previewModal && (
-                    <Button
-                      onClick={() => {
-                        const streamName = previewModal.type === 'guest' ? previewModal.streamName! : previewModal.returnFeed!;
-                        previewStream(streamName, previewModal.id, previewModal.type === 'guest' ? previewModal.assignedServer : undefined);
-                      }}
-                      size="sm"
-                      className="va-bg-primary hover:va-bg-primary-dark text-va-dark-bg"
-                    >
-                      <i className="fas fa-play mr-2"></i>
-                      Start Preview
-                    </Button>
-                  )}
+                  <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                  <p className="va-text-secondary text-sm">Connecting…</p>
                 </div>
               </div>
             )}
@@ -1116,6 +1175,37 @@ export default function Links() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Floating hover preview */}
+      {hoverLink && (
+        <div
+          className="fixed z-[9999] pointer-events-none"
+          style={{
+            left: Math.min(hoverPos.x, window.innerWidth - 300),
+            top: Math.max(hoverPos.y - 8, 8),
+            width: 280,
+          }}
+        >
+          <div className="va-bg-dark-surface va-border-dark border rounded-lg overflow-hidden shadow-2xl">
+            <div className="px-2 py-1.5 border-b va-border-dark flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+              <span className="text-xs va-text-secondary font-mono truncate">{hoverLink.streamName}</span>
+            </div>
+            <div className="relative bg-black aspect-video">
+              <video
+                ref={hoverVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center" style={{ display: 'none' }}>
+                <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
