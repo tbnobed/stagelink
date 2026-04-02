@@ -2109,6 +2109,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST broadcast a message to all guest chat sessions in a production
+  app.post('/api/productions/:id/broadcast', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const user = req.user as any;
+      const { message } = req.body;
+      if (!message?.trim()) return res.status(400).json({ error: 'Message required' });
+
+      const links = await storage.getLinksByProduction(req.params.id);
+      if (links.length === 0) return res.json({ success: true, sent: 0 });
+
+      const chatWS = (global as any).chatWebSocketServer;
+      let sent = 0;
+      for (const link of links) {
+        const chatMessage = await storage.createChatMessage({
+          sessionId: link.streamName,
+          senderId: user.id,
+          senderName: user.username,
+          content: message.trim(),
+          messageType: 'broadcast',
+        });
+        if (chatWS) {
+          chatWS.sendToSession(link.streamName, { type: 'new_message', message: chatMessage });
+        }
+        sent++;
+      }
+      res.json({ success: true, sent });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to broadcast message' });
+    }
+  });
+
   // POST promote a waiting participant to live
   app.post('/api/productions/:id/participants/:linkId/promote', requireAdminOrEngineer, async (req, res) => {
     try {
