@@ -41,6 +41,7 @@ interface GeneratedLink {
   guestName?: string | null;
   guestEmail?: string | null;
   productionId?: string | null;
+  productionName?: string | null;
   inviteStatus?: string | null;
   type: 'guest' | 'viewer';
   roomAssignments?: RoomAssignment[];
@@ -745,7 +746,7 @@ export default function Links() {
                   {filteredLinks.map((link: GeneratedLink) => {
                     const expired = isLinkExpired(link);
                     const displayName = link.type === 'guest' ? (link.guestName || link.streamName || '—') : (link.returnFeed || 'Viewer Link');
-                    const subName = link.type === 'guest' && link.guestName ? link.streamName : null;
+                    const subName = link.type === 'guest' && link.guestName ? (link.productionName || link.streamName) : null;
                     const shortUrl = link.shortLink ? `${window.location.origin}${link.shortLink}` : null;
 
                     return (
@@ -786,7 +787,7 @@ export default function Links() {
                               </Badge>
                             )}
                           </div>
-                          {subName && <div className="text-xs text-gray-500 font-mono truncate">{subName}</div>}
+                          {subName && <div className="text-xs text-gray-500 truncate">{subName}</div>}
                           {link.guestEmail && <div className="text-xs text-gray-500 truncate">{link.guestEmail}</div>}
                         </td>
 

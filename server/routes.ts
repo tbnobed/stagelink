@@ -383,12 +383,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Find room assignments for this stream
           const roomAssignments = await storage.getRoomAssignmentsByStreamName(link.streamName);
+
+          // Resolve production name if assigned
+          let productionName: string | null = null;
+          if ((link as any).productionId) {
+            const prod = await storage.getProduction((link as any).productionId);
+            productionName = prod?.name ?? null;
+          }
           
           return {
             ...link,
             shortLink: shortLink ? `/s/${shortLink.id}` : null,
             shortCode: shortLink?.id || null,
             roomAssignments: roomAssignments || [],
+            productionName,
           };
         })
       );
