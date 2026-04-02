@@ -1,7 +1,7 @@
 import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, productions, returnFeeds, whepServers, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord, type Production, type InsertProduction, type ReturnFeed, type InsertReturnFeed, type WhepServer, type InsertWhepServer } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, lt, and, isNotNull, isNull, desc } from "drizzle-orm";
+import { eq, lt, and, isNotNull, isNull, desc, like } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -23,6 +23,7 @@ export interface IStorage {
   createLink(link: InsertGeneratedLink, userId?: number): Promise<GeneratedLink>;
   deleteLink(id: string): Promise<boolean>;
   deleteExpiredLinks(): Promise<number>;
+  deleteOrphanedProductionLinks(): Promise<number>;
   
   // Short Links
   getShortLink(code: string): Promise<ShortLink | undefined>;
@@ -281,6 +282,10 @@ export class MemStorage implements IStorage {
     }
     
     return deletedCount;
+  }
+
+  async deleteOrphanedProductionLinks(): Promise<number> {
+    return 0;
   }
 
   async getShortLink(code: string): Promise<ShortLink | undefined> {
@@ -888,6 +893,51 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return result.rowCount || 0;
+  }
+
+  async deleteOrphanedProductionLinks(): Promise<number> {
+    // Find all links that look like production links (streamName starts with 'prod-')
+    // but have no associated production (productionId is null — set by DB onDelete:'set null')
+    const orphans = await db
+      .select()
+      .from(generatedLinks)
+      .where(
+        and(
+          like(generatedLinks.streamName, 'prod-%'),
+          isNull(generatedLinks.productionId)
+        )
+      );
+
+    if (orphans.length === 0) return 0;
+
+    const ids = orphans.map(l => l.id);
+
+    // Delete session tokens for these links
+    for (const id of ids) {
+      await db.delete(sessionTokens).where(
+        and(eq(sessionTokens.linkId, id), eq(sessionTokens.linkType, 'guest'))
+      );
+    }
+
+    // Delete matching short links (by streamName)
+    for (const link of orphans) {
+      await db.delete(shortLinks).where(
+        and(
+          eq(shortLinks.streamName, link.streamName),
+          eq(shortLinks.returnFeed, link.returnFeed),
+          eq(shortLinks.chatEnabled, link.chatEnabled)
+        )
+      );
+    }
+
+    // Delete the links themselves
+    let deleted = 0;
+    for (const id of ids) {
+      const r = await db.delete(generatedLinks).where(eq(generatedLinks.id, id));
+      deleted += r.rowCount ?? 0;
+    }
+
+    return deleted;
   }
 
   async getShortLink(code: string): Promise<ShortLink | undefined> {

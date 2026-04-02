@@ -278,6 +278,18 @@ export default function Links() {
     },
   });
 
+  const deleteOrphanedProductionsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/links/orphaned-productions', { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete orphaned production links');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/all-links'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/links'] });
+    },
+  });
+
   const copyToClipboard = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
@@ -473,6 +485,19 @@ export default function Links() {
     });
   };
 
+  const removeOrphanedProductionLinks = () => {
+    if (!confirm('Delete all participant links from deleted productions? This cannot be undone.')) return;
+    deleteOrphanedProductionsMutation.mutate(undefined, {
+      onSuccess: (data: any) => {
+        toast({
+          title: data.deletedCount === 0 ? "Nothing to Clean Up" : "Production Links Removed",
+          description: data.deletedCount === 0 ? "No orphaned production links found" : `${data.deletedCount} participant link${data.deletedCount !== 1 ? 's' : ''} from deleted productions removed`,
+        });
+      },
+      onError: () => { toast({ title: "Error", description: "Failed to remove orphaned production links", variant: "destructive" }); },
+    });
+  };
+
   const openInviteDialog = (link: GeneratedLink) => {
     setInviteDialog({
       open: true,
@@ -633,6 +658,17 @@ export default function Links() {
                 >
                   <i className="fas fa-clock mr-2"></i>
                   Remove Expired
+                </Button>
+                <Button
+                  onClick={removeOrphanedProductionLinks}
+                  variant="outline"
+                  size="sm"
+                  className="border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-white"
+                  disabled={deleteOrphanedProductionsMutation.isPending}
+                  data-testid="button-remove-orphaned-productions"
+                >
+                  <i className="fas fa-unlink mr-2"></i>
+                  {deleteOrphanedProductionsMutation.isPending ? 'Cleaning...' : 'Remove Deleted Production Links'}
                 </Button>
                 <Button
                   onClick={clearAllLinks}

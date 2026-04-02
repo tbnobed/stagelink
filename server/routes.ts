@@ -505,6 +505,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete orphaned production links (prod-* stream names with no parent production)
+  app.delete('/api/links/orphaned-productions', requireAdmin, async (req, res) => {
+    try {
+      const deletedCount = await storage.deleteOrphanedProductionLinks();
+      res.json({ deletedCount });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete orphaned production links' });
+    }
+  });
+
   // Viewer Links API routes (authenticated users)
   app.get('/api/viewer-links', requireAuth, async (req, res) => {
     try {
