@@ -90,7 +90,6 @@ export default function Links() {
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const hoverVideoRef = useRef<HTMLVideoElement>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoverPlayerRef = useRef<any>(null);
 
   const previewVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const chatScrollRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -570,24 +569,12 @@ export default function Links() {
     hoverTimerRef.current = setTimeout(async () => {
       if (!hoverVideoRef.current || !link.streamName) return;
       try {
-        if (hoverPlayerRef.current) {
-          try { hoverPlayerRef.current.close?.(); } catch { }
-          hoverPlayerRef.current = null;
-        }
-        const { buildWhepUrlForServer, buildWhepUrl } = await import('@/lib/srs-config');
-        const config = await import('@/lib/srs-config').then(m => m.getSRSConfig());
-        const url = link.assignedServer
-          ? await buildWhepUrlForServer(link.assignedServer, config.app, link.streamName)
-          : await buildWhepUrl(config.app, link.streamName);
-
-        if (!window.SrsRtcWhipWhepAsync) return;
-        const player = new window.SrsRtcWhipWhepAsync();
-        hoverPlayerRef.current = player;
-        await player.play(url);
-        if (hoverVideoRef.current) {
-          hoverVideoRef.current.srcObject = player.stream;
-          await hoverVideoRef.current.play().catch(() => {});
-        }
+        await startPlayback(
+          hoverVideoRef.current,
+          link.streamName,
+          3,
+          link.assignedServer || undefined,
+        );
       } catch { }
     }, 700);
   };
@@ -602,10 +589,6 @@ export default function Links() {
         hoverVideoRef.current.srcObject.getTracks().forEach(t => t.stop());
       }
       hoverVideoRef.current.srcObject = null;
-    }
-    if (hoverPlayerRef.current) {
-      try { hoverPlayerRef.current.close?.(); } catch { }
-      hoverPlayerRef.current = null;
     }
     setHoverLink(null);
   };
