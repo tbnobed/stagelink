@@ -2048,12 +2048,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // DELETE production
+  // DELETE production — also removes all associated participant links
   app.delete('/api/productions/:id', requireAdmin, async (req, res) => {
     try {
+      // Delete all participant links first (each deleteLink also cleans up short links + session tokens)
+      const links = await storage.getLinksByProduction(req.params.id);
+      await Promise.all(links.map(link => storage.deleteLink(link.id)));
+
       const deleted = await storage.deleteProduction(req.params.id);
       if (!deleted) return res.status(404).json({ error: 'Production not found' });
-      res.json({ success: true });
+      res.json({ success: true, linksDeleted: links.length });
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete production' });
     }
