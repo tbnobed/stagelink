@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Send, Radio, Users, Search, MessageSquare } from 'lucide-react';
-import { Link } from 'wouter';
 
 type ParticipantStatus = 'live' | 'waiting' | 'offline';
 type StatusFilter = ParticipantStatus | 'all';
@@ -83,9 +82,9 @@ export default function ModeratorConsole() {
   });
 
   const { data: messages = [] } = useQuery<ChatMessage[]>({
-    queryKey: ['/api/chat/messages', selectedGuest?.streamName],
+    queryKey: ['/api/chat/messages', selectedGuest?.id],
     queryFn: async () => {
-      const r = await fetch(`/api/chat/messages/${selectedGuest!.streamName}?limit=100`);
+      const r = await fetch(`/api/chat/messages/${selectedGuest!.id}?limit=100`);
       if (!r.ok) throw new Error('Failed to fetch messages');
       return r.json();
     },
@@ -124,14 +123,14 @@ export default function ModeratorConsole() {
       const r = await fetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: selectedGuest!.streamName, message: msg, messageType: 'individual' }),
+        body: JSON.stringify({ sessionId: selectedGuest!.id, message: msg, messageType: 'individual' }),
       });
       if (!r.ok) throw new Error('Failed to send');
       return r.json();
     },
     onSuccess: () => {
       setChatInput('');
-      queryClient.invalidateQueries({ queryKey: ['/api/chat/messages', selectedGuest?.streamName] });
+      queryClient.invalidateQueries({ queryKey: ['/api/chat/messages', selectedGuest?.id] });
     },
     onError: () => toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' }),
   });
@@ -153,7 +152,7 @@ export default function ModeratorConsole() {
         description: `Message delivered to ${data.sent} guest${data.sent !== 1 ? 's' : ''}`,
       });
       if (selectedGuest) {
-        queryClient.invalidateQueries({ queryKey: ['/api/chat/messages', selectedGuest.streamName] });
+        queryClient.invalidateQueries({ queryKey: ['/api/chat/messages', selectedGuest.id] });
       }
     },
     onError: () => toast({ title: 'Error', description: 'Failed to broadcast', variant: 'destructive' }),
@@ -192,11 +191,12 @@ export default function ModeratorConsole() {
 
         {/* Header */}
         <div className="p-4 border-b border-gray-700">
-          <Link href="/productions">
-            <a className="inline-flex items-center gap-1 text-gray-400 hover:text-white text-xs mb-3 transition-colors">
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Productions
-            </a>
-          </Link>
+          <button
+            onClick={() => window.location.href = '/productions'}
+            className="inline-flex items-center gap-1 text-gray-400 hover:text-white text-xs mb-3 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Productions
+          </button>
           <div className="flex items-start gap-2">
             <MessageSquare className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
             <div className="min-w-0">

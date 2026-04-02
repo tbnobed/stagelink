@@ -2123,14 +2123,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let sent = 0;
       for (const link of links) {
         const chatMessage = await storage.createChatMessage({
-          sessionId: link.streamName,
+          sessionId: link.id,
           senderId: user.id,
           senderName: user.username,
           content: message.trim(),
           messageType: 'broadcast',
         });
         if (chatWS) {
-          chatWS.sendToSession(link.streamName, { type: 'new_message', message: chatMessage });
+          chatWS.sendToSession(link.id, { type: 'new_message', message: chatMessage });
         }
         sent++;
       }
