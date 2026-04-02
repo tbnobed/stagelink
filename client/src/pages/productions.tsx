@@ -263,6 +263,21 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
     return null;
   };
 
+  const PAGE = 20;
+  const [search, setSearch] = useState('');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  const matchesSearch = (p: ParticipantRecord) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      (p.guestName || '').toLowerCase().includes(q) ||
+      (p.guestEmail || '').toLowerCase().includes(q) ||
+      (p.streamName || '').toLowerCase().includes(q) ||
+      p.id.toLowerCase().includes(q)
+    );
+  };
+
   const ParticipantRow = ({ p, showPromote }: { p: ParticipantRecord; showPromote?: boolean }) => (
     <div className="bg-gray-800/50 rounded-lg px-3 py-2">
       <div className="flex items-center justify-between">
@@ -291,24 +306,60 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
     </div>
   );
 
-  const Group = ({ title, items, showPromote }: { title: string; items: ParticipantRecord[]; showPromote?: boolean }) => (
-    <div className="mb-6">
-      <h4 className="text-sm font-semibold text-gray-400 mb-2 uppercase tracking-wider">{title} ({items.length})</h4>
-      {items.length === 0 ? (
-        <p className="text-gray-500 text-sm italic">None</p>
-      ) : (
-        <div className="space-y-2">
-          {items.map(p => <ParticipantRow key={p.id} p={p} showPromote={showPromote} />)}
-        </div>
-      )}
-    </div>
-  );
+  const Group = ({ title, groupKey, items, showPromote }: { title: string; groupKey: string; items: ParticipantRecord[]; showPromote?: boolean }) => {
+    const filtered = items.filter(matchesSearch);
+    const isExpanded = !!expanded[groupKey];
+    const visible = isExpanded ? filtered : filtered.slice(0, PAGE);
+    const hidden = filtered.length - visible.length;
+    return (
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold text-gray-400 mb-2 uppercase tracking-wider">
+          {title} ({items.length}{search && filtered.length !== items.length ? `, ${filtered.length} shown` : ''})
+        </h4>
+        {filtered.length === 0 ? (
+          <p className="text-gray-500 text-sm italic">{search ? 'No matches' : 'None'}</p>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {visible.map(p => <ParticipantRow key={p.id} p={p} showPromote={showPromote} />)}
+            </div>
+            {hidden > 0 && (
+              <button
+                className="mt-2 text-xs text-blue-400 hover:text-blue-300 underline"
+                onClick={() => setExpanded(e => ({ ...e, [groupKey]: true }))}
+              >
+                Show {hidden} more…
+              </button>
+            )}
+            {isExpanded && filtered.length > PAGE && (
+              <button
+                className="mt-2 text-xs text-gray-400 hover:text-gray-300 underline"
+                onClick={() => setExpanded(e => ({ ...e, [groupKey]: false }))}
+              >
+                Show less
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div>
-      <Group title="Live" items={live} />
-      <Group title="Waiting" items={waiting} showPromote />
-      <Group title="Offline" items={offline} />
+      {/* Search bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setExpanded({}); }}
+          placeholder="Search by name, email, or ID…"
+          className="w-full bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+        />
+      </div>
+      <Group key="live" title="Live" groupKey="live" items={live} />
+      <Group key="waiting" title="Waiting" groupKey="waiting" items={waiting} showPromote />
+      <Group key="offline" title="Offline" groupKey="offline" items={offline} />
     </div>
   );
 }
