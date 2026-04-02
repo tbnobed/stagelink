@@ -877,15 +877,12 @@ export default function Productions() {
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0 flex-wrap justify-end">
-                      <Link href={`/moderator/${selected.id}`}>
-                        <a>
-                          <Button variant="outline" size="sm"
-                            className="border-blue-600/60 text-blue-400 hover:bg-blue-500/10">
-                            <i className="fas fa-headset mr-1.5" />
-                            Moderator Console
-                          </Button>
-                        </a>
-                      </Link>
+                      <Button variant="outline" size="sm"
+                        className="border-blue-600/60 text-blue-400 hover:bg-blue-500/10"
+                        onClick={() => window.location.href = `/moderator/${selected.id}`}>
+                        <i className="fas fa-headset mr-1.5" />
+                        Moderator Console
+                      </Button>
                       <Button variant="outline" size="sm"
                         className="border-gray-600 text-gray-300 hover:bg-gray-800"
                         onClick={() => setEditProd(selected)}>
