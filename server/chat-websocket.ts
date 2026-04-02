@@ -56,7 +56,11 @@ interface ProductionState {
   maxLive: number;
   liveParticipants: Map<string, string>; // clientKey -> linkId
   waitingQueue: Array<{ clientKey: string; linkId: string; guestName: string; ws: WebSocket }>;
+  disconnectTimers: Map<string, ReturnType<typeof setTimeout>>; // clientKey -> timer for grace-period eviction
 }
+
+// How long (ms) a live slot is held open after a WebSocket drops before freeing it
+const LIVE_SLOT_GRACE_MS = 30_000;
 
 class ChatWebSocketServer {
   private wss: WebSocketServer;
@@ -403,6 +407,7 @@ class ChatWebSocketServer {
         maxLive: production.maxLiveParticipants,
         liveParticipants: new Map(),
         waitingQueue: [],
+        disconnectTimers: new Map(),
       });
     }
 
@@ -417,8 +422,14 @@ class ChatWebSocketServer {
     }
     this.clientKeyToActiveWs.set(clientKey, ws);
 
-    // If already live (reconnect), just re-confirm
+    // If already live (reconnect or grace-period reconnect), cancel any eviction timer and re-confirm
     if (state.liveParticipants.has(clientKey)) {
+      const pendingTimer = state.disconnectTimers.get(clientKey);
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+        state.disconnectTimers.delete(clientKey);
+        console.log(`Production ${productionId}: ${guestName} (${linkId}) reconnected within grace period — slot retained`);
+      }
       state.liveParticipants.set(clientKey, linkId);
       this.clientProductionMap.set(clientKey, { productionId, linkId });
       this.wsToProductionClientKey.set(ws, clientKey);
@@ -443,6 +454,30 @@ class ChatWebSocketServer {
     }
   }
 
+  private evictLiveParticipant(productionId: string, clientKey: string, state: ProductionState) {
+    if (!state.liveParticipants.has(clientKey)) return;
+    const linkId = state.liveParticipants.get(clientKey)!;
+    state.liveParticipants.delete(clientKey);
+    state.disconnectTimers.delete(clientKey);
+    this.clientProductionMap.delete(clientKey);
+    console.log(`Production ${productionId}: live ${linkId} evicted after grace period. ${state.liveParticipants.size}/${state.maxLive} live`);
+
+    while (state.liveParticipants.size < state.maxLive && state.waitingQueue.length > 0) {
+      const nextWaiter = state.waitingQueue.shift()!;
+      state.liveParticipants.set(nextWaiter.clientKey, nextWaiter.linkId);
+      if (nextWaiter.ws.readyState === WebSocket.OPEN) {
+        nextWaiter.ws.send(JSON.stringify({ type: 'production_status', status: 'promoted', position: 0 }));
+      }
+      console.log(`Production ${productionId}: auto-promoted ${nextWaiter.guestName} to live`);
+    }
+
+    state.waitingQueue.forEach((w, i) => {
+      if (w.ws.readyState === WebSocket.OPEN) {
+        w.ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position: i + 1 }));
+      }
+    });
+  }
+
   private handleProductionDisconnectByWs(ws: WebSocket) {
     const clientKey = this.wsToProductionClientKey.get(ws);
     if (!clientKey) return;
@@ -459,7 +494,7 @@ class ChatWebSocketServer {
     const state = this.productionStates.get(productionId);
     if (!state) return;
 
-    // Remove from waiting queue if present
+    // Remove from waiting queue immediately (waiters don't hold a live slot)
     const waitingIdx = state.waitingQueue.findIndex(w => w.clientKey === clientKey);
     if (waitingIdx !== -1) {
       const removed = state.waitingQueue.splice(waitingIdx, 1)[0];
@@ -473,27 +508,23 @@ class ChatWebSocketServer {
       return;
     }
 
-    // Remove from live participants and auto-promote next waiter
+    // For live participants: hold the slot for LIVE_SLOT_GRACE_MS to allow reconnects
     if (state.liveParticipants.has(clientKey)) {
-      state.liveParticipants.delete(clientKey);
-      this.clientProductionMap.delete(clientKey);
-      console.log(`Production ${productionId}: live ${entry.linkId} disconnected. ${state.liveParticipants.size}/${state.maxLive} live`);
+      // Cancel any existing timer (shouldn't happen, but be safe)
+      const existing = state.disconnectTimers.get(clientKey);
+      if (existing) clearTimeout(existing);
 
-      while (state.liveParticipants.size < state.maxLive && state.waitingQueue.length > 0) {
-        const nextWaiter = state.waitingQueue.shift()!;
-        state.liveParticipants.set(nextWaiter.clientKey, nextWaiter.linkId);
-        if (nextWaiter.ws.readyState === WebSocket.OPEN) {
-          nextWaiter.ws.send(JSON.stringify({ type: 'production_status', status: 'promoted', position: 0 }));
-        }
-        console.log(`Production ${productionId}: auto-promoted ${nextWaiter.guestName} to live`);
-      }
-
-      state.waitingQueue.forEach((w, i) => {
-        if (w.ws.readyState === WebSocket.OPEN) {
-          w.ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position: i + 1 }));
-        }
-      });
+      console.log(`Production ${productionId}: live ${entry.linkId} WS dropped — holding slot for ${LIVE_SLOT_GRACE_MS / 1000}s`);
+      const timer = setTimeout(() => {
+        this.evictLiveParticipant(productionId, clientKey, state);
+      }, LIVE_SLOT_GRACE_MS);
+      state.disconnectTimers.set(clientKey, timer);
+      // Do NOT delete from clientProductionMap yet — needed when they reconnect
+      return;
     }
+
+    // (Fallback: not live and not waiting — just clean up)
+    this.clientProductionMap.delete(clientKey);
   }
 
   private handleProductionLeaveLive(ws: WebSocket, message: ChatMessage) {
@@ -509,6 +540,13 @@ class ChatWebSocketServer {
     if (!state) return;
 
     if (!state.liveParticipants.has(clientKey)) return;
+
+    // Cancel any grace-period timer — voluntary sign-off is final
+    const pendingTimer = state.disconnectTimers.get(clientKey);
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      state.disconnectTimers.delete(clientKey);
+    }
 
     state.liveParticipants.delete(clientKey);
     this.wsToProductionClientKey.delete(ws);
