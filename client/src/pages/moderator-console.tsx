@@ -431,7 +431,7 @@ export default function ModeratorConsole() {
               <span className="text-gray-500 text-xs">Private Chat</span>
             </div>
 
-            <div ref={privateChatRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div ref={privateChatRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
               {privateMessages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center pt-12">
                   <MessageSquare className="w-10 h-10 text-gray-700 mb-3" />
@@ -494,7 +494,7 @@ export default function ModeratorConsole() {
               <span className="text-gray-600 text-xs ml-auto">Click a guest in the sidebar to chat privately</span>
             </div>
 
-            <div ref={allChatRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div ref={allChatRef} className="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
               {deduplicatedMessages.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full text-center pt-12">
                   <MessageSquare className="w-12 h-12 text-gray-700 mb-3" />
