@@ -2146,6 +2146,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         sent++;
       }
+
+      // Also post the broadcast into the production's shared group chat so all
+      // guests see it in their "Group Chat" tab in real time.
+      const publicSessionId = `pub-${req.params.id}`;
+      const groupMessage = await storage.createChatMessage({
+        sessionId: publicSessionId,
+        senderId: user.id,
+        senderName: user.username,
+        content: message.trim(),
+        messageType: 'broadcast',
+      });
+      if (chatWS) {
+        chatWS.sendToSession(publicSessionId, { type: 'new_message', message: groupMessage });
+      }
+
       res.json({ success: true, sent });
     } catch (error) {
       res.status(500).json({ error: 'Failed to broadcast message' });

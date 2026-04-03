@@ -1989,10 +1989,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(chatMessages.createdAt))
       .limit(fetchLimit);
 
-    // Deduplicate broadcast messages server-side (same logic as client dedup)
+    // Deduplicate broadcast messages server-side.
+    // When the same broadcast exists in both an individual-guest session AND the
+    // shared pub-session, prefer the individual-session copy so the moderator
+    // sees it as a "Broadcast to All" rather than a "Group" message.
+    // Sort broadcast rows so individual-session rows come before pub-session rows
+    // (pub rows move to the end of the dedup window; they become duplicates).
+    const sortedForDedup = [...rows].sort((a, b) => {
+      const aIsPub = a.sessionId === publicSessionId && a.messageType === 'broadcast';
+      const bIsPub = b.sessionId === publicSessionId && b.messageType === 'broadcast';
+      if (aIsPub !== bIsPub) return aIsPub ? 1 : -1;
+      return 0;
+    });
+
     const seen = new Set<string>();
-    const deduped: typeof rows = [];
-    for (const msg of rows) {
+    const deduped: typeof sortedForDedup = [];
+    for (const msg of sortedForDedup) {
       if (msg.messageType === 'broadcast') {
         const bucket = new Date(msg.createdAt).toISOString().slice(0, 16);
         const key = `${msg.senderId}|${msg.content}|${bucket}`;
