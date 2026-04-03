@@ -165,17 +165,6 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
               </div>
             </div>
           )}
-          {/* Name overlay */}
-          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-2 py-1.5 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
-            <span className="text-white text-sm font-medium truncate leading-tight drop-shadow">
-              {getDisplayName()}
-            </span>
-            {connectionState === 'connected' && (
-              <span className="ml-2 shrink-0 bg-green-500/90 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-sm leading-tight">
-                Live
-              </span>
-            )}
-          </div>
         </div>
     </div>
   );
