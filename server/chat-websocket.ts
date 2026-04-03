@@ -55,7 +55,8 @@ const messageSchema = z.object({
 interface ProductionState {
   maxLive: number;
   liveParticipants: Map<string, string>; // clientKey -> linkId
-  waitingQueue: Array<{ clientKey: string; linkId: string; guestName: string; ws: WebSocket }>;
+  liveStreamNames: Map<string, string>; // clientKey -> streamName
+  waitingQueue: Array<{ clientKey: string; linkId: string; streamName: string; guestName: string; ws: WebSocket }>;
   disconnectTimers: Map<string, ReturnType<typeof setTimeout>>; // clientKey -> timer for grace-period eviction
 }
 
@@ -406,6 +407,7 @@ class ChatWebSocketServer {
       this.productionStates.set(productionId, {
         maxLive: production.maxLiveParticipants,
         liveParticipants: new Map(),
+        liveStreamNames: new Map(),
         waitingQueue: [],
         disconnectTimers: new Map(),
       });
@@ -422,6 +424,8 @@ class ChatWebSocketServer {
     }
     this.clientKeyToActiveWs.set(clientKey, ws);
 
+    const streamName = resolvedLink.streamName;
+
     // If already live (reconnect or grace-period reconnect), cancel any eviction timer and re-confirm
     if (state.liveParticipants.has(clientKey)) {
       const pendingTimer = state.disconnectTimers.get(clientKey);
@@ -429,8 +433,13 @@ class ChatWebSocketServer {
         clearTimeout(pendingTimer);
         state.disconnectTimers.delete(clientKey);
         console.log(`Production ${productionId}: ${guestName} (${linkId}) reconnected within grace period — slot retained`);
+        // Re-assign to room in case it was removed during grace period
+        storage.autoAssignParticipantToRoom(productionId, streamName, guestName).catch(err =>
+          console.error('Room auto-assign error on reconnect:', err)
+        );
       }
       state.liveParticipants.set(clientKey, linkId);
+      state.liveStreamNames.set(clientKey, streamName);
       this.clientProductionMap.set(clientKey, { productionId, linkId });
       this.wsToProductionClientKey.set(ws, clientKey);
       ws.send(JSON.stringify({ type: 'production_status', status: 'live', position: 0 }));
@@ -444,10 +453,14 @@ class ChatWebSocketServer {
 
     if (state.liveParticipants.size < state.maxLive) {
       state.liveParticipants.set(clientKey, linkId);
+      state.liveStreamNames.set(clientKey, streamName);
       ws.send(JSON.stringify({ type: 'production_status', status: 'live', position: 0 }));
       console.log(`Production ${productionId}: ${guestName} (${linkId}) is LIVE. ${state.liveParticipants.size}/${state.maxLive}`);
+      storage.autoAssignParticipantToRoom(productionId, streamName, guestName).catch(err =>
+        console.error('Room auto-assign error on LIVE:', err)
+      );
     } else {
-      state.waitingQueue.push({ clientKey, linkId, guestName, ws });
+      state.waitingQueue.push({ clientKey, linkId, streamName, guestName, ws });
       const position = state.waitingQueue.length;
       ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position }));
       console.log(`Production ${productionId}: ${guestName} (${linkId}) is WAITING at position ${position}.`);
@@ -457,18 +470,32 @@ class ChatWebSocketServer {
   private evictLiveParticipant(productionId: string, clientKey: string, state: ProductionState) {
     if (!state.liveParticipants.has(clientKey)) return;
     const linkId = state.liveParticipants.get(clientKey)!;
+    const evictedStreamName = state.liveStreamNames.get(clientKey);
     state.liveParticipants.delete(clientKey);
+    state.liveStreamNames.delete(clientKey);
     state.disconnectTimers.delete(clientKey);
     this.clientProductionMap.delete(clientKey);
     console.log(`Production ${productionId}: live ${linkId} evicted. ${state.liveParticipants.size}/${state.maxLive} live`);
 
+    // Remove evicted participant from their room
+    if (evictedStreamName) {
+      storage.removeParticipantFromProductionRooms(productionId, evictedStreamName).catch(err =>
+        console.error('Room removal error on evict:', err)
+      );
+    }
+
     while (state.liveParticipants.size < state.maxLive && state.waitingQueue.length > 0) {
       const nextWaiter = state.waitingQueue.shift()!;
       state.liveParticipants.set(nextWaiter.clientKey, nextWaiter.linkId);
+      state.liveStreamNames.set(nextWaiter.clientKey, nextWaiter.streamName);
       if (nextWaiter.ws.readyState === WebSocket.OPEN) {
         nextWaiter.ws.send(JSON.stringify({ type: 'production_status', status: 'promoted', position: 0 }));
       }
       console.log(`Production ${productionId}: auto-promoted ${nextWaiter.guestName} to live`);
+      // Assign promoted participant to the freed room slot
+      storage.autoAssignParticipantToRoom(productionId, nextWaiter.streamName, nextWaiter.guestName).catch(err =>
+        console.error('Room auto-assign error on promote:', err)
+      );
     }
 
     state.waitingQueue.forEach((w, i) => {
@@ -558,20 +585,33 @@ class ChatWebSocketServer {
       state.disconnectTimers.delete(clientKey);
     }
 
+    const signedOffStreamName = state.liveStreamNames.get(clientKey);
     state.liveParticipants.delete(clientKey);
+    state.liveStreamNames.delete(clientKey);
     this.wsToProductionClientKey.delete(ws);
     this.clientKeyToActiveWs.delete(clientKey);
     this.clientProductionMap.delete(clientKey);
     console.log(`Production ${productionId}: ${entry.linkId} signed off. ${state.liveParticipants.size}/${state.maxLive} live`);
 
+    // Remove signed-off participant from their room
+    if (signedOffStreamName) {
+      storage.removeParticipantFromProductionRooms(productionId, signedOffStreamName).catch(err =>
+        console.error('Room removal error on sign-off:', err)
+      );
+    }
+
     // Auto-promote next waiter if any
     while (state.liveParticipants.size < state.maxLive && state.waitingQueue.length > 0) {
       const nextWaiter = state.waitingQueue.shift()!;
       state.liveParticipants.set(nextWaiter.clientKey, nextWaiter.linkId);
+      state.liveStreamNames.set(nextWaiter.clientKey, nextWaiter.streamName);
       if (nextWaiter.ws.readyState === WebSocket.OPEN) {
         nextWaiter.ws.send(JSON.stringify({ type: 'production_status', status: 'promoted', position: 0 }));
       }
       console.log(`Production ${productionId}: auto-promoted ${nextWaiter.guestName} after sign-off`);
+      storage.autoAssignParticipantToRoom(productionId, nextWaiter.streamName, nextWaiter.guestName).catch(err =>
+        console.error('Room auto-assign error on promote after sign-off:', err)
+      );
     }
 
     state.waitingQueue.forEach((w, i) => {
@@ -706,6 +746,7 @@ class ChatWebSocketServer {
     // Manual admin promotion proceeds regardless of current live count (admin override)
     const waiter = state.waitingQueue.splice(waitingIdx, 1)[0];
     state.liveParticipants.set(clientKey, linkId);
+    state.liveStreamNames.set(clientKey, waiter.streamName);
 
     if (waiter.ws.readyState === WebSocket.OPEN) {
       waiter.ws.send(JSON.stringify({ type: 'production_status', status: 'promoted', position: 0 }));
@@ -717,6 +758,11 @@ class ChatWebSocketServer {
         w.ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position: i + 1 }));
       }
     });
+
+    // Assign promoted participant to an available room slot
+    storage.autoAssignParticipantToRoom(productionId, waiter.streamName, waiter.guestName).catch(err =>
+      console.error('Room auto-assign error on manual promote:', err)
+    );
 
     console.log(`Production ${productionId}: manually promoted ${linkId} to live. ${state.liveParticipants.size}/${state.maxLive}`);
     return true;
@@ -741,9 +787,13 @@ class ChatWebSocketServer {
       while (state.liveParticipants.size < state.maxLive && state.waitingQueue.length > 0) {
         const waiter = state.waitingQueue.shift()!;
         state.liveParticipants.set(waiter.clientKey, waiter.linkId);
+        state.liveStreamNames.set(waiter.clientKey, waiter.streamName);
         if (waiter.ws.readyState === WebSocket.OPEN) {
           waiter.ws.send(JSON.stringify({ type: 'production_status', status: 'promoted', position: 0 }));
         }
+        storage.autoAssignParticipantToRoom(productionId, waiter.streamName, waiter.guestName).catch(err =>
+          console.error('Room auto-assign error on capacity increase promote:', err)
+        );
       }
       // Re-notify remaining waiters
       state.waitingQueue.forEach((w, i) => {

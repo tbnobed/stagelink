@@ -2167,6 +2167,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET rooms assigned to a production
+  app.get('/api/productions/:id/rooms', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const rooms = await storage.getRoomsByProduction(req.params.id);
+      res.json(rooms);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch production rooms' });
+    }
+  });
+
+  // PUT update rooms assigned to a production (body: { roomIds: string[] })
+  app.put('/api/productions/:id/rooms', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const { roomIds } = req.body as { roomIds: string[] };
+      if (!Array.isArray(roomIds)) return res.status(400).json({ error: 'roomIds must be an array' });
+      await storage.setRoomsForProduction(req.params.id, roomIds);
+      const updatedRooms = await storage.getRoomsByProduction(req.params.id);
+      res.json(updatedRooms);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update production rooms' });
+    }
+  });
+
   // POST add participants (generate links) for a production
   // Body: { guests: [{ guestName, guestEmail }] }
   app.post('/api/productions/:id/participants', requireAdminOrEngineer, async (req, res) => {

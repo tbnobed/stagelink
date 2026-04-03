@@ -255,6 +255,7 @@ export const rooms = pgTable("rooms", {
   maxParticipants: integer("max_participants").default(10),
   chatEnabled: boolean("chat_enabled").notNull().default(true),
   isActive: boolean("is_active").notNull().default(true),
+  productionId: varchar("production_id").references(() => productions.id, { onDelete: 'set null' }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
   createdBy: integer("created_by").references(() => users.id),

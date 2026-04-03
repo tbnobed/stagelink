@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Production, GeneratedLink, ReturnFeed } from "@shared/schema";
+import type { Production, GeneratedLink, ReturnFeed, Room } from "@shared/schema";
 
 type ProductionStatus = 'draft' | 'active' | 'ended';
 type InviteStatus = 'pending' | 'sent' | 'failed' | null;
@@ -703,7 +703,135 @@ function ProductionSummaryBadges({ productionId }: { productionId: string }) {
   );
 }
 
-type DetailTab = 'participants' | 'invite';
+function RoomsPanel({ productionId }: { productionId: string }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [pendingRoomIds, setPendingRoomIds] = useState<string[] | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const { data: allRooms = [], isLoading: loadingAll } = useQuery<Room[]>({
+    queryKey: ['/api/rooms'],
+    staleTime: 30000,
+  });
+
+  const { data: assignedRooms = [], isLoading: loadingAssigned } = useQuery<Room[]>({
+    queryKey: ['/api/productions', productionId, 'rooms'],
+    queryFn: async () => {
+      const r = await fetch(`/api/productions/${productionId}/rooms`);
+      if (!r.ok) throw new Error('Failed to fetch');
+      return r.json();
+    },
+    staleTime: 10000,
+  });
+
+  const assignedIds = pendingRoomIds ?? assignedRooms.map(r => r.id);
+
+  const toggle = (roomId: string) => {
+    const current = pendingRoomIds ?? assignedRooms.map(r => r.id);
+    if (current.includes(roomId)) {
+      setPendingRoomIds(current.filter(id => id !== roomId));
+    } else {
+      setPendingRoomIds([...current, roomId]);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await apiRequest('PUT', `/api/productions/${productionId}/rooms`, { roomIds: assignedIds });
+      if (!res.ok) throw new Error('Failed to save');
+      queryClient.invalidateQueries({ queryKey: ['/api/productions', productionId, 'rooms'] });
+      setPendingRoomIds(null);
+      toast({ title: 'Room assignments saved' });
+    } catch {
+      toast({ title: 'Failed to save room assignments', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loadingAll || loadingAssigned) {
+    return <div className="text-gray-400 text-sm py-6 text-center">Loading rooms...</div>;
+  }
+
+  const isDirty = pendingRoomIds !== null;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-gray-400 text-sm">
+            Select rooms to assign to this production. Participants will be automatically placed into an available slot when they go live.
+          </p>
+        </div>
+        {isDirty && (
+          <div className="flex gap-2 shrink-0">
+            <Button size="sm" variant="outline"
+              className="border-gray-600 text-gray-400"
+              onClick={() => setPendingRoomIds(null)}>Cancel</Button>
+            <Button size="sm" onClick={handleSave} disabled={saving}
+              className="bg-va-primary hover:bg-va-primary/90 text-white">
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {allRooms.length === 0 && (
+        <div className="text-center py-10 text-gray-500">
+          <p className="text-sm">No rooms configured yet.</p>
+          <p className="text-xs mt-1">Create rooms from the Rooms page first.</p>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {allRooms.map(room => {
+          const isChecked = assignedIds.includes(room.id);
+          const assignedElsewhere = room.productionId && room.productionId !== productionId;
+          return (
+            <div key={room.id}
+              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                isChecked
+                  ? 'border-va-primary/60 bg-va-primary/5'
+                  : assignedElsewhere
+                    ? 'border-gray-700/40 bg-gray-800/20 opacity-60'
+                    : 'border-gray-700 bg-gray-800/40 hover:border-gray-600'
+              }`}
+              onClick={() => !assignedElsewhere && toggle(room.id)}
+            >
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => !assignedElsewhere && toggle(room.id)}
+                disabled={!!assignedElsewhere}
+                className="w-4 h-4 accent-va-primary cursor-pointer"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-medium">{room.name}</p>
+                {room.description && (
+                  <p className="text-gray-400 text-xs truncate">{room.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500 shrink-0">
+                <span>{room.maxParticipants ?? 10} slots</span>
+                {!room.isActive && <span className="text-yellow-600">Inactive</span>}
+                {assignedElsewhere && <span className="text-orange-500">Assigned to another production</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {!isDirty && assignedIds.length > 0 && (
+        <p className="text-xs text-gray-500">
+          {assignedIds.length} room{assignedIds.length !== 1 ? 's' : ''} assigned — participants auto-fill slots as they go live.
+        </p>
+      )}
+    </div>
+  );
+}
+
+type DetailTab = 'participants' | 'invite' | 'rooms';
 
 export default function Productions() {
   const { toast } = useToast();
@@ -925,6 +1053,16 @@ export default function Productions() {
                     >
                       Invite Participants
                     </button>
+                    <button
+                      className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                        detailTab === 'rooms'
+                          ? 'border-blue-500 text-white'
+                          : 'border-transparent text-gray-500 hover:text-gray-300'
+                      }`}
+                      onClick={() => setDetailTab('rooms')}
+                    >
+                      Rooms
+                    </button>
                   </div>
                 </div>
 
@@ -945,6 +1083,13 @@ export default function Productions() {
 
                   {detailTab === 'invite' && (
                     <InviteParticipantsPanel production={selected} />
+                  )}
+
+                  {detailTab === 'rooms' && (
+                    <div>
+                      <h3 className="text-lg font-semibold va-text-primary mb-4">Assigned Rooms</h3>
+                      <RoomsPanel productionId={selected.id} />
+                    </div>
                   )}
                 </div>
               </div>

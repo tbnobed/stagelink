@@ -78,6 +78,10 @@ export interface IStorage {
   createRoom(room: InsertRoom, userId?: number): Promise<Room>;
   updateRoom(id: string, updates: Partial<InsertRoom>): Promise<Room | undefined>;
   deleteRoom(id: string): Promise<boolean>;
+  getRoomsByProduction(productionId: string): Promise<Room[]>;
+  setRoomsForProduction(productionId: string, roomIds: string[]): Promise<void>;
+  autoAssignParticipantToRoom(productionId: string, streamName: string, guestName: string): Promise<void>;
+  removeParticipantFromProductionRooms(productionId: string, streamName: string): Promise<void>;
   
   // Room Participants
   getRoomParticipants(roomId: string): Promise<RoomParticipant[]>;
@@ -684,6 +688,10 @@ export class MemStorage implements IStorage {
     this.links.set(linkId, updated);
     return updated;
   }
+  async getRoomsByProduction(productionId: string): Promise<Room[]> { return []; }
+  async setRoomsForProduction(productionId: string, roomIds: string[]): Promise<void> {}
+  async autoAssignParticipantToRoom(productionId: string, streamName: string, guestName: string): Promise<void> {}
+  async removeParticipantFromProductionRooms(productionId: string, streamName: string): Promise<void> {}
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1600,6 +1608,80 @@ export class DatabaseStorage implements IStorage {
     // Delete the room
     const result = await db.delete(rooms).where(eq(rooms.id, id));
     return result.rowCount > 0;
+  }
+
+  async getRoomsByProduction(productionId: string): Promise<Room[]> {
+    return await db.select().from(rooms)
+      .where(eq(rooms.productionId, productionId))
+      .orderBy(rooms.name);
+  }
+
+  async setRoomsForProduction(productionId: string, roomIds: string[]): Promise<void> {
+    // Unassign rooms that were previously assigned to this production but aren't in the new list
+    await db.update(rooms)
+      .set({ productionId: null, updatedAt: new Date() })
+      .where(eq(rooms.productionId, productionId));
+    // Assign the selected rooms
+    if (roomIds.length > 0) {
+      await db.update(rooms)
+        .set({ productionId, updatedAt: new Date() })
+        .where(inArray(rooms.id, roomIds));
+    }
+  }
+
+  async autoAssignParticipantToRoom(productionId: string, streamName: string, guestName: string): Promise<void> {
+    // Get active rooms for this production, in name order
+    const productionRooms = await db.select().from(rooms)
+      .where(and(eq(rooms.productionId, productionId), eq(rooms.isActive, true)))
+      .orderBy(rooms.name);
+    if (productionRooms.length === 0) return;
+
+    for (const room of productionRooms) {
+      // Get current stream assignments for this room
+      const assignments = await db.select().from(roomStreamAssignments)
+        .where(eq(roomStreamAssignments.roomId, room.id));
+      const maxSlots = room.maxParticipants ?? 10;
+
+      // Skip if already assigned to this room
+      if (assignments.some(a => a.streamName === streamName)) return;
+
+      if (assignments.length < maxSlots) {
+        const nextPosition = assignments.length > 0
+          ? Math.max(...assignments.map(a => a.position ?? 0)) + 1
+          : 1;
+        // Create stream assignment
+        await db.insert(roomStreamAssignments).values({
+          roomId: room.id,
+          streamName,
+          assignedGuestName: guestName,
+          position: nextPosition,
+        });
+        // Create room participant entry
+        await db.insert(roomParticipants).values({
+          roomId: room.id,
+          guestName,
+          streamName,
+          isStreaming: true,
+          joinedAt: new Date(),
+          lastSeenAt: new Date(),
+        });
+        console.log(`Auto-assigned ${streamName} (${guestName}) to room "${room.name}" at position ${nextPosition}`);
+        return;
+      }
+    }
+    console.log(`No available room slot in production ${productionId} for stream ${streamName}`);
+  }
+
+  async removeParticipantFromProductionRooms(productionId: string, streamName: string): Promise<void> {
+    const productionRooms = await db.select().from(rooms)
+      .where(eq(rooms.productionId, productionId));
+    if (productionRooms.length === 0) return;
+    const roomIds = productionRooms.map(r => r.id);
+    await db.delete(roomStreamAssignments)
+      .where(and(inArray(roomStreamAssignments.roomId, roomIds), eq(roomStreamAssignments.streamName, streamName)));
+    await db.delete(roomParticipants)
+      .where(and(inArray(roomParticipants.roomId, roomIds), eq(roomParticipants.streamName, streamName)));
+    console.log(`Removed ${streamName} from all production ${productionId} rooms`);
   }
 
   // Room Participant Methods
