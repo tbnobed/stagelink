@@ -48,88 +48,103 @@ interface StreamAssignment {
   whepUrl?: string;
 }
 
-function RoomPreviewCard({ room }: { room: Room }) {
+// A single stream tile inside the room preview card
+function StreamTile({ url }: { url: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const currentUrlRef = useRef<string | null>(null);
+  const [connected, setConnected] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!(window as any).SrsRtcWhipWhepAsync) return;
+      try {
+        const player = new (window as any).SrsRtcWhipWhepAsync();
+        playerRef.current = player;
+        player.pc?.addEventListener('connectionstatechange', () => {
+          if (!cancelled) setConnected(player.pc?.connectionState === 'connected');
+        });
+        await player.play(url);
+        if (!cancelled && videoRef.current) {
+          videoRef.current.srcObject = player.stream;
+          await videoRef.current.play().catch(() => {});
+          setConnected(true);
+        }
+      } catch { /* stream may not be live yet */ }
+    })();
+    return () => {
+      cancelled = true;
+      if (playerRef.current) { try { playerRef.current.close(); } catch {} playerRef.current = null; }
+      if (videoRef.current) {
+        if (videoRef.current.srcObject instanceof MediaStream) {
+          (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+        }
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [url]);
+
+  return (
+    <div className="relative w-full h-full bg-black">
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className={`w-full h-full object-cover transition-opacity duration-500 ${connected ? 'opacity-100' : 'opacity-0'}`}
+      />
+      {!connected && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RoomPreviewCard({ room }: { room: Room }) {
   const { data: roomData } = useQuery<{ whepUrls: StreamAssignment[] }>({
     queryKey: [`/api/rooms/${room.id}/public`],
     refetchInterval: 10000,
   });
 
   const streams = roomData?.whepUrls ?? [];
-  const firstStream = streams[0];
+  // Cap at 4 for the preview grid
+  const displayStreams = streams.slice(0, 4);
 
-  const stopStream = () => {
-    if (playerRef.current) {
-      try { playerRef.current.close(); } catch {}
-      playerRef.current = null;
-    }
-    if (videoRef.current) {
-      if (videoRef.current.srcObject instanceof MediaStream) {
-        (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-      }
-      videoRef.current.srcObject = null;
-    }
-    currentUrlRef.current = null;
-    setIsConnected(false);
-  };
-
-  useEffect(() => {
-    const url = firstStream?.url ?? null;
-    if (!url) { stopStream(); return; }
-    if (url === currentUrlRef.current) return; // already playing this URL
-
-    stopStream();
-    currentUrlRef.current = url;
-
-    let cancelled = false;
-    (async () => {
-      if (!videoRef.current) return;
-      if (!(window as any).SrsRtcWhipWhepAsync) return;
-      try {
-        const player = new (window as any).SrsRtcWhipWhepAsync();
-        playerRef.current = player;
-        player.pc?.addEventListener('connectionstatechange', () => {
-          if (!cancelled) setIsConnected(player.pc?.connectionState === 'connected');
-        });
-        await player.play(url);
-        if (!cancelled && videoRef.current) {
-          videoRef.current.srcObject = player.stream;
-          await videoRef.current.play().catch(() => {});
-          setIsConnected(true);
-        }
-      } catch { if (!cancelled) setIsConnected(false); }
-    })();
-
-    return () => { cancelled = true; };
-  }, [firstStream?.url]);
-
-  useEffect(() => () => stopStream(), []);
+  // Determine grid layout based on count
+  const gridClass =
+    displayStreams.length <= 1 ? '' :
+    displayStreams.length === 2 ? 'grid grid-cols-2' :
+    'grid grid-cols-2 grid-rows-2';
 
   return (
     <div
       className="va-bg-dark-surface rounded-xl border va-border-dark hover:border-va-primary/60 transition-all duration-200 cursor-pointer group overflow-hidden"
       onClick={() => window.open(`/room/${room.id}`, '_blank')}
     >
-      <div className="relative bg-black aspect-video">
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          className={`w-full h-full object-cover transition-opacity duration-500 ${isConnected ? 'opacity-100' : 'opacity-0'}`}
-        />
-        {!isConnected && (
+      <div className="relative bg-black aspect-video overflow-hidden">
+        {displayStreams.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <i className="fas fa-users text-3xl text-gray-500 mb-1"></i>
-              <p className="text-xs text-gray-500">
-                {streams.length > 0 ? `${streams.length} stream${streams.length !== 1 ? 's' : ''}` : 'No streams'}
-              </p>
+              <p className="text-xs text-gray-500">No streams</p>
             </div>
+          </div>
+        ) : (
+          <div className={`w-full h-full ${gridClass}`}>
+            {displayStreams.map((s, i) => (
+              <div
+                key={s.streamName ?? i}
+                className={`
+                  ${displayStreams.length === 3 && i === 2 ? 'col-span-2' : ''}
+                  relative overflow-hidden
+                `}
+                style={{ height: displayStreams.length === 1 ? '100%' : undefined }}
+              >
+                <StreamTile url={s.url!} />
+              </div>
+            ))}
           </div>
         )}
         <div className="absolute top-2 left-2">
