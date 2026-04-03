@@ -1632,38 +1632,52 @@ export class DatabaseStorage implements IStorage {
   }
 
   async autoAssignParticipantToRoom(productionId: string, streamName: string, guestName: string): Promise<void> {
-    // Get active rooms for this production, then shuffle for random distribution
+    // Get active rooms for this production
     const productionRooms = await db.select().from(rooms)
       .where(and(eq(rooms.productionId, productionId), eq(rooms.isActive, true)));
     if (productionRooms.length === 0) return;
 
-    // Fisher-Yates shuffle so participants spread across rooms randomly
-    for (let i = productionRooms.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [productionRooms[i], productionRooms[j]] = [productionRooms[j], productionRooms[i]];
+    // Fetch all current assignments for these rooms in one query
+    const roomIds = productionRooms.map(r => r.id);
+    const allAssignments = await db.select().from(roomStreamAssignments)
+      .where(inArray(roomStreamAssignments.roomId, roomIds));
+
+    // If already assigned to any room for this production, do nothing
+    if (allAssignments.some(a => a.streamName === streamName)) return;
+
+    // Group assignments by room
+    const assignmentsByRoom = new Map<string, typeof allAssignments>();
+    for (const room of productionRooms) {
+      assignmentsByRoom.set(room.id, allAssignments.filter(a => a.roomId === room.id));
     }
 
-    for (const room of productionRooms) {
-      // Get current stream assignments for this room
-      const assignments = await db.select().from(roomStreamAssignments)
-        .where(eq(roomStreamAssignments.roomId, room.id));
+    // Build list with occupancy counts, then shuffle within same-count groups for random tiebreaking
+    const ranked = productionRooms.map(room => ({
+      room,
+      assignments: assignmentsByRoom.get(room.id) ?? [],
+    }));
+
+    // Shuffle first so ties are broken randomly
+    for (let i = ranked.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [ranked[i], ranked[j]] = [ranked[j], ranked[i]];
+    }
+    // Then sort ascending by occupancy — least-occupied room comes first
+    ranked.sort((a, b) => a.assignments.length - b.assignments.length);
+
+    // Assign to the first room that has capacity
+    for (const { room, assignments } of ranked) {
       const maxSlots = room.maxParticipants ?? 10;
-
-      // Skip if already assigned to this room
-      if (assignments.some(a => a.streamName === streamName)) return;
-
       if (assignments.length < maxSlots) {
         const nextPosition = assignments.length > 0
           ? Math.max(...assignments.map(a => a.position ?? 0)) + 1
           : 1;
-        // Create stream assignment
         await db.insert(roomStreamAssignments).values({
           roomId: room.id,
           streamName,
           assignedGuestName: guestName,
           position: nextPosition,
         });
-        // Create room participant entry
         await db.insert(roomParticipants).values({
           roomId: room.id,
           guestName,
@@ -1672,7 +1686,7 @@ export class DatabaseStorage implements IStorage {
           joinedAt: new Date(),
           lastSeenAt: new Date(),
         });
-        console.log(`Auto-assigned ${streamName} (${guestName}) to room "${room.name}" at position ${nextPosition}`);
+        console.log(`Auto-assigned ${streamName} (${guestName}) to room "${room.name}" at position ${nextPosition} (${assignments.length + 1}/${maxSlots} slots)`);
         return;
       }
     }
