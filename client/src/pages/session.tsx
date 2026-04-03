@@ -608,93 +608,89 @@ export default function Session() {
       </div>
 
       {/* Main Content - Full Height */}
-      <div className={`flex-1 ${isMobile ? 'p-2' : 'p-4'}`}>
-        <div className={`${isMobile ? 'flex flex-col gap-2' : 'grid lg:grid-cols-2 gap-4'} h-full`}>
-          {/* Publisher Section */}
-          <div className="va-bg-dark-surface rounded-xl border va-border-dark h-full flex flex-col">
-            <div className={`flex items-center justify-between ${isMobile ? 'p-3' : 'p-4'} border-b va-border-dark desktop-only`}>
-              <h3 className="text-lg font-semibold va-text-primary">Publisher</h3>
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                isPublishing 
-                  ? 'bg-green-500/20 text-green-400' 
-                  : 'bg-red-500/20 text-red-400'
-              }`} data-testid="status-publisher">
-                {isPublishing ? 'Live' : 'Offline'}
-              </span>
-            </div>
-            
-            <div className={`flex-1 ${isMobile ? 'p-2' : 'p-4'} flex flex-col`}>
-              {/* Mobile Video View */}
-              {isMobile ? (
-                <div className="mobile-video-container flex-1">
-                  <video 
-                    ref={publisherVideoRef} 
-                    autoPlay 
-                    muted 
-                    playsInline
-                    className="w-full h-full"
-                    style={{ display: isPublishing ? 'block' : 'none' }}
-                    data-testid="video-publisher"
-                  />
-                  {!isPublishing && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-                      <div className="text-center">
-                        <i className="fas fa-video text-4xl text-gray-500 mb-4"></i>
-                        <p className="va-text-secondary">Tap Start Stream to begin</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Mobile Controls Overlay */}
-                  <MobileVideoControls
-                    isPublishing={isPublishing}
-                    isConnected={isPublishing}
-                    onTogglePublishing={togglePublishing}
-                    onToggleChat={chatEnabled ? toggleChat : undefined}
-                    onToggleFullscreen={toggleFullscreen}
-                    onToggleMute={toggleMute}
-                    chatEnabled={chatEnabled}
-                    isMuted={isMuted}
-                    streamName={streamName || 'Publisher'}
-                    showPublishingControls={true}
-                  />
-                </div>
-              ) : (
-                <>
-                  {/* Desktop Welcome Alert */}
-                  <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4 mb-4">
-                    <div className="flex items-start">
-                      <i className="fas fa-info-circle text-blue-400 mt-1 mr-3"></i>
-                      <div>
-                        <p className="text-blue-400 font-medium">Welcome to Virtual Audience</p>
-                        <p className="text-blue-300 text-sm mt-1">Click <strong>Start Stream</strong> and allow video/audio access to begin broadcasting</p>
-                      </div>
+      <div className={`flex-1 min-h-0 ${isMobile ? 'p-2' : 'p-4'}`}>
+        {isMobile ? (
+          /* ── MOBILE LAYOUT ── */
+          <div className="flex flex-col gap-2 h-full">
+            <div className="va-bg-dark-surface rounded-xl border va-border-dark flex flex-col">
+              <div className="mobile-video-container flex-1 relative">
+                <video
+                  ref={publisherVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full"
+                  style={{ display: isPublishing ? 'block' : 'none' }}
+                  data-testid="video-publisher"
+                />
+                {!isPublishing && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                    <div className="text-center">
+                      <i className="fas fa-video text-4xl text-gray-500 mb-4"></i>
+                      <p className="va-text-secondary">Tap Start Stream to begin</p>
                     </div>
                   </div>
+                )}
+                <MobileVideoControls
+                  isPublishing={isPublishing}
+                  isConnected={isPublishing}
+                  onTogglePublishing={togglePublishing}
+                  onToggleChat={chatEnabled ? toggleChat : undefined}
+                  onToggleFullscreen={toggleFullscreen}
+                  onToggleMute={toggleMute}
+                  chatEnabled={chatEnabled}
+                  isMuted={isMuted}
+                  streamName={streamName || 'Publisher'}
+                  showPublishingControls={true}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ── DESKTOP LAYOUT ── left narrow column + dominant return feed */
+          <div className="grid h-full gap-4" style={{ gridTemplateColumns: '320px 1fr' }}>
 
-                  {/* Stream Control */}
-                  <Button 
+            {/* ── LEFT COLUMN: Publisher + Stats + Chat ── */}
+            <div className="flex flex-col gap-3 min-h-0">
+
+              {/* Publisher block */}
+              <div className="va-bg-dark-surface rounded-xl border va-border-dark flex flex-col shrink-0">
+                <div className="flex items-center justify-between px-3 py-2 border-b va-border-dark">
+                  <h3 className="text-sm font-semibold va-text-primary">Publisher</h3>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs ${isPublishing ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}
+                    data-testid="status-publisher"
+                  >
+                    {isPublishing ? 'Live' : 'Offline'}
+                  </span>
+                </div>
+
+                <div className="p-3 flex flex-col gap-2">
+                  {/* Compact personalized welcome */}
+                  <p className="text-xs text-blue-300 leading-snug">
+                    Welcome, <span className="font-semibold text-blue-200">{guestName || 'Guest'}</span>
+                    {' '}— click <strong>Start Stream</strong> to begin broadcasting.
+                  </p>
+
+                  {/* Stream control */}
+                  <Button
                     onClick={togglePublishing}
                     disabled={isInWaitingRoom}
                     title={isInWaitingRoom ? 'Waiting for an open slot in the production' : undefined}
-                    className={`w-full font-semibold mb-4 ${
-                      isPublishing
-                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                        : 'va-bg-primary hover:va-bg-primary-dark text-va-dark-bg'
-                    }`}
+                    className={`w-full text-sm font-semibold ${isPublishing ? 'bg-red-500 hover:bg-red-600 text-white' : 'va-bg-primary hover:va-bg-primary-dark text-va-dark-bg'}`}
                     data-testid="button-toggle-stream"
                   >
                     <i className={`fas ${isPublishing ? 'fa-stop' : 'fa-video'} mr-2`}></i>
                     {isInWaitingRoom ? 'Waiting for Slot...' : isPublishing ? 'Stop Stream' : 'Start Stream'}
                   </Button>
 
-                  {/* Video Element */}
-                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
-                    <video 
+                  {/* Publisher video (compact) */}
+                  <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+                    <video
                       ref={publisherVideoRef}
-                      autoPlay 
-                      muted 
-                      playsInline 
+                      autoPlay
+                      muted
+                      playsInline
                       className="w-full h-full object-cover"
                       style={{ display: isPublishing ? 'block' : 'none' }}
                       data-testid="video-publisher"
@@ -702,141 +698,122 @@ export default function Session() {
                     {!isPublishing && (
                       <div className="absolute inset-0 flex items-center justify-center va-bg-dark-surface-2">
                         <div className="text-center">
-                          <i className="fas fa-video text-4xl text-gray-500 mb-4"></i>
-                          <p className="va-text-secondary">Click Start Stream to begin</p>
+                          <i className="fas fa-video text-xl text-gray-500 mb-2"></i>
+                          <p className="va-text-secondary text-xs">Click Start Stream to begin</p>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Session Statistics */}
-                  <div className="va-bg-dark-surface-2 rounded-lg p-4 space-y-3">
-                    <h4 className="font-medium va-text-primary flex items-center">
-                      <i className="fas fa-chart-line mr-2 va-text-green"></i>
-                      Session Statistics
-                    </h4>
-                    <div className="grid grid-cols-1 gap-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="va-text-secondary">Session ID:</span>
-                        <span className="va-text-primary font-mono" data-testid="text-session-id">{sessionId}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="va-text-secondary">Audio Codec:</span>
-                        <span className="va-text-primary font-mono" data-testid="text-audio-codec">{audioCodec}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="va-text-secondary">Video Codec:</span>
-                        <span className="va-text-primary font-mono" data-testid="text-video-codec">{videoCodec}</span>
-                      </div>
-                    </div>
+                  {/* Compact Session Statistics */}
+                  <div className="border-t va-border-dark pt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+                    <span className="va-text-secondary">Session</span>
+                    <span className="va-text-primary font-mono truncate" data-testid="text-session-id">{sessionId}</span>
+                    <span className="va-text-secondary">Audio</span>
+                    <span className="va-text-primary font-mono" data-testid="text-audio-codec">{audioCodec}</span>
+                    <span className="va-text-secondary">Video</span>
+                    <span className="va-text-primary font-mono" data-testid="text-video-codec">{videoCodec}</span>
                   </div>
-                </>
+                </div>
+              </div>
+
+              {/* Chat section — fills remaining left-column height */}
+              {chatEnabled && (
+                <div className="va-bg-dark-surface rounded-xl border va-border-dark flex-1 flex flex-col min-h-0 overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-2 border-b va-border-dark shrink-0">
+                    <span className="text-sm font-semibold va-text-primary">Live Chat</span>
+                    <button
+                      onClick={toggleChat}
+                      className="text-xs va-text-secondary hover:va-text-primary transition-colors"
+                      data-testid={showChat ? 'button-hide-chat' : 'button-show-chat'}
+                    >
+                      {showChat ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                  {showChat && linkId && guestUser ? (
+                    <GuestChat
+                      sessionId={linkId}
+                      enabled={showChat}
+                      guestUser={guestUser}
+                      className="flex-1 min-h-0"
+                    />
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                      <button
+                        onClick={toggleChat}
+                        className="text-xs va-text-secondary hover:va-text-primary transition-colors"
+                      >
+                        <i className="fas fa-comments mr-1.5"></i>Click to open chat
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Player Section */}
-          <div className="va-bg-dark-surface rounded-xl border va-border-dark h-full flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b va-border-dark">
-              <h3 className="text-lg font-semibold va-text-primary">Studio Return Feed</h3>
-              <span 
-                className={`px-3 py-1 rounded-full text-sm ${
-                  returnFeedStatus === 'connected' 
-                    ? 'bg-green-500/20 text-green-400'
-                    : returnFeedStatus === 'connecting' || returnFeedStatus === 'retrying'
-                    ? 'bg-yellow-500/20 text-yellow-400'
-                    : 'bg-red-500/20 text-red-400'
-                }`}
-                data-testid="status-player"
-              >
-                {returnFeedStatus === 'connected' && 'Connected'}
-                {returnFeedStatus === 'connecting' && 'Connecting...'}
-                {returnFeedStatus === 'retrying' && 'Retrying...'}
-                {returnFeedStatus === 'failed' && 'Connection Failed'}
-                {returnFeedStatus === 'disconnected' && 'Disconnected'}
-              </span>
-            </div>
-            
-            <div className="flex-1 p-4 flex flex-col">
-              {/* Return Feed Control Button */}
-              <Button 
-                onClick={isReturnFeedStarted ? stopReturnFeed : startReturnFeed}
-                className={`w-full font-semibold mb-4 ${
-                  isReturnFeedStarted
-                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                    : 'va-bg-primary hover:va-bg-primary-dark text-va-dark-bg'
-                }`}
-                data-testid="button-toggle-return-feed"
-                disabled={returnFeedStatus === 'connecting'}
-              >
-                <i className={`fas ${isReturnFeedStarted ? 'fa-stop' : 'fa-play'} mr-2`}></i>
-                {isReturnFeedStarted ? 'Stop Return Feed' : 'Start Return Feed'}
-              </Button>
+            {/* ── RIGHT COLUMN: Studio Return Feed (dominant) ── */}
+            <div className="va-bg-dark-surface rounded-xl border va-border-dark flex flex-col min-h-0">
+              <div className="flex items-center justify-between px-4 py-3 border-b va-border-dark shrink-0">
+                <h3 className="text-lg font-semibold va-text-primary">Studio Return Feed</h3>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      returnFeedStatus === 'connected'
+                        ? 'bg-green-500/20 text-green-400'
+                        : returnFeedStatus === 'connecting' || returnFeedStatus === 'retrying'
+                        ? 'bg-yellow-500/20 text-yellow-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}
+                    data-testid="status-player"
+                  >
+                    {returnFeedStatus === 'connected' && 'Connected'}
+                    {returnFeedStatus === 'connecting' && 'Connecting...'}
+                    {returnFeedStatus === 'retrying' && 'Retrying...'}
+                    {returnFeedStatus === 'failed' && 'Failed'}
+                    {returnFeedStatus === 'disconnected' && 'Disconnected'}
+                  </span>
+                  <Button
+                    onClick={isReturnFeedStarted ? stopReturnFeed : startReturnFeed}
+                    size="sm"
+                    className={`font-semibold ${isReturnFeedStarted ? 'bg-red-500 hover:bg-red-600 text-white' : 'va-bg-primary hover:va-bg-primary-dark text-va-dark-bg'}`}
+                    data-testid="button-toggle-return-feed"
+                    disabled={returnFeedStatus === 'connecting'}
+                  >
+                    <i className={`fas ${isReturnFeedStarted ? 'fa-stop' : 'fa-play'} mr-1.5`}></i>
+                    {isReturnFeedStarted ? 'Stop' : 'Start Return Feed'}
+                  </Button>
+                </div>
+              </div>
 
-              {/* Return Video Element - Takes remaining height */}
-              <div className="relative bg-black rounded-lg overflow-hidden flex-1 min-h-0 mb-4">
-                <video 
+              {/* Return feed video — takes ALL remaining height */}
+              <div className="relative bg-black rounded-b-xl overflow-hidden flex-1 min-h-0">
+                <video
                   ref={playerVideoRef}
                   autoPlay
                   muted={isMuted}
-                  playsInline 
-                  className="w-full h-full object-cover"
+                  playsInline
+                  className="w-full h-full object-contain"
                   data-testid="video-player"
                 />
+                {!isReturnFeedStarted && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center va-bg-dark-surface-2">
+                    <i className="fas fa-tv text-5xl text-gray-600 mb-4"></i>
+                    <p className="va-text-secondary text-base">Click <strong>Start Return Feed</strong> to connect</p>
+                  </div>
+                )}
                 <button
                   onClick={toggleMute}
-                  className="absolute bottom-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition"
+                  className="absolute bottom-3 right-3 bg-black/60 hover:bg-black/80 text-white rounded-full p-2.5 transition"
                   title={isMuted ? 'Unmute return feed' : 'Mute return feed'}
                   data-testid="button-toggle-mute"
                 >
-                  <i className={`fas ${isMuted ? 'fa-volume-mute' : 'fa-volume-up'} text-sm`} />
+                  <i className={`fas ${isMuted ? 'fa-volume-mute' : 'fa-volume-up'}`} />
                 </button>
               </div>
-
-            {/* Chat Container */}
-            {showChat && linkId && guestUser && (
-              <GuestChat 
-                sessionId={linkId}
-                enabled={showChat}
-                guestUser={guestUser}
-                className="h-96"
-              />
-            )}
-
-            {/* Chat Toggle - only show if chat is enabled for this link */}
-            {chatEnabled && !showChat && (
-              <div className="text-center p-4 border-2 border-green-500">
-                <p className="text-green-400 mb-2">Chat Available</p>
-                <Button 
-                  onClick={toggleChat}
-                  variant="outline"
-                  className="va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
-                  data-testid="button-show-chat"
-                >
-                  <i className="fas fa-comments mr-2"></i>
-                  Show Chat
-                </Button>
-              </div>
-            )}
-            
-            {/* Chat hide button when showing */}
-            {chatEnabled && showChat && (
-              <div className="text-center mb-4">
-                <Button 
-                  onClick={toggleChat}
-                  variant="outline"
-                  size="sm"
-                  className="va-bg-dark-surface-2 hover:bg-gray-600 va-text-primary va-border-dark"
-                  data-testid="button-hide-chat"
-                >
-                  <i className="fas fa-times mr-2"></i>
-                  Hide Chat
-                </Button>
-              </div>
-            )}
             </div>
+
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
