@@ -50,8 +50,9 @@ interface StreamAssignment {
 
 function RoomPreviewCard({ room }: { room: Room }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerRef = useRef<any>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const currentUrlRef = useRef<string | null>(null);
 
   const { data: roomData } = useQuery<{ whepUrls: StreamAssignment[] }>({
     queryKey: [`/api/rooms/${room.id}/public`],
@@ -61,26 +62,10 @@ function RoomPreviewCard({ room }: { room: Room }) {
   const streams = roomData?.whepUrls ?? [];
   const firstStream = streams[0];
 
-  const startHoverPreview = () => {
-    if (!firstStream?.url) return;
-    hoverTimerRef.current = setTimeout(async () => {
-      if (!videoRef.current) return;
-      try {
-        const player = new (window as any).SrsRtcWhipWhepAsync();
-        playerRef.current = player;
-        await player.play(firstStream.url);
-        if (videoRef.current) {
-          videoRef.current.srcObject = player.stream;
-          await videoRef.current.play().catch(() => {});
-        }
-      } catch { }
-    }, 600);
-  };
-
-  const stopHoverPreview = () => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
+  const stopStream = () => {
+    if (playerRef.current) {
+      try { playerRef.current.close(); } catch {}
+      playerRef.current = null;
     }
     if (videoRef.current) {
       if (videoRef.current.srcObject instanceof MediaStream) {
@@ -88,14 +73,45 @@ function RoomPreviewCard({ room }: { room: Room }) {
       }
       videoRef.current.srcObject = null;
     }
-    playerRef.current = null;
+    currentUrlRef.current = null;
+    setIsConnected(false);
   };
+
+  useEffect(() => {
+    const url = firstStream?.url ?? null;
+    if (!url) { stopStream(); return; }
+    if (url === currentUrlRef.current) return; // already playing this URL
+
+    stopStream();
+    currentUrlRef.current = url;
+
+    let cancelled = false;
+    (async () => {
+      if (!videoRef.current) return;
+      if (!(window as any).SrsRtcWhipWhepAsync) return;
+      try {
+        const player = new (window as any).SrsRtcWhipWhepAsync();
+        playerRef.current = player;
+        player.pc?.addEventListener('connectionstatechange', () => {
+          if (!cancelled) setIsConnected(player.pc?.connectionState === 'connected');
+        });
+        await player.play(url);
+        if (!cancelled && videoRef.current) {
+          videoRef.current.srcObject = player.stream;
+          await videoRef.current.play().catch(() => {});
+          setIsConnected(true);
+        }
+      } catch { if (!cancelled) setIsConnected(false); }
+    })();
+
+    return () => { cancelled = true; };
+  }, [firstStream?.url]);
+
+  useEffect(() => () => stopStream(), []);
 
   return (
     <div
       className="va-bg-dark-surface rounded-xl border va-border-dark hover:border-va-primary/60 transition-all duration-200 cursor-pointer group overflow-hidden"
-      onMouseEnter={startHoverPreview}
-      onMouseLeave={stopHoverPreview}
       onClick={() => window.open(`/room/${room.id}`, '_blank')}
     >
       <div className="relative bg-black aspect-video">
@@ -104,16 +120,18 @@ function RoomPreviewCard({ room }: { room: Room }) {
           autoPlay
           muted
           playsInline
-          className="w-full h-full object-cover opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          className={`w-full h-full object-cover transition-opacity duration-500 ${isConnected ? 'opacity-100' : 'opacity-0'}`}
         />
-        <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity duration-300">
-          <div className="text-center">
-            <i className="fas fa-users text-3xl text-gray-500 mb-1"></i>
-            <p className="text-xs text-gray-500">
-              {streams.length > 0 ? `${streams.length} stream${streams.length !== 1 ? 's' : ''}` : 'No streams'}
-            </p>
+        {!isConnected && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <i className="fas fa-users text-3xl text-gray-500 mb-1"></i>
+              <p className="text-xs text-gray-500">
+                {streams.length > 0 ? `${streams.length} stream${streams.length !== 1 ? 's' : ''}` : 'No streams'}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="absolute top-2 left-2">
           {room.isActive ? (
             <Badge className="bg-green-500/90 text-white text-[10px] px-1.5 py-0.5 border-0">
@@ -582,7 +600,7 @@ export default function Rooms() {
               <RoomPreviewCard key={room.id} room={room} />
             ))}
           </div>
-          <p className="text-xs text-gray-500">Hover a card to preview its live stream. Click to open in a new tab.</p>
+          <p className="text-xs text-gray-500">Live streams play automatically in each card. Click a card to open the full room view.</p>
         </div>
       )}
 
