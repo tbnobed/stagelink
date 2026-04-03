@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS "rooms" (
         "max_participants" integer DEFAULT 10,
         "chat_enabled" boolean DEFAULT true NOT NULL,
         "is_active" boolean DEFAULT true NOT NULL,
+        "production_id" varchar REFERENCES "productions"("id") ON DELETE SET NULL,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "updated_at" timestamp DEFAULT now() NOT NULL,
         "created_by" integer REFERENCES "users"("id")
@@ -336,6 +337,11 @@ DO $$ BEGIN
         ALTER TABLE "short_viewer_links" ADD COLUMN "assigned_whep_server" text;
     END IF;
 
+    -- rooms: production assignment (v2.7)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='rooms' AND column_name='production_id') THEN
+        ALTER TABLE "rooms" ADD COLUMN "production_id" varchar REFERENCES "productions"("id") ON DELETE SET NULL;
+    END IF;
+
     -- return_feeds: fallback server address (v2.7)
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='return_feeds' AND column_name='fallback_server_address') THEN
         ALTER TABLE "return_feeds" ADD COLUMN "fallback_server_address" text;
@@ -378,6 +384,7 @@ CREATE INDEX IF NOT EXISTS "consent_records_consent_type_idx"      ON "consent_r
 CREATE INDEX IF NOT EXISTS "consent_records_granted_at_idx"        ON "consent_records"        ("granted_at");
 CREATE INDEX IF NOT EXISTS "rooms_created_by_idx"                  ON "rooms"                  ("created_by");
 CREATE INDEX IF NOT EXISTS "rooms_is_active_idx"                   ON "rooms"                  ("is_active");
+CREATE INDEX IF NOT EXISTS "rooms_production_id_idx"               ON "rooms"                  ("production_id");
 CREATE INDEX IF NOT EXISTS "room_participants_room_id_idx"         ON "room_participants"       ("room_id");
 CREATE INDEX IF NOT EXISTS "room_participants_user_id_idx"         ON "room_participants"       ("user_id");
 CREATE INDEX IF NOT EXISTS "room_participants_is_streaming_idx"    ON "room_participants"       ("is_streaming");

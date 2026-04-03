@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS "rooms" (
         "max_participants" integer DEFAULT 10,
         "chat_enabled" boolean DEFAULT true NOT NULL,
         "is_active" boolean DEFAULT true NOT NULL,
+        "production_id" varchar REFERENCES "productions"("id") ON DELETE SET NULL,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "updated_at" timestamp DEFAULT now() NOT NULL,
         "created_by" integer REFERENCES "users"("id")
@@ -288,6 +289,7 @@ CREATE TABLE IF NOT EXISTS "return_feeds" (
         "label" text NOT NULL,
         "stream_name" text NOT NULL,
         "server_address" text,
+        "fallback_server_address" text,
         "sort_order" integer NOT NULL DEFAULT 0,
         "created_at" timestamp NOT NULL DEFAULT now()
 );
@@ -348,6 +350,7 @@ CREATE INDEX IF NOT EXISTS "consent_records_granted_at_idx" ON "consent_records"
 
 CREATE INDEX IF NOT EXISTS "rooms_created_by_idx" ON "rooms" ("created_by");
 CREATE INDEX IF NOT EXISTS "rooms_is_active_idx" ON "rooms" ("is_active");
+CREATE INDEX IF NOT EXISTS "rooms_production_id_idx" ON "rooms" ("production_id");
 CREATE INDEX IF NOT EXISTS "room_participants_room_id_idx" ON "room_participants" ("room_id");
 CREATE INDEX IF NOT EXISTS "room_participants_user_id_idx" ON "room_participants" ("user_id");
 CREATE INDEX IF NOT EXISTS "room_participants_is_streaming_idx" ON "room_participants" ("is_streaming");
