@@ -98,15 +98,6 @@ function StreamTile({ url, guestName }: { url: string; guestName?: string }) {
           <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
-      {/* Name overlay — mirrors the full room page header */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-1.5 py-1 bg-gradient-to-b from-black/70 to-transparent">
-        <span className="text-white text-[10px] font-medium truncate leading-tight">
-          {guestName || '—'}
-        </span>
-        {connected && (
-          <Badge className="bg-green-500/90 text-white text-[9px] px-1 py-0 border-0 leading-tight shrink-0 ml-1">Live</Badge>
-        )}
-      </div>
     </div>
   );
 }

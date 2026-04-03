@@ -40,13 +40,15 @@ interface VideoPlayerProps {
   position: number;
   assignedUser?: number;
   assignedGuest?: string;
+  onFailed?: () => void;
 }
 
-function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: VideoPlayerProps) {
+function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, onFailed }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
   const [connectionState, setConnectionState] = useState<string>('new');
   const [error, setError] = useState<string | null>(null);
+  const failTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -115,6 +117,22 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest }: Vid
     };
   }, [streamUrl]);
 
+  // If the stream stays failed for 15 seconds, signal the parent to drop this tile
+  useEffect(() => {
+    if (failTimerRef.current) {
+      clearTimeout(failTimerRef.current);
+      failTimerRef.current = null;
+    }
+    if (connectionState === 'failed' || error) {
+      failTimerRef.current = setTimeout(() => {
+        onFailed?.();
+      }, 15_000);
+    }
+    return () => {
+      if (failTimerRef.current) clearTimeout(failTimerRef.current);
+    };
+  }, [connectionState, error, onFailed]);
+
   const getStatusColor = () => {
     switch (connectionState) {
       case 'connected': return 'bg-green-500';
@@ -176,6 +194,7 @@ export default function RoomFullscreen() {
   const { toast } = useToast();
   const [showChat, setShowChat] = useState(false);
   const queryClient = useQueryClient();
+  const [locallyFailedStreams, setLocallyFailedStreams] = useState<Set<string>>(new Set());
 
   const { data: roomData, isLoading, error } = useQuery<RoomData>({
     queryKey: [`/api/rooms/${id}/public`],
@@ -198,6 +217,16 @@ export default function RoomFullscreen() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [id, queryClient]);
 
+  // If the server poll returns a stream we marked locally as failed, trust the server and clear it
+  useEffect(() => {
+    if (!roomData) return;
+    setLocallyFailedStreams(prev => {
+      if (prev.size === 0) return prev;
+      const serverStreamNames = new Set(roomData.whepUrls.map(s => s.streamName));
+      const next = new Set([...prev].filter(name => !serverStreamNames.has(name)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [roomData]);
 
   if (isLoading) {
     return (
@@ -229,9 +258,16 @@ export default function RoomFullscreen() {
 
   const { room, participants, whepUrls } = roomData;
 
+  // Filter out streams the client has confirmed dead (15s failure timeout)
+  // When the server poll removes a stream it also disappears naturally
+  const visibleStreams = whepUrls.filter(s => !locallyFailedStreams.has(s.streamName));
+
+  const markStreamFailed = (streamName: string) => {
+    setLocallyFailedStreams(prev => new Set([...prev, streamName]));
+  };
 
   const getGridClass = () => {
-    const streamCount = Math.max(whepUrls.length, 1);
+    const streamCount = Math.max(visibleStreams.length, 1);
     // Full-screen optimized grid layouts with proper rows
     if (streamCount === 1) return "grid-cols-1 grid-rows-1";
     if (streamCount === 2) return "grid-cols-2 grid-rows-1";
@@ -247,7 +283,7 @@ export default function RoomFullscreen() {
       {/* Main content */}
       <div className="h-full">
         <div className="h-full">
-          {whepUrls.length === 0 ? (
+          {visibleStreams.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center text-white/70">
                 <Video className="w-16 h-16 mx-auto mb-4 opacity-50" />
@@ -257,7 +293,7 @@ export default function RoomFullscreen() {
             </div>
           ) : (
             <div className={`grid gap-1 h-full w-full ${getGridClass()}`} data-testid="video-grid-fullscreen">
-              {whepUrls
+              {visibleStreams
                 .sort((a, b) => a.position - b.position)
                 .map((stream) => (
                   <VideoPlayer
@@ -267,6 +303,7 @@ export default function RoomFullscreen() {
                     position={stream.position}
                     assignedUser={stream.assignedUser}
                     assignedGuest={stream.assignedGuest}
+                    onFailed={() => markStreamFailed(stream.streamName)}
                   />
                 ))}
             </div>

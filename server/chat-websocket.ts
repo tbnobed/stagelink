@@ -100,7 +100,22 @@ class ChatWebSocketServer {
       });
     }, 30000); // Ping every 30 seconds
 
+    // Periodic sweep: remove room assignments for streams no longer live
+    setInterval(() => this.sweepStaleRoomAssignments(), 30_000);
+
     console.log('Chat WebSocket server initialized with keepalive');
+  }
+
+  private sweepStaleRoomAssignments() {
+    const liveStreams = new Set<string>();
+    for (const state of this.productionStates.values()) {
+      for (const streamName of state.liveStreamNames.values()) {
+        liveStreams.add(streamName);
+      }
+    }
+    storage.removeStaleRoomAssignments(liveStreams).catch(err =>
+      console.error('Room sweep error:', err)
+    );
   }
 
   private handleConnection(ws: WebSocket, request: any) {

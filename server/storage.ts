@@ -83,6 +83,7 @@ export interface IStorage {
   autoAssignParticipantToRoom(productionId: string, streamName: string, guestName: string): Promise<void>;
   removeParticipantFromProductionRooms(productionId: string, streamName: string): Promise<void>;
   clearAllRoomAssignments(): Promise<void>;
+  removeStaleRoomAssignments(liveStreamNames: Set<string>): Promise<number>;
   
   // Room Participants
   getRoomParticipants(roomId: string): Promise<RoomParticipant[]>;
@@ -694,6 +695,7 @@ export class MemStorage implements IStorage {
   async autoAssignParticipantToRoom(productionId: string, streamName: string, guestName: string): Promise<void> {}
   async removeParticipantFromProductionRooms(productionId: string, streamName: string): Promise<void> {}
   async clearAllRoomAssignments(): Promise<void> {}
+  async removeStaleRoomAssignments(liveStreamNames: Set<string>): Promise<number> { return 0; }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1709,6 +1711,36 @@ export class DatabaseStorage implements IStorage {
     await db.delete(roomStreamAssignments);
     await db.delete(roomParticipants);
     console.log('Cleared all room assignments and participants on startup');
+  }
+
+  async removeStaleRoomAssignments(liveStreamNames: Set<string>): Promise<number> {
+    const productionRooms = await db.select({ id: rooms.id })
+      .from(rooms)
+      .where(isNotNull(rooms.productionId));
+    if (productionRooms.length === 0) return 0;
+    const roomIds = productionRooms.map(r => r.id);
+
+    const allAssignments = await db.select({ streamName: roomStreamAssignments.streamName })
+      .from(roomStreamAssignments)
+      .where(inArray(roomStreamAssignments.roomId, roomIds));
+    if (allAssignments.length === 0) return 0;
+
+    const staleStreamNames = [...new Set(allAssignments.map(a => a.streamName))]
+      .filter(name => !liveStreamNames.has(name));
+    if (staleStreamNames.length === 0) return 0;
+
+    await db.delete(roomStreamAssignments)
+      .where(and(
+        inArray(roomStreamAssignments.roomId, roomIds),
+        inArray(roomStreamAssignments.streamName, staleStreamNames)
+      ));
+    await db.delete(roomParticipants)
+      .where(and(
+        inArray(roomParticipants.roomId, roomIds),
+        inArray(roomParticipants.streamName, staleStreamNames)
+      ));
+    console.log(`Room sweep: removed ${staleStreamNames.length} stale assignment(s): ${staleStreamNames.join(', ')}`);
+    return staleStreamNames.length;
   }
 
   // Room Participant Methods
