@@ -49,7 +49,7 @@ interface StreamAssignment {
 }
 
 // A single stream tile inside the room preview card
-function StreamTile({ url }: { url: string }) {
+function StreamTile({ url, guestName }: { url: string; guestName?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
   const [connected, setConnected] = useState(false);
@@ -98,8 +98,27 @@ function StreamTile({ url }: { url: string }) {
           <div className="w-4 h-4 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
+      {/* Name overlay — mirrors the full room page header */}
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-1.5 py-1 bg-gradient-to-b from-black/70 to-transparent">
+        <span className="text-white text-[10px] font-medium truncate leading-tight">
+          {guestName || '—'}
+        </span>
+        {connected && (
+          <Badge className="bg-green-500/90 text-white text-[9px] px-1 py-0 border-0 leading-tight shrink-0 ml-1">Live</Badge>
+        )}
+      </div>
     </div>
   );
+}
+
+function getPreviewGridClass(count: number): string {
+  if (count <= 1) return 'grid-cols-1';
+  if (count === 2) return 'grid-cols-2';
+  if (count === 3) return 'grid-cols-3';
+  if (count === 4) return 'grid-cols-2';
+  if (count <= 6) return 'grid-cols-3';
+  if (count <= 8) return 'grid-cols-4';
+  return 'grid-cols-5';
 }
 
 function RoomPreviewCard({ room }: { room: Room }) {
@@ -108,15 +127,7 @@ function RoomPreviewCard({ room }: { room: Room }) {
     refetchInterval: 10000,
   });
 
-  const streams = roomData?.whepUrls ?? [];
-  // Cap at 4 for the preview grid
-  const displayStreams = streams.slice(0, 4);
-
-  // Determine grid layout based on count
-  const gridClass =
-    displayStreams.length <= 1 ? '' :
-    displayStreams.length === 2 ? 'grid grid-cols-2' :
-    'grid grid-cols-2 grid-rows-2';
+  const streams = (roomData?.whepUrls ?? []).sort((a, b) => a.position - b.position);
 
   return (
     <div
@@ -124,7 +135,7 @@ function RoomPreviewCard({ room }: { room: Room }) {
       onClick={() => window.open(`/room/${room.id}`, '_blank')}
     >
       <div className="relative bg-black aspect-video overflow-hidden">
-        {displayStreams.length === 0 ? (
+        {streams.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <i className="fas fa-users text-3xl text-gray-500 mb-1"></i>
@@ -132,22 +143,15 @@ function RoomPreviewCard({ room }: { room: Room }) {
             </div>
           </div>
         ) : (
-          <div className={`w-full h-full ${gridClass}`}>
-            {displayStreams.map((s, i) => (
-              <div
-                key={s.streamName ?? i}
-                className={`
-                  ${displayStreams.length === 3 && i === 2 ? 'col-span-2' : ''}
-                  relative overflow-hidden
-                `}
-                style={{ height: displayStreams.length === 1 ? '100%' : undefined }}
-              >
-                <StreamTile url={s.url!} />
+          <div className={`w-full h-full grid gap-px ${getPreviewGridClass(streams.length)}`}>
+            {streams.map((s, i) => (
+              <div key={s.streamName ?? i} className="relative overflow-hidden min-h-0">
+                <StreamTile url={s.url!} guestName={s.assignedGuestName} />
               </div>
             ))}
           </div>
         )}
-        <div className="absolute top-2 left-2">
+        <div className="absolute bottom-2 left-2">
           {room.isActive ? (
             <Badge className="bg-green-500/90 text-white text-[10px] px-1.5 py-0.5 border-0">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-white mr-1 animate-pulse"></span>
