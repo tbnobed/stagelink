@@ -82,6 +82,7 @@ export interface IStorage {
   setRoomsForProduction(productionId: string, roomIds: string[]): Promise<void>;
   autoAssignParticipantToRoom(productionId: string, streamName: string, guestName: string): Promise<void>;
   removeParticipantFromProductionRooms(productionId: string, streamName: string): Promise<void>;
+  clearAllRoomAssignments(): Promise<void>;
   
   // Room Participants
   getRoomParticipants(roomId: string): Promise<RoomParticipant[]>;
@@ -692,6 +693,7 @@ export class MemStorage implements IStorage {
   async setRoomsForProduction(productionId: string, roomIds: string[]): Promise<void> {}
   async autoAssignParticipantToRoom(productionId: string, streamName: string, guestName: string): Promise<void> {}
   async removeParticipantFromProductionRooms(productionId: string, streamName: string): Promise<void> {}
+  async clearAllRoomAssignments(): Promise<void> {}
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1687,6 +1689,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(roomParticipants)
       .where(and(inArray(roomParticipants.roomId, roomIds), eq(roomParticipants.streamName, streamName)));
     console.log(`Removed ${streamName} from all production ${productionId} rooms`);
+  }
+
+  async clearAllRoomAssignments(): Promise<void> {
+    await db.delete(roomStreamAssignments);
+    await db.delete(roomParticipants);
+    console.log('Cleared all room assignments and participants on startup');
   }
 
   // Room Participant Methods
