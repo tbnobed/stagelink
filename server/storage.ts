@@ -1975,13 +1975,33 @@ export class DatabaseStorage implements IStorage {
     const linkIds = links.map(l => l.id);
     const meta: Record<string, { guestName: string | null; guestEmail: string | null }> = {};
     links.forEach(l => { meta[l.id] = { guestName: l.guestName, guestEmail: l.guestEmail }; });
+
+    // Over-fetch to account for broadcast duplication (1 DB row per guest per broadcast).
+    // We fetch enough rows that after deduplication we still have `limit` unique messages.
+    const fetchLimit = Math.min(limit * Math.max(linkIds.length, 10), 50_000);
     const rows = await db
       .select()
       .from(chatMessages)
       .where(inArray(chatMessages.sessionId, linkIds))
       .orderBy(desc(chatMessages.createdAt))
-      .limit(limit);
-    return rows.reverse().map(m => ({
+      .limit(fetchLimit);
+
+    // Deduplicate broadcast messages server-side (same logic as client dedup)
+    const seen = new Set<string>();
+    const deduped: typeof rows = [];
+    for (const msg of rows) {
+      if (msg.messageType === 'broadcast') {
+        const bucket = new Date(msg.createdAt).toISOString().slice(0, 16);
+        const key = `${msg.senderId}|${msg.content}|${bucket}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+      }
+      deduped.push(msg);
+    }
+
+    // rows are newest-first; take the most recent `limit` unique messages then restore asc order
+    const final = deduped.slice(0, limit).reverse();
+    return final.map(m => ({
       ...m,
       guestName: meta[m.sessionId]?.guestName ?? null,
       guestEmail: meta[m.sessionId]?.guestEmail ?? null,
