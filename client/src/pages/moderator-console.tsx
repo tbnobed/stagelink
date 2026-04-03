@@ -507,6 +507,7 @@ export default function ModeratorConsole() {
               {deduplicatedMessages.map(msg => {
                 const fromModerator = msg.senderId !== null;
                 const isBroadcast = msg.messageType === 'broadcast';
+                const isGroupChat = msg.sessionId === `pub-${productionId}`;
                 const participant = participantLookup[msg.sessionId];
                 const displayName = msg.guestName || participant?.guestName || msg.senderName;
 
@@ -528,26 +529,35 @@ export default function ModeratorConsole() {
 
                 return (
                   <div key={msg.id} className="flex justify-start gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0 mt-0.5">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-gray-300 shrink-0 mt-0.5 ${isGroupChat ? 'bg-blue-800' : 'bg-gray-700'}`}>
                       {(displayName || '?')[0].toUpperCase()}
                     </div>
                     <div className="flex flex-col">
-                      <div className="flex items-baseline gap-2 mb-0.5">
-                        <button
-                          onClick={() => {
-                            const p = participant || allParticipants.find(ap => ap.id === msg.sessionId);
-                            if (p) { setSelectedGuest(p); setChatInput(''); }
-                          }}
-                          className="text-xs font-semibold text-blue-300 hover:text-blue-200 transition-colors hover:underline"
-                        >
-                          {displayName || 'Guest'}
-                        </button>
-                        {participant && (
+                      <div className="flex items-baseline gap-2 mb-0.5 flex-wrap">
+                        {isGroupChat ? (
+                          <span className="text-xs font-semibold text-blue-300">{displayName || 'Guest'}</span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              const p = participant || allParticipants.find(ap => ap.id === msg.sessionId);
+                              if (p) { setSelectedGuest(p); setChatInput(''); }
+                            }}
+                            className="text-xs font-semibold text-blue-300 hover:text-blue-200 transition-colors hover:underline"
+                          >
+                            {displayName || 'Guest'}
+                          </button>
+                        )}
+                        {isGroupChat && (
+                          <span className="text-xs bg-blue-900/60 text-blue-300 border border-blue-700/50 rounded-full px-1.5 py-0 leading-4">
+                            Group
+                          </span>
+                        )}
+                        {participant && !isGroupChat && (
                           <span className={`w-1.5 h-1.5 rounded-full ${statusDotClass(participant.status)}`} />
                         )}
                         <span className="text-gray-600 text-xs">{formatTime(msg.createdAt)}</span>
                       </div>
-                      <div className="bg-gray-800 text-gray-100 rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[500px]">
+                      <div className={`text-gray-100 rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[500px] ${isGroupChat ? 'bg-blue-900/40 border border-blue-800/30' : 'bg-gray-800'}`}>
                         <MessageContent content={msg.content} />
                       </div>
                     </div>

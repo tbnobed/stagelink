@@ -1971,18 +1971,21 @@ export class DatabaseStorage implements IStorage {
 
   async getProductionMessages(productionId: string, limit = 200): Promise<(ChatMessage & { guestName: string | null; guestEmail: string | null })[]> {
     const links = await this.getLinksByProduction(productionId);
-    if (links.length === 0) return [];
     const linkIds = links.map(l => l.id);
     const meta: Record<string, { guestName: string | null; guestEmail: string | null }> = {};
     links.forEach(l => { meta[l.id] = { guestName: l.guestName, guestEmail: l.guestEmail }; });
 
+    // Always include the production's shared public chat session (aggregated group chat)
+    const publicSessionId = `pub-${productionId}`;
+    const allSessionIds = linkIds.length > 0 ? [...linkIds, publicSessionId] : [publicSessionId];
+
     // Over-fetch to account for broadcast duplication (1 DB row per guest per broadcast).
     // We fetch enough rows that after deduplication we still have `limit` unique messages.
-    const fetchLimit = Math.min(limit * Math.max(linkIds.length, 10), 50_000);
+    const fetchLimit = Math.min(limit * Math.max(allSessionIds.length, 10), 50_000);
     const rows = await db
       .select()
       .from(chatMessages)
-      .where(inArray(chatMessages.sessionId, linkIds))
+      .where(inArray(chatMessages.sessionId, allSessionIds))
       .orderBy(desc(chatMessages.createdAt))
       .limit(fetchLimit);
 
