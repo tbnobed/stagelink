@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { initializeStreaming, startPublishing, stopPublishing, startPlayback } from "@/lib/streaming";
 import { Chat } from "@/components/chat";
 import { GuestChat } from "@/components/guest-chat";
+import { ProductionPublicChat } from "@/components/production-public-chat";
 import { MobileNav } from "@/components/mobile-nav";
 import { MobileVideoControls } from "@/components/mobile-video-controls";
 import { ConsentDialog } from "@/components/consent-dialog";
@@ -20,6 +21,7 @@ export default function Session() {
   const [videoCodec, setVideoCodec] = useState("-");
   const [showChat, setShowChat] = useState(false);
   const [chatEnabled, setChatEnabled] = useState(false);
+  const [chatTab, setChatTab] = useState<'group' | 'private'>('group');
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
   const [returnFeedStatus, setReturnFeedStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed' | 'retrying'>('disconnected');
@@ -718,34 +720,53 @@ export default function Session() {
               </div>
 
               {/* Chat section — fills remaining left-column height */}
-              {chatEnabled && (
+              {(productionId || chatEnabled) && guestUser && (
                 <div className="va-bg-dark-surface rounded-xl border va-border-dark flex-1 flex flex-col min-h-0 overflow-hidden">
-                  <div className="flex items-center justify-between px-3 py-2 border-b va-border-dark shrink-0">
-                    <span className="text-sm font-semibold va-text-primary">Live Chat</span>
-                    <button
-                      onClick={toggleChat}
-                      className="text-xs va-text-secondary hover:va-text-primary transition-colors"
-                      data-testid={showChat ? 'button-hide-chat' : 'button-show-chat'}
-                    >
-                      {showChat ? 'Hide' : 'Show'}
-                    </button>
+                  {/* Tab header */}
+                  <div className="flex items-center gap-1 px-2 py-1.5 border-b va-border-dark shrink-0">
+                    {productionId && (
+                      <button
+                        onClick={() => setChatTab('group')}
+                        className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                          chatTab === 'group'
+                            ? 'bg-blue-600 text-white'
+                            : 'va-text-secondary hover:va-text-primary'
+                        }`}
+                      >
+                        <i className="fas fa-users mr-1"></i>Group Chat
+                      </button>
+                    )}
+                    {chatEnabled && (
+                      <button
+                        onClick={() => setChatTab('private')}
+                        className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                          chatTab === 'private'
+                            ? 'bg-gray-600 text-white'
+                            : 'va-text-secondary hover:va-text-primary'
+                        }`}
+                      >
+                        <i className="fas fa-lock mr-1"></i>Private
+                      </button>
+                    )}
                   </div>
-                  {showChat && linkId && guestUser ? (
-                    <GuestChat
-                      sessionId={linkId}
-                      enabled={showChat}
+
+                  {/* Group chat panel */}
+                  {chatTab === 'group' && productionId && (
+                    <ProductionPublicChat
+                      productionId={productionId}
                       guestUser={guestUser}
                       className="flex-1 min-h-0"
                     />
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center">
-                      <button
-                        onClick={toggleChat}
-                        className="text-xs va-text-secondary hover:va-text-primary transition-colors"
-                      >
-                        <i className="fas fa-comments mr-1.5"></i>Click to open chat
-                      </button>
-                    </div>
+                  )}
+
+                  {/* Private chat panel */}
+                  {chatTab === 'private' && chatEnabled && linkId && (
+                    <GuestChat
+                      sessionId={linkId}
+                      enabled={true}
+                      guestUser={guestUser}
+                      className="flex-1 min-h-0"
+                    />
                   )}
                 </div>
               )}
