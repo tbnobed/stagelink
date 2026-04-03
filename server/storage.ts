@@ -1630,11 +1630,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async autoAssignParticipantToRoom(productionId: string, streamName: string, guestName: string): Promise<void> {
-    // Get active rooms for this production, in name order
+    // Get active rooms for this production, then shuffle for random distribution
     const productionRooms = await db.select().from(rooms)
-      .where(and(eq(rooms.productionId, productionId), eq(rooms.isActive, true)))
-      .orderBy(rooms.name);
+      .where(and(eq(rooms.productionId, productionId), eq(rooms.isActive, true)));
     if (productionRooms.length === 0) return;
+
+    // Fisher-Yates shuffle so participants spread across rooms randomly
+    for (let i = productionRooms.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [productionRooms[i], productionRooms[j]] = [productionRooms[j], productionRooms[i]];
+    }
 
     for (const room of productionRooms) {
       // Get current stream assignments for this room
