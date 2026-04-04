@@ -65,7 +65,9 @@ const LIVE_SLOT_GRACE_MS = 8_000;
 
 class ChatWebSocketServer {
   private wss: WebSocketServer;
-  private clients: Map<string, ChatClient> = new Map(); // key: userId-sessionId
+  private clients: Map<string, ChatClient> = new Map(); // key: userId-sessionId or guest-name-sessionId
+  private wsToRegularClientKey: Map<WebSocket, string> = new Map(); // O(1) ws -> clientKey for regular chat
+  private wsToNotificationListenerKey: Map<WebSocket, string> = new Map(); // O(1) ws -> listenerKey
   private sessionParticipants: Map<string, Set<string>> = new Map(); // sessionId -> Set of clientKeys
   private notificationListeners: Map<string, ChatClient> = new Map(); // key: notification-userId
   private productionStates: Map<string, ProductionState> = new Map(); // productionId -> state
@@ -131,8 +133,7 @@ class ChatWebSocketServer {
     ws.on('message', async (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
-        console.log('WebSocket message received:', message);
-        // Temporarily bypass strict validation for null userId
+        // Avoid logging full message body — it contains tokens and floods logs at scale
         await this.handleMessage(ws, message as ChatMessage);
       } catch (error) {
         console.error('Invalid message received:', error);
@@ -192,6 +193,7 @@ class ChatWebSocketServer {
     // Remove existing client if reconnecting
     if (this.clients.has(clientKey)) {
       const existingClient = this.clients.get(clientKey)!;
+      this.wsToRegularClientKey.delete(existingClient.ws);
       existingClient.ws.close();
       this.clients.delete(clientKey);
     }
@@ -205,6 +207,7 @@ class ChatWebSocketServer {
     };
 
     this.clients.set(clientKey, client);
+    this.wsToRegularClientKey.set(ws, clientKey);
 
     // Add to session participants
     if (!this.sessionParticipants.has(message.sessionId)) {
@@ -238,8 +241,10 @@ class ChatWebSocketServer {
       });
     }
 
-    // Send participant list to the new client
-    await this.sendParticipantsList(message.sessionId);
+    // Send participant list to the new client (skip for production group sessions — too many participants)
+    if (!message.sessionId.startsWith('pub-')) {
+      await this.sendParticipantsList(message.sessionId);
+    }
 
     // Send recent messages to the new client
     const recentMessages = await storage.getChatMessages(message.sessionId, 20);
@@ -268,62 +273,67 @@ class ChatWebSocketServer {
     // Update participant status in database
     await storage.updateParticipantStatus(message.sessionId, message.userId, false);
 
-    // Send updated participant list
-    await this.sendParticipantsList(message.sessionId);
+    // Send updated participant list (skip for production group sessions)
+    if (!message.sessionId.startsWith('pub-')) {
+      await this.sendParticipantsList(message.sessionId);
+    }
 
     console.log(`User ${message.userId} left session ${message.sessionId}`);
   }
 
   private async handleDisconnection(ws: WebSocket, closeCode?: number) {
     this.handleProductionDisconnectByWs(ws, closeCode);
-    
-    // Check if it's a notification listener
-    for (const [listenerKey, listener] of Array.from(this.notificationListeners.entries())) {
-      if (listener.ws === ws) {
+
+    // O(1) notification listener lookup
+    const listenerKey = this.wsToNotificationListenerKey.get(ws);
+    if (listenerKey) {
+      const listener = this.notificationListeners.get(listenerKey);
+      if (listener) {
         console.log(`Notification listener disconnected: ${listener.username}`);
         this.notificationListeners.delete(listenerKey);
-        return;
+      }
+      this.wsToNotificationListenerKey.delete(ws);
+      return;
+    }
+
+    // O(1) regular client lookup
+    const clientKey = this.wsToRegularClientKey.get(ws);
+    if (!clientKey) return;
+    this.wsToRegularClientKey.delete(ws);
+
+    const client = this.clients.get(clientKey);
+    if (!client) return;
+
+    this.clients.delete(clientKey);
+
+    // Remove from session participants
+    if (this.sessionParticipants.has(client.sessionId)) {
+      this.sessionParticipants.get(client.sessionId)!.delete(clientKey);
+      if (this.sessionParticipants.get(client.sessionId)!.size === 0) {
+        this.sessionParticipants.delete(client.sessionId);
       }
     }
-    
-    // Find and remove the regular client
-    for (const [clientKey, client] of Array.from(this.clients.entries())) {
-      if (client.ws === ws) {
-        console.log(`Found disconnecting client: ${client.username}, userId: ${client.userId}, sessionId: ${client.sessionId}`);
-        this.clients.delete(clientKey);
-        
-        // Remove from session participants
-        if (this.sessionParticipants.has(client.sessionId)) {
-          this.sessionParticipants.get(client.sessionId)!.delete(clientKey);
-          if (this.sessionParticipants.get(client.sessionId)!.size === 0) {
-            this.sessionParticipants.delete(client.sessionId);
-          }
-        }
 
-        // Handle participant cleanup - authenticated users go offline, guest users are removed
-        try {
-          if (client.userId) {
-            // Authenticated users: mark as offline
-            console.log(`Marking authenticated user ${client.username} as offline`);
-            await storage.updateParticipantStatus(client.sessionId, client.userId, false);
-            console.log(`Successfully marked ${client.username} as offline`);
-          } else {
-            // Guest users: remove from database completely to prevent accumulation
-            console.log(`Removing guest user ${client.username} from database for session ${client.sessionId}`);
-            await storage.removeParticipantByUsername(client.sessionId, client.username);
-            console.log(`Successfully removed guest user ${client.username} from database`);
-          }
-        } catch (error) {
-          console.error(`Error during participant cleanup for ${client.username}:`, error);
-        }
-
-        // Send updated participant list
-        await this.sendParticipantsList(client.sessionId);
-
-        console.log(`Client disconnected: ${client.username}`);
-        break;
+    // Handle participant cleanup - authenticated users go offline, guest users are removed
+    try {
+      if (client.userId) {
+        await storage.updateParticipantStatus(client.sessionId, client.userId, false);
+      } else {
+        // Guest users: remove from database completely to prevent accumulation
+        console.log(`Removing guest user ${client.username} from database for session ${client.sessionId}`);
+        await storage.removeParticipantByUsername(client.sessionId, client.username);
+        console.log(`Successfully removed guest user ${client.username} from database`);
       }
+    } catch (error) {
+      console.error(`Error during participant cleanup for ${client.username}:`, error);
     }
+
+    // Send updated participant list (skip for production group sessions)
+    if (!client.sessionId.startsWith('pub-')) {
+      await this.sendParticipantsList(client.sessionId);
+    }
+
+    console.log(`Client disconnected: ${client.username}`);
   }
 
   private async handleChatMessage(ws: WebSocket, message: ChatMessage) {
@@ -335,8 +345,9 @@ class ChatWebSocketServer {
       return;
     }
 
-    // Find the sender client
-    const senderClient = Array.from(this.clients.values()).find(client => client.ws === ws);
+    // O(1) sender lookup via reverse map
+    const senderKey = this.wsToRegularClientKey.get(ws);
+    const senderClient = senderKey ? this.clients.get(senderKey) : undefined;
     if (!senderClient) {
       ws.send(JSON.stringify({ 
         type: 'error', 
@@ -655,6 +666,7 @@ class ChatWebSocketServer {
     // Remove existing listener if reconnecting
     if (this.notificationListeners.has(listenerKey)) {
       const existingListener = this.notificationListeners.get(listenerKey)!;
+      this.wsToNotificationListenerKey.delete(existingListener.ws);
       existingListener.ws.close();
       this.notificationListeners.delete(listenerKey);
     }
@@ -668,6 +680,7 @@ class ChatWebSocketServer {
     };
 
     this.notificationListeners.set(listenerKey, listener);
+    this.wsToNotificationListenerKey.set(ws, listenerKey);
     console.log(`Notification listener registered for user ${message.username} (${message.userId})`);
     
     ws.send(JSON.stringify({ 
@@ -676,23 +689,34 @@ class ChatWebSocketServer {
     }));
   }
 
+  private getSessionClients(sessionId: string): ChatClient[] {
+    const keys = this.sessionParticipants.get(sessionId);
+    if (!keys) return [];
+    const result: ChatClient[] = [];
+    for (const key of keys) {
+      const c = this.clients.get(key);
+      if (c) result.push(c);
+    }
+    return result;
+  }
+
   private getMessageRecipients(sessionId: string, messageType: 'individual' | 'broadcast' | 'system', recipientId?: number): ChatClient[] {
-    const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
+    const sessionClients = this.getSessionClients(sessionId);
 
     if (messageType === 'broadcast' || messageType === 'system') {
-      return sessionClients; // Send to everyone in the session
+      return sessionClients;
     }
 
     if (messageType === 'individual' && recipientId) {
       return sessionClients.filter(client => client.userId === recipientId);
     }
 
-    return sessionClients; // Default to everyone
+    return sessionClients;
   }
 
   private async sendParticipantsList(sessionId: string) {
     const participants = await storage.getChatParticipants(sessionId);
-    const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
+    const sessionClients = this.getSessionClients(sessionId);
 
     // Only show online participants to avoid duplicates
     const onlineParticipants = participants.filter(p => p.isOnline);
@@ -733,7 +757,7 @@ class ChatWebSocketServer {
 
   // Public methods for sending messages from API
   public sendToSession(sessionId: string, message: any) {
-    const sessionClients = Array.from(this.clients.values()).filter(client => client.sessionId === sessionId);
+    const sessionClients = this.getSessionClients(sessionId);
     sessionClients.forEach(client => {
       if (client.ws.readyState === WebSocket.OPEN) {
         client.ws.send(JSON.stringify(message));

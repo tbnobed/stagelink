@@ -2256,20 +2256,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (links.length === 0) return res.json({ success: true, sent: 0 });
 
       const chatWS = (global as any).chatWebSocketServer;
-      let sent = 0;
-      for (const link of links) {
-        const chatMessage = await storage.createChatMessage({
+
+      // Parallelize DB inserts (pool handles concurrency); then fan-out via WS
+      const chatMessages = await Promise.all(
+        links.map(link => storage.createChatMessage({
           sessionId: link.id,
           senderId: user.id,
           senderName: user.username,
           content: message.trim(),
           messageType: 'broadcast',
+        }))
+      );
+      if (chatWS) {
+        chatMessages.forEach((chatMessage, i) => {
+          chatWS.sendToSession(links[i].id, { type: 'new_message', message: chatMessage });
         });
-        if (chatWS) {
-          chatWS.sendToSession(link.id, { type: 'new_message', message: chatMessage });
-        }
-        sent++;
       }
+      const sent = links.length;
 
       // Also post the broadcast into the production's shared group chat so all
       // guests see it in their "Group Chat" tab in real time.

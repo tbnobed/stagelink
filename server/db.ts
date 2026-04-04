@@ -17,7 +17,10 @@ if (process.env.USE_PG_DRIVER === 'true' || (process.env.NODE_ENV === 'productio
   
   pool = new Pool({ 
     connectionString: process.env.DATABASE_URL,
-    ssl: false
+    ssl: false,
+    max: 30,                  // Up from default 10 — handles burst DB writes from 500 guests
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
   });
   db = drizzle(pool, { schema });
   console.log('Using PostgreSQL driver for database connection');

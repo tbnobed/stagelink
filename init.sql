@@ -340,6 +340,7 @@ CREATE INDEX IF NOT EXISTS "chat_messages_sender_id_idx" ON "chat_messages" ("se
 CREATE INDEX IF NOT EXISTS "chat_messages_created_at_idx" ON "chat_messages" ("created_at");
 CREATE INDEX IF NOT EXISTS "chat_participants_session_id_idx" ON "chat_participants" ("session_id");
 CREATE INDEX IF NOT EXISTS "chat_participants_user_id_idx" ON "chat_participants" ("user_id");
+CREATE INDEX IF NOT EXISTS "chat_participants_username_idx" ON "chat_participants" ("username");
 CREATE INDEX IF NOT EXISTS "chat_participants_is_online_idx" ON "chat_participants" ("is_online");
 
 CREATE INDEX IF NOT EXISTS "generated_links_expires_at_idx" ON "generated_links" ("expires_at");
