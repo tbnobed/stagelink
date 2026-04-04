@@ -1,5 +1,9 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireAdmin, requireAdminOrEngineer } from "./auth";
 import { ChatWebSocketServer } from "./chat-websocket";
@@ -7,6 +11,58 @@ import { insertUserSchema, insertShortLinkSchema, insertRoomSchema, insertRoomPa
 import { generateUniqueShortCode } from "./utils/shortCode";
 import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl, getNextWhipServer, formatServerAddress, getWhipServerList, buildServerWhepUrl, parseServerAddress } from "./utils/srs-config";
 import { sendStreamingInvite, sendViewerInvite } from "./email-service";
+
+const uploadsDir = path.resolve('uploads/room-backgrounds');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const ALLOWED_IMAGE_EXTS: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+};
+
+const bgUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = ALLOWED_IMAGE_EXTS[file.mimetype] || '.png';
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_IMAGE_EXTS[file.mimetype]) {
+      return cb(new Error('Only JPEG, PNG, WebP and GIF images are allowed'));
+    }
+    cb(null, true);
+  },
+});
+
+const IMAGE_MAGIC_BYTES: Array<{ mime: string; bytes: number[] }> = [
+  { mime: 'image/jpeg', bytes: [0xFF, 0xD8, 0xFF] },
+  { mime: 'image/png', bytes: [0x89, 0x50, 0x4E, 0x47] },
+  { mime: 'image/gif', bytes: [0x47, 0x49, 0x46] },
+  { mime: 'image/webp', bytes: [0x52, 0x49, 0x46, 0x46] },
+];
+
+function validateImageMagicBytes(filePath: string): boolean {
+  try {
+    const fd = fs.openSync(filePath, 'r');
+    const buf = Buffer.alloc(8);
+    fs.readSync(fd, buf, 0, 8, 0);
+    fs.closeSync(fd);
+    return IMAGE_MAGIC_BYTES.some(sig => sig.bytes.every((b, i) => buf[i] === b));
+  } catch {
+    return false;
+  }
+}
+
+function safeDeleteFile(filePath: string) {
+  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
+}
 
 // Round-robin counter for WHEP server pool assignment
 let whepRoundRobinIndex = 0;
@@ -48,6 +104,9 @@ async function getNextFeedServers(feed: ReturnFeed): Promise<{ primary: string |
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
+
+  // Serve uploaded room background images
+  app.use('/uploads/room-backgrounds', express.static(uploadsDir, { maxAge: '7d' }));
   // Health check endpoint for Docker health checks
   app.get('/health', (req, res) => {
     res.status(200).json({
@@ -1723,6 +1782,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/rooms/:id', requireAdminOrEngineer, async (req, res) => {
     try {
+      const room = await storage.getRoom(req.params.id);
+      if (!room) return res.status(404).json({ error: 'Room not found' });
+
+      if (room.backgroundImage) {
+        const bgFile = path.join(uploadsDir, path.basename(room.backgroundImage));
+        safeDeleteFile(bgFile);
+      }
+
       const success = await storage.deleteRoom(req.params.id);
       if (!success) {
         return res.status(404).json({ error: 'Room not found' });
@@ -1731,6 +1798,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to delete room:', error);
       res.status(500).json({ error: 'Failed to delete room' });
+    }
+  });
+
+  // Room background image upload
+  app.post('/api/rooms/:id/background', requireAdminOrEngineer, bgUpload.single('background'), async (req, res) => {
+    try {
+      const room = await storage.getRoom(req.params.id);
+      if (!room) return res.status(404).json({ error: 'Room not found' });
+
+      if (!req.file) return res.status(400).json({ error: 'No image file provided' });
+
+      const newFilePath = path.join(uploadsDir, req.file.filename);
+      if (!validateImageMagicBytes(newFilePath)) {
+        safeDeleteFile(newFilePath);
+        return res.status(400).json({ error: 'Invalid image file' });
+      }
+
+      const imageUrl = `/uploads/room-backgrounds/${req.file.filename}`;
+      try {
+        const updated = await storage.updateRoom(req.params.id, { backgroundImage: imageUrl });
+
+        if (room.backgroundImage) {
+          const oldFile = path.join(uploadsDir, path.basename(room.backgroundImage));
+          safeDeleteFile(oldFile);
+        }
+
+        res.json(updated);
+      } catch (dbErr) {
+        safeDeleteFile(newFilePath);
+        throw dbErr;
+      }
+    } catch (error) {
+      console.error('Failed to upload room background:', error);
+      res.status(500).json({ error: 'Failed to upload background image' });
+    }
+  });
+
+  // Room background image delete
+  app.delete('/api/rooms/:id/background', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const room = await storage.getRoom(req.params.id);
+      if (!room) return res.status(404).json({ error: 'Room not found' });
+
+      if (room.backgroundImage) {
+        const oldFile = path.join(uploadsDir, path.basename(room.backgroundImage));
+        if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+      }
+
+      const updated = await storage.updateRoom(req.params.id, { backgroundImage: null });
+      res.json(updated);
+    } catch (error) {
+      console.error('Failed to delete room background:', error);
+      res.status(500).json({ error: 'Failed to delete background image' });
     }
   });
 

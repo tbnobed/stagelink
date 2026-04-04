@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowLeft, Edit, Save, Users, Video, MessageCircle, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Save, Users, Video, MessageCircle, Plus, Trash2, Upload, Image, X as XIcon } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,6 +34,7 @@ interface Room {
   maxParticipants: number;
   chatEnabled: boolean;
   isActive: boolean;
+  backgroundImage?: string | null;
   createdAt: string;
   createdBy?: number;
 }
@@ -236,6 +237,121 @@ function StreamAssignmentCard({ assignment }: { assignment: StreamAssignment }) 
   );
 }
 
+function BackgroundImageCard({ room }: { room: Room }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadBackground = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('background', file);
+      const res = await fetch(`/api/rooms/${room.id}/background`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      queryClient.invalidateQueries({ queryKey: [`/api/rooms/${room.id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/rooms'] });
+      toast({ title: "Background image uploaded" });
+    } catch (err) {
+      toast({ title: "Failed to upload background", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeBackground = async () => {
+    try {
+      const res = await fetch(`/api/rooms/${room.id}/background`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      queryClient.invalidateQueries({ queryKey: [`/api/rooms/${room.id}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/rooms'] });
+      toast({ title: "Background image removed" });
+    } catch (err) {
+      toast({ title: "Failed to remove background", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Image className="w-4 h-4" />
+          Background Image
+        </CardTitle>
+        <CardDescription>
+          Set a custom background for the room grid and fullscreen output
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {room.backgroundImage ? (
+          <div className="space-y-3">
+            <div className="relative rounded-lg overflow-hidden border aspect-video">
+              <img
+                src={room.backgroundImage}
+                alt="Room background"
+                className="w-full h-full object-cover"
+              />
+              <Button
+                variant="destructive"
+                size="sm"
+                className="absolute top-2 right-2"
+                onClick={removeBackground}
+              >
+                <XIcon className="w-3 h-3 mr-1" />
+                Remove
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This background will be visible behind the video tiles in both the room view and fullscreen output.
+            </p>
+          </div>
+        ) : (
+          <div
+            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm font-medium">Click to upload a background image</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              JPG, PNG, WebP or GIF — max 10 MB
+            </p>
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) uploadBackground(file);
+            e.target.value = '';
+          }}
+        />
+        {room.backgroundImage && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            {uploading ? "Uploading..." : "Replace Background"}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function RoomManage() {
   const { id: roomId } = useParams();
   const [, setLocation] = useLocation();
@@ -432,6 +548,11 @@ export default function RoomManage() {
             </Button>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Background Image */}
+      <div className="mt-6">
+        <BackgroundImageCard room={room} />
       </div>
 
       {/* Stream Assignments */}

@@ -33,6 +33,7 @@ interface Room {
   maxParticipants: number;
   chatEnabled: boolean;
   isActive: boolean;
+  backgroundImage?: string | null;
   createdAt: string;
   createdBy?: number;
 }
@@ -125,7 +126,14 @@ function RoomPreviewCard({ room }: { room: Room }) {
       className="va-bg-dark-surface rounded-xl border va-border-dark hover:border-va-primary/60 transition-all duration-200 cursor-pointer group overflow-hidden"
       onClick={() => window.open(`/room/${room.id}`, '_blank')}
     >
-      <div className="relative bg-black aspect-video overflow-hidden">
+      <div
+        className="relative bg-black aspect-video overflow-hidden"
+        style={room.backgroundImage ? {
+          backgroundImage: `url(${room.backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        } : undefined}
+      >
         {streams.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">

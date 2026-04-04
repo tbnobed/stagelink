@@ -15,6 +15,7 @@ interface RoomData {
     description?: string;
     maxParticipants: number;
     chatEnabled: boolean;
+    backgroundImage?: string | null;
   };
   participants: Array<{
     id: number;
@@ -279,7 +280,15 @@ export default function RoomFullscreen() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black text-white">
+    <div
+      className="fixed inset-0 z-50 bg-black text-white"
+      style={room.backgroundImage ? {
+        backgroundImage: `url(${room.backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      } : undefined}
+    >
       {/* Main content */}
       <div className="h-full">
         <div className="h-full">

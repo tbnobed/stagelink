@@ -209,6 +209,7 @@ CREATE TABLE IF NOT EXISTS "rooms" (
         "max_participants" integer DEFAULT 10,
         "chat_enabled" boolean DEFAULT true NOT NULL,
         "is_active" boolean DEFAULT true NOT NULL,
+        "background_image" text,
         "production_id" varchar REFERENCES "productions"("id") ON DELETE SET NULL,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "updated_at" timestamp DEFAULT now() NOT NULL,

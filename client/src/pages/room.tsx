@@ -17,6 +17,7 @@ interface RoomData {
     maxParticipants: number;
     chatEnabled: boolean;
     isActive: boolean;
+    backgroundImage?: string | null;
     createdAt: string;
   };
   participants: Array<{
@@ -401,7 +402,16 @@ export default function Room() {
                 </CardContent>
               </Card>
             ) : (
-              <div className={`grid gap-4 ${getGridClass()}`} data-testid="video-grid">
+              <div
+                className={`grid gap-4 ${getGridClass()} p-4 rounded-lg`}
+                data-testid="video-grid"
+                style={room.backgroundImage ? {
+                  backgroundImage: `url(${room.backgroundImage})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                } : undefined}
+              >
                 {whepUrls
                   .sort((a, b) => a.position - b.position)
                   .map((stream) => {
