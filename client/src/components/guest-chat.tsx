@@ -26,6 +26,7 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '', onNew
   const inputRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptRef = useRef(0);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -48,6 +49,7 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '', onNew
           console.log('Guest Chat WebSocket connected');
           setIsConnected(true);
           setError(null);
+          reconnectAttemptRef.current = 0;
 
           // Send join message
           wsRef.current?.send(JSON.stringify({
@@ -107,12 +109,15 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '', onNew
           console.log(`Guest Chat WebSocket disconnected: ${event.code} ${event.reason}`);
           setIsConnected(false);
           
-          // Attempt to reconnect after 3 seconds if still enabled
           if (enabled && guestUser) {
-            console.log('Attempting to reconnect in 3 seconds...');
+            const attempt = reconnectAttemptRef.current++;
+            const baseDelay = Math.min(1000 * Math.pow(2, attempt), 30000);
+            const jitter = Math.random() * 1000;
+            const delay = baseDelay + jitter;
+            console.log(`Reconnecting in ${Math.round(delay)}ms (attempt ${attempt + 1})`);
             reconnectTimeoutRef.current = setTimeout(() => {
               connect();
-            }, 3000);
+            }, delay);
           }
         };
 

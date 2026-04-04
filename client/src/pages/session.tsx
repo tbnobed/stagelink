@@ -471,9 +471,13 @@ export default function Session() {
     setShowChat(!showChat);
   };
 
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const playNotificationSound = useCallback(() => {
     try {
-      const ctx = new AudioContext();
+      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);

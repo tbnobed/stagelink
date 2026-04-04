@@ -30,6 +30,7 @@ export function ProductionPublicChat({ productionId, guestUser, className = '' }
   const scrollRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptRef = useRef(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export function ProductionPublicChat({ productionId, guestUser, className = '' }
       ws.onopen = () => {
         if (!mountedRef.current) return;
         setIsConnected(true);
+        reconnectAttemptRef.current = 0;
 
         ws!.send(JSON.stringify({
           type: 'join',
@@ -87,7 +89,10 @@ export function ProductionPublicChat({ productionId, guestUser, className = '' }
       ws.onclose = () => {
         if (!mountedRef.current) return;
         setIsConnected(false);
-        reconnectRef.current = setTimeout(connect, 3000);
+        const attempt = reconnectAttemptRef.current++;
+        const baseDelay = Math.min(1000 * Math.pow(2, attempt), 30000);
+        const jitter = Math.random() * 1000;
+        reconnectRef.current = setTimeout(connect, baseDelay + jitter);
       };
 
       ws.onerror = () => {

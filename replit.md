@@ -73,11 +73,12 @@ Preferred communication style: Simple, everyday language.
 - **Aggregated / Group Chat**: Production guests can see each other's messages in a shared public chat feed (YouTube Live-style). Session page shows a "Group Chat" tab (connects all guests in the same production to shared WS session `pub-${productionId}`) alongside a "Private" tab (1-on-1 moderator messages). Messages stored in `chat_messages` with `session_id = pub-${productionId}`. No schema changes required — existing WS session routing handles it. Component: `ProductionPublicChat` in `client/src/components/production-public-chat.tsx`.
 
 ## Scalability (500-guest hardening)
-- **WebSocket**: O(1) reverse-map lookups (`wsToRegularClientKey`, `wsToNotificationListenerKey`) for disconnect/message handling. `sessionParticipants` Map provides indexed per-session client lookups. Group chat (`pub-*`) sessions skip participant DB tracking and participant-list broadcasts entirely.
-- **Database**: Indexes on all high-traffic columns (`chat_participants.session_id`, `chat_messages.session_id`, `room_stream_assignments.room_id/stream_name`, `room_participants.room_id/stream_name`, `generated_links.production_id`, `rooms.production_id`). PostgreSQL pool max set to 30 connections.
+- **WebSocket**: O(1) reverse-map lookups (`wsToRegularClientKey`, `wsToNotificationListenerKey`) for disconnect/message handling. `sessionParticipants` Map provides indexed per-session client lookups. Group chat (`pub-*`) sessions skip participant DB tracking and participant-list broadcasts entirely. `maxPayload: 64KB` caps message size to prevent abuse. `perMessageDeflate` disabled to save memory.
+- **Database**: Indexes on all high-traffic columns (`chat_participants.session_id`, `chat_messages.session_id`, `room_stream_assignments.room_id/stream_name`, `room_participants.room_id/stream_name`, `generated_links.production_id`, `rooms.production_id`). PostgreSQL pool max set to 50 connections.
 - **Broadcast**: Production broadcast uses `Promise.all` for parallel DB inserts across all guest sessions.
+- **Reconnection**: Exponential backoff with jitter (1s → 2s → 4s → … → 30s cap + random 0–1s jitter) prevents thundering herd after server restart. Applied to both `GuestChat` and `ProductionPublicChat` WebSocket reconnect loops.
 - **Connection budget**: Each guest opens max 2 WebSocket connections (1 production + 1 chat tab). Total ~1000 WS for 500 guests.
-- **Docker prerequisite**: Set `ulimit -n 65536` for the container to handle 1000+ WS file descriptors.
+- **Docker**: `ulimit -n 65536` set in docker-compose.yml. `start.sh` runs as root for volume permissions then drops to `nodejs` via `su-exec`.
 
 # External Dependencies
 

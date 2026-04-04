@@ -80,8 +80,8 @@ class ChatWebSocketServer {
     this.wss = new WebSocketServer({ 
       server,
       path: '/chat',
-      // Add ping interval to keep connections alive
       perMessageDeflate: false,
+      maxPayload: 64 * 1024,
     });
 
     this.wss.on('connection', this.handleConnection.bind(this));

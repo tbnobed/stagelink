@@ -18,7 +18,7 @@ if (process.env.USE_PG_DRIVER === 'true' || (process.env.NODE_ENV === 'productio
   pool = new Pool({ 
     connectionString: process.env.DATABASE_URL,
     ssl: false,
-    max: 30,                  // Up from default 10 — handles burst DB writes from 500 guests
+    max: 50,                  // Sized for 500+ concurrent guests with burst DB writes
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
   });
