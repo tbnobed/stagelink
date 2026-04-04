@@ -37,6 +37,10 @@ export default function Session() {
   const [guestName, setGuestName] = useState<string | null>(null);
   const [productionStatus, setProductionStatus] = useState<ProductionStatus>('idle');
   const [waitingPosition, setWaitingPosition] = useState<number>(0);
+  // Gate: production hasn't been started by admin yet
+  const [awaitingProductionStart, setAwaitingProductionStart] = useState(false);
+  const [productionName, setProductionName] = useState<string | null>(null);
+  const productionPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const productionWsRef = useRef<WebSocket | null>(null);
   const publisherVideoRef = useRef<HTMLVideoElement>(null);
   const playerVideoRef = useRef<HTMLVideoElement>(null);
@@ -125,6 +129,12 @@ export default function Session() {
           // Store production info if available
           if (result.productionId) {
             setProductionId(result.productionId);
+            // Store production name for waiting screen
+            if (result.productionName) setProductionName(result.productionName);
+            // If the production hasn't been started by the admin yet, gate the guest
+            if (result.productionStatus === 'draft') {
+              setAwaitingProductionStart(true);
+            }
           }
           const displayName = result.guestName || `Guest_${stream || 'User'}`;
           if (result.guestName) {
@@ -254,6 +264,33 @@ export default function Session() {
     };
   }, [productionId, linkId, consentGranted, guestName, toast]);
 
+
+  // Poll production status while the guest is waiting for the production to start.
+  // Clears automatically once the production becomes active (or ended).
+  useEffect(() => {
+    if (!awaitingProductionStart || !productionId) return;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/productions/${productionId}/public-status`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.status === 'active') {
+          setAwaitingProductionStart(false);
+          if (data.name) setProductionName(data.name);
+        }
+      } catch {}
+    };
+
+    poll(); // immediate first check
+    productionPollRef.current = setInterval(poll, 6000);
+    return () => {
+      if (productionPollRef.current) {
+        clearInterval(productionPollRef.current);
+        productionPollRef.current = null;
+      }
+    };
+  }, [awaitingProductionStart, productionId]);
 
   // Auto-start return feed when entering the waiting room
   useEffect(() => {
@@ -498,6 +535,35 @@ export default function Session() {
           <div className="text-red-500 text-6xl mb-4">🚫</div>
           <h2 className="text-xl font-semibold va-text-primary mb-2">Access Denied</h2>
           <p className="va-text-secondary">This session link is no longer valid.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Gate: production hasn't been started by admin yet — show holding screen and poll
+  if (awaitingProductionStart) {
+    return (
+      <div className="min-h-screen va-bg-dark flex items-center justify-center p-6">
+        <div className="text-center max-w-md w-full">
+          <div className="relative mx-auto w-24 h-24 mb-6">
+            <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping" />
+            <div className="relative rounded-full bg-blue-500/10 border-2 border-blue-500/40 w-full h-full flex items-center justify-center">
+              <svg className="w-10 h-10 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+              </svg>
+            </div>
+          </div>
+          {productionName && (
+            <p className="text-blue-400 text-sm font-medium uppercase tracking-widest mb-2">{productionName}</p>
+          )}
+          <h2 className="text-2xl font-bold va-text-primary mb-3">Standby</h2>
+          <p className="va-text-secondary mb-6">
+            The production hasn't started yet. You'll be let in automatically as soon as it begins — no need to refresh.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm va-text-secondary">
+            <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+            Waiting for production to start…
+          </div>
         </div>
       </div>
     );

@@ -71,10 +71,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ valid: false, error: 'Invalid or expired token' });
       }
 
+      // If this link belongs to a production, include the production's current status
+      // so the guest can be gated until the production is set to active.
+      if (result.productionId) {
+        const production = await storage.getProduction(result.productionId);
+        if (production) {
+          return res.json({ ...result, productionStatus: production.status, productionName: production.name });
+        }
+      }
+
       res.json(result);
     } catch (error) {
       console.error('Token validation error:', error);
       res.status(500).json({ valid: false, error: 'Token validation failed' });
+    }
+  });
+
+  // Public production status endpoint — no auth required, used by guests to poll
+  // whether the production has started (to gate access until admin sets it active).
+  app.get('/api/productions/:id/public-status', async (req, res) => {
+    try {
+      const production = await storage.getProduction(req.params.id);
+      if (!production) return res.status(404).json({ error: 'Not found' });
+      res.json({ status: production.status, name: production.name });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch production status' });
     }
   });
 
