@@ -14,9 +14,10 @@ interface GuestChatProps {
     role: string;
   };
   className?: string;
+  onNewPrivateMessage?: (message: ChatMessage) => void;
 }
 
-export function GuestChat({ sessionId, enabled, guestUser, className = '' }: GuestChatProps) {
+export function GuestChat({ sessionId, enabled, guestUser, className = '', onNewPrivateMessage }: GuestChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -76,6 +77,9 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '' }: Gue
               case 'new_message':
                 if (data.message) {
                   setMessages(prev => [...prev, data.message]);
+                  if (data.message.senderId !== guestUser.id && onNewPrivateMessage) {
+                    onNewPrivateMessage(data.message);
+                  }
                 }
                 break;
               case 'message_history':

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -10,6 +10,7 @@ import { MobileNav } from "@/components/mobile-nav";
 import { MobileVideoControls } from "@/components/mobile-video-controls";
 import { ConsentDialog } from "@/components/consent-dialog";
 import { useMobile, useSwipeGestures } from "@/hooks/use-mobile";
+import type { ChatMessage } from "@shared/schema";
 
 type ProductionStatus = 'idle' | 'live' | 'waiting' | 'promoted';
 
@@ -22,6 +23,7 @@ export default function Session() {
   const [showChat, setShowChat] = useState(false);
   const [chatEnabled, setChatEnabled] = useState(false);
   const [chatTab, setChatTab] = useState<'group' | 'private'>('group');
+  const [privateUnread, setPrivateUnread] = useState(0);
   const [isValidatingToken, setIsValidatingToken] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
   const [returnFeedStatus, setReturnFeedStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'failed' | 'retrying'>('disconnected');
@@ -469,6 +471,37 @@ export default function Session() {
     setShowChat(!showChat);
   };
 
+  const playNotificationSound = useCallback(() => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } catch {}
+  }, []);
+
+  const handlePrivateMessage = useCallback((message: ChatMessage) => {
+    const isPrivateTabActive = chatTab === 'private' && showChat;
+    if (!isPrivateTabActive) {
+      setPrivateUnread(prev => prev + 1);
+    }
+    playNotificationSound();
+    toast({
+      title: `Message from ${message.senderName}`,
+      description: message.content.length > 80
+        ? message.content.slice(0, 80) + '…'
+        : message.content,
+    });
+  }, [chatTab, showChat, playNotificationSound, toast]);
+
   const toggleMute = () => {
     const next = !isMuted;
     setIsMuted(next);
@@ -843,14 +876,19 @@ export default function Session() {
                     )}
                     {chatEnabled && (
                       <button
-                        onClick={() => setChatTab('private')}
-                        className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                        onClick={() => { setChatTab('private'); setPrivateUnread(0); }}
+                        className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors relative ${
                           chatTab === 'private'
                             ? 'bg-gray-600 text-white'
                             : 'va-text-secondary hover:va-text-primary'
                         }`}
                       >
                         <i className="fas fa-lock mr-1"></i>Private
+                        {privateUnread > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-pulse">
+                            {privateUnread > 99 ? '99+' : privateUnread}
+                          </span>
+                        )}
                       </button>
                     )}
                   </div>
@@ -864,13 +902,14 @@ export default function Session() {
                     />
                   )}
 
-                  {/* Private chat panel */}
-                  {chatTab === 'private' && chatEnabled && linkId && (
+                  {/* Private chat panel — always mounted to keep WS alive for notifications */}
+                  {chatEnabled && linkId && (
                     <GuestChat
                       sessionId={linkId}
                       enabled={true}
                       guestUser={guestUser}
-                      className="flex-1 min-h-0"
+                      className={`flex-1 min-h-0 ${chatTab !== 'private' ? 'hidden' : ''}`}
+                      onNewPrivateMessage={handlePrivateMessage}
                     />
                   )}
                 </div>
