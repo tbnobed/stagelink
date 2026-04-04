@@ -1,7 +1,8 @@
-# Virtual Audience Platform v2.7 - Production Docker Build
+# Virtual Audience Platform v2.8 - Production Docker Build
 # Includes: Productions & Capacity, Email Campaigns, Return Feeds (3-server fallback chain),
 #           WHEP Server Pool, Multi-server WHIP load balancing,
-#           TBN Adult Likeness Authorization, US broadcast compliance
+#           TBN Adult Likeness Authorization, US broadcast compliance,
+#           Room background images
 FROM node:18-alpine AS builder
 
 ARG CACHE_BUST
@@ -32,6 +33,9 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 
+# Create uploads directory for room background images
+RUN mkdir -p /app/uploads/room-backgrounds && chown -R nodejs:nodejs /app/uploads
+
 # Copy the single-source-of-truth upgrade script into the image.
 # start.sh runs this on every container start so fresh deploys AND
 # upgrades from any prior version are handled automatically.
@@ -41,7 +45,7 @@ COPY --chown=nodejs:nodejs fix-production-database.sql /app/fix-production-datab
 RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
 set -e
-echo "=== Virtual Audience Platform v2.7 ==="
+echo "=== Virtual Audience Platform v2.8 ==="
 echo "Waiting for database to be ready..."
 sleep 5
 
