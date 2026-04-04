@@ -215,34 +215,37 @@ class ChatWebSocketServer {
     }
     this.sessionParticipants.get(message.sessionId)!.add(clientKey);
 
-    // Update participant status instead of adding new participant
-    const existingParticipants = await storage.getChatParticipants(message.sessionId);
-    // For guest users (null userId), match by username; for authenticated users, match by userId
-    const existingParticipant = message.userId 
-      ? existingParticipants.find(p => p.userId === message.userId)
-      : existingParticipants.find(p => p.username === message.username && p.userId === null);
-    
-    if (existingParticipant) {
-      // Update existing participant to online - handle both guest and authenticated users
-      if (message.userId) {
-        await storage.updateParticipantStatus(message.sessionId, message.userId, true);
-      } else {
-        // For guest users, update by username since they don't have userId
-        await storage.updateParticipantStatusByUsername(message.sessionId, message.username, true);
-      }
-    } else {
-      // Add new participant only if they don't exist
-      await storage.addChatParticipant({
-        sessionId: message.sessionId,
-        userId: message.userId || null, // Explicitly set null for guest users
-        username: message.username,
-        role: message.role,
-        isOnline: true,
-      });
-    }
+    const isGroupChat = message.sessionId.startsWith('pub-');
 
-    // Send participant list to the new client (skip for production group sessions — too many participants)
-    if (!message.sessionId.startsWith('pub-')) {
+    // Skip participant DB tracking for production group chats (pub-*) — nobody consumes
+    // the participant list, and loading all 500 participants on every join is O(n²) total.
+    if (!isGroupChat) {
+      // Update participant status instead of adding new participant
+      const existingParticipants = await storage.getChatParticipants(message.sessionId);
+      // For guest users (null userId), match by username; for authenticated users, match by userId
+      const existingParticipant = message.userId 
+        ? existingParticipants.find(p => p.userId === message.userId)
+        : existingParticipants.find(p => p.username === message.username && p.userId === null);
+      
+      if (existingParticipant) {
+        // Update existing participant to online - handle both guest and authenticated users
+        if (message.userId) {
+          await storage.updateParticipantStatus(message.sessionId, message.userId, true);
+        } else {
+          // For guest users, update by username since they don't have userId
+          await storage.updateParticipantStatusByUsername(message.sessionId, message.username, true);
+        }
+      } else {
+        // Add new participant only if they don't exist
+        await storage.addChatParticipant({
+          sessionId: message.sessionId,
+          userId: message.userId || null, // Explicitly set null for guest users
+          username: message.username,
+          role: message.role,
+          isOnline: true,
+        });
+      }
+
       await this.sendParticipantsList(message.sessionId);
     }
 
@@ -314,22 +317,19 @@ class ChatWebSocketServer {
       }
     }
 
-    // Handle participant cleanup - authenticated users go offline, guest users are removed
-    try {
-      if (client.userId) {
-        await storage.updateParticipantStatus(client.sessionId, client.userId, false);
-      } else {
-        // Guest users: remove from database completely to prevent accumulation
-        console.log(`Removing guest user ${client.username} from database for session ${client.sessionId}`);
-        await storage.removeParticipantByUsername(client.sessionId, client.username);
-        console.log(`Successfully removed guest user ${client.username} from database`);
-      }
-    } catch (error) {
-      console.error(`Error during participant cleanup for ${client.username}:`, error);
-    }
-
-    // Send updated participant list (skip for production group sessions)
+    // Skip participant DB cleanup for production group chats (pub-*) — we never added them
     if (!client.sessionId.startsWith('pub-')) {
+      try {
+        if (client.userId) {
+          await storage.updateParticipantStatus(client.sessionId, client.userId, false);
+        } else {
+          // Guest users: remove from database completely to prevent accumulation
+          await storage.removeParticipantByUsername(client.sessionId, client.username);
+        }
+      } catch (error) {
+        console.error(`Error during participant cleanup for ${client.username}:`, error);
+      }
+
       await this.sendParticipantsList(client.sessionId);
     }
 

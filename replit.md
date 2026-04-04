@@ -51,7 +51,7 @@ Preferred communication style: Simple, everyday language.
 - **Monorepo Layout**: Client, server, and shared code
 - **Path Aliases**: Configured for @/, @shared/, and @assets
 - **Build Process**: Vite for frontend, esbuild for backend production
-- **Deployment**: Comprehensive Docker v2.5 configurations for Ubuntu servers with Nginx reverse proxy, SSL, and automated migrations. Docker files include user registration system, password reset functionality, multi-server WHIP load balancing, TBN Adult Likeness Authorization consent system, Studio server support, and properly support all user roles and guest user fixes.
+- **Deployment**: Comprehensive Docker v2.7 configurations for Ubuntu servers with Nginx reverse proxy, SSL, and automated migrations. Docker files include user registration system, password reset functionality, multi-server WHIP load balancing, TBN Adult Likeness Authorization consent system, Studio server support, and properly support all user roles and guest user fixes.
 - **Email Service**: SendGrid integration for professional email invites with clean short link formatting.
 
 ## Key Features
@@ -70,6 +70,13 @@ Preferred communication style: Simple, everyday language.
 - **WHEP Server Pool**: Admin page includes a dedicated "Return Feed WHEP Servers" section for managing a pool of servers used exclusively for delivering studio return feeds to guests.
 - **Moderator Console**: Dedicated moderator page at `/moderator/:productionId` (admin/engineer only) accessible via a button on the Productions page. Split-pane layout: left sidebar shows all guests with Live/Waiting/Offline status, search, and filter. Right panel has a broadcast bar (sends one message to ALL guest chats simultaneously) and a private 1-on-1 chat view per selected guest. Backend: `POST /api/productions/:id/broadcast` delivers a message to each guest's chat session and pushes it via WebSocket in real time.
 - **Aggregated / Group Chat**: Production guests can see each other's messages in a shared public chat feed (YouTube Live-style). Session page shows a "Group Chat" tab (connects all guests in the same production to shared WS session `pub-${productionId}`) alongside a "Private" tab (1-on-1 moderator messages). Messages stored in `chat_messages` with `session_id = pub-${productionId}`. No schema changes required — existing WS session routing handles it. Component: `ProductionPublicChat` in `client/src/components/production-public-chat.tsx`.
+
+## Scalability (500-guest hardening)
+- **WebSocket**: O(1) reverse-map lookups (`wsToRegularClientKey`, `wsToNotificationListenerKey`) for disconnect/message handling. `sessionParticipants` Map provides indexed per-session client lookups. Group chat (`pub-*`) sessions skip participant DB tracking and participant-list broadcasts entirely.
+- **Database**: Indexes on all high-traffic columns (`chat_participants.session_id`, `chat_messages.session_id`, `room_stream_assignments.room_id/stream_name`, `room_participants.room_id/stream_name`, `generated_links.production_id`, `rooms.production_id`). PostgreSQL pool max set to 30 connections.
+- **Broadcast**: Production broadcast uses `Promise.all` for parallel DB inserts across all guest sessions.
+- **Connection budget**: Each guest opens max 2 WebSocket connections (1 production + 1 chat tab). Total ~1000 WS for 500 guests.
+- **Docker prerequisite**: Set `ulimit -n 65536` for the container to handle 1000+ WS file descriptors.
 
 # External Dependencies
 
