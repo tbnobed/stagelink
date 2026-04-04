@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        CACHE_BUST: "2026-04-04-v2.7-fallback-server-address2"
-    container_name: virtual-audience-app-v2-7
+        CACHE_BUST: "2026-04-04-v2.8-room-backgrounds"
+    container_name: virtual-audience-app-v2-8
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -49,6 +49,10 @@ services:
       # Email Configuration
       - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
       - SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL:-alerts@obedtv.com}
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     depends_on:
       db:
         condition: service_healthy
@@ -56,6 +60,7 @@ services:
       - virtual-audience-network
     volumes:
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
     healthcheck:
       test: ["CMD", "sh", "-c", "wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1"]
       interval: 30s
@@ -65,7 +70,7 @@ services:
 
   db:
     image: postgres:15-alpine
-    container_name: virtual-audience-db-v2-7
+    container_name: virtual-audience-db-v2-8
     restart: unless-stopped
     environment:
       - POSTGRES_DB=virtual_audience
