@@ -1,5 +1,4 @@
 import { Link } from "wouter";
-import SRSMonitoring from "@/components/srs-monitoring";
 
 export default function Home() {
   return (
@@ -116,10 +115,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* SRS Server Monitoring */}
-        <div className="mt-8">
-          <SRSMonitoring />
-        </div>
       </div>
     </div>
   );

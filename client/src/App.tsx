@@ -26,6 +26,7 @@ import ResetPasswordPage from "@/pages/reset-password-page";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import Productions from "@/pages/productions";
 import ModeratorConsole from "@/pages/moderator-console";
+import Dashboard from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -43,6 +44,7 @@ function Router() {
         <ProtectedRoute path="/profile" component={ProfilePage} />
         <ProtectedRoute path="/productions" component={Productions} adminOrEngineerOnly />
         <ProtectedRoute path="/moderator/:id" component={ModeratorConsole} adminOrEngineerOnly />
+        <ProtectedRoute path="/dashboard" component={Dashboard} adminOrEngineerOnly />
         <ProtectedRoute path="/admin" component={AdminPage} adminOnly />
         <ProtectedRoute path="/admin/consent" component={ConsentAuditPage} adminOnly />
         <Route path="/session" component={Session} />

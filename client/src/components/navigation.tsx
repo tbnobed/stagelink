@@ -27,9 +27,10 @@ export default function Navigation() {
     { path: "/rooms", label: "Rooms", icon: "fas fa-video" },
   ] : [];
 
-  // Productions: only visible to admin and engineer roles
+  // Productions and Dashboard: only visible to admin and engineer roles
   if (user?.role === 'admin' || user?.role === 'engineer') {
     navItems.push({ path: "/productions", label: "Productions", icon: "fas fa-broadcast-tower" });
+    navItems.push({ path: "/dashboard", label: "Dashboard", icon: "fas fa-tachometer-alt" });
   }
 
   // Only show admin nav item for admin users
