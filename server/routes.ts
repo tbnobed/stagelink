@@ -1589,14 +1589,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Dashboard: proxy server stats for custom monitored servers (avoids CORS)
   app.post('/api/monitor/server-stats', requireAdminOrEngineer, async (req, res) => {
-    const { address, port, useHttps } = req.body;
+    const { address, port, useHttps, apiSecret } = req.body;
     if (!address || !port) return res.status(400).json({ error: 'address and port required' });
     try {
       const protocol = useHttps ? 'https' : 'http';
       const url = `${protocol}://${address}:${port}/api/v1/summaries`;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 5000);
-      const response = await fetch(url, { signal: controller.signal });
+      const headers: Record<string, string> = {};
+      if (apiSecret) headers['Authorization'] = `Bearer ${apiSecret}`;
+      const response = await fetch(url, { signal: controller.signal, headers });
       clearTimeout(timer);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();

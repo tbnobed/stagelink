@@ -17,7 +17,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Pencil, Trash2, Plus, Server, RefreshCw } from "lucide-react";
+import { Pencil, Trash2, Plus, Server, RefreshCw, Lock } from "lucide-react";
 
 // ---------- types ----------
 interface MonitoredServer {
@@ -26,6 +26,7 @@ interface MonitoredServer {
   address: string;
   apiPort: number;
   useHttps: boolean;
+  apiSecret?: string;
 }
 
 interface SRSSummaryData {
@@ -67,6 +68,7 @@ const serverSchema = z.object({
   address: z.string().min(1, "Address is required"),
   apiPort: z.coerce.number().int().min(1).max(65535),
   useHttps: z.boolean().default(false),
+  apiSecret: z.string().optional(),
 });
 type ServerFormValues = z.infer<typeof serverSchema>;
 
@@ -111,6 +113,7 @@ function ServerCard({
         address: server.address,
         port: server.apiPort,
         useHttps: server.useHttps,
+        ...(server.apiSecret ? { apiSecret: server.apiSecret } : {}),
       }).then((r) => r.json()),
     refetchInterval: 30_000,
     staleTime: 25_000,
@@ -129,8 +132,11 @@ function ServerCard({
           </div>
           <div>
             <h3 className="text-lg font-semibold va-text-primary">{server.name}</h3>
-            <p className="text-xs va-text-secondary font-mono mt-0.5">
+            <p className="text-xs va-text-secondary font-mono mt-0.5 flex items-center gap-1.5">
               {server.address}:{server.apiPort}
+              {server.apiSecret && (
+                <Lock className="w-3 h-3 text-yellow-500 shrink-0" title="API secret configured" />
+              )}
             </p>
           </div>
         </div>
@@ -238,6 +244,7 @@ function ServerDialog({
       address: initial?.address ?? "",
       apiPort: initial?.apiPort ?? 1985,
       useHttps: initial?.useHttps ?? false,
+      apiSecret: initial?.apiSecret ?? "",
     },
   });
 
@@ -247,6 +254,7 @@ function ServerDialog({
       address: initial?.address ?? "",
       apiPort: initial?.apiPort ?? 1985,
       useHttps: initial?.useHttps ?? false,
+      apiSecret: initial?.apiSecret ?? "",
     });
   }, [initial, open]);
 
@@ -306,6 +314,27 @@ function ServerDialog({
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                   <Label className="!mt-0">Use HTTPS</Label>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="apiSecret"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>API Secret <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Oryx / authenticated SRS only"
+                      autoComplete="off"
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    If set, sent as <code className="font-mono">Authorization: Bearer &lt;secret&gt;</code> on every stats request.
+                  </p>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -386,17 +415,21 @@ export default function Dashboard() {
   }
 
   function handleSave(values: ServerFormValues) {
+    const normalized = {
+      ...values,
+      apiSecret: values.apiSecret?.trim() || undefined,
+    };
     if (editingServer) {
       persistServers(
         servers.map((s) =>
-          s.id === editingServer.id ? { ...editingServer, ...values } : s
+          s.id === editingServer.id ? { ...editingServer, ...normalized } : s
         )
       );
       toast({ title: "Server updated" });
     } else {
       const newServer: MonitoredServer = {
         id: Math.random().toString(36).slice(2),
-        ...values,
+        ...normalized,
       };
       persistServers([...servers, newServer]);
       toast({ title: "Server added" });
