@@ -1,5 +1,5 @@
-# Virtual Audience Platform v2.6 - Production Docker Build
-# Includes: Productions & Capacity, Email Campaigns, Return Feeds (configurable),
+# Virtual Audience Platform v2.7 - Production Docker Build
+# Includes: Productions & Capacity, Email Campaigns, Return Feeds (3-server fallback chain),
 #           WHEP Server Pool, Multi-server WHIP load balancing,
 #           TBN Adult Likeness Authorization, US broadcast compliance
 FROM node:18-alpine AS builder
@@ -41,7 +41,7 @@ COPY --chown=nodejs:nodejs fix-production-database.sql /app/fix-production-datab
 RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
 set -e
-echo "=== Virtual Audience Platform v2.6 ==="
+echo "=== Virtual Audience Platform v2.7 ==="
 echo "Waiting for database to be ready..."
 sleep 5
 

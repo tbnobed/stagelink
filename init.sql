@@ -1,7 +1,7 @@
--- Virtual Audience Platform v2.6
+-- Virtual Audience Platform v2.7
 -- Clean initialization for Docker deployment (fresh install)
 -- Includes: Productions & Capacity Management, Email Campaign (invite_status),
---           Return Feeds (configurable), WHEP Server Pool (round-robin return feed delivery),
+--           Return Feeds (configurable, 3-server fallback chain), WHEP Server Pool,
 --           Multi-server WHIP load balancing, TBN Adult Likeness Authorization consent system
 
 -- Create database if not exists
@@ -290,6 +290,7 @@ CREATE TABLE IF NOT EXISTS "return_feeds" (
         "stream_name" text NOT NULL,
         "server_address" text,
         "fallback_server_address" text,
+        "fallback_server_address2" text,
         "sort_order" integer NOT NULL DEFAULT 0,
         "created_at" timestamp NOT NULL DEFAULT now()
 );
@@ -396,7 +397,7 @@ ON CONFLICT DO NOTHING;
 -- ============================================================
 
 SELECT
-    'Virtual Audience Platform v2.6 — Fresh Install Verification' AS status,
+    'Virtual Audience Platform v2.7 — Fresh Install Verification' AS status,
     CASE
         WHEN (
             SELECT COUNT(*) FROM information_schema.tables
@@ -417,7 +418,7 @@ SELECT
         ELSE 'ERROR: Missing tables — check output above'
     END AS result;
 
-\echo 'Virtual Audience Platform v2.6 database initialized successfully'
-\echo 'Features: Productions & Capacity, Email Campaigns, Return Feeds (configurable),'
+\echo 'Virtual Audience Platform v2.7 database initialized successfully'
+\echo 'Features: Productions & Capacity, Email Campaigns, Return Feeds (3-server fallback),'
 \echo '          WHEP Server Pool, Multi-server WHIP load balancing,'
 \echo '          TBN Adult Likeness Authorization, US broadcast compliance'

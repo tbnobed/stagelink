@@ -1,6 +1,6 @@
--- Virtual Audience Platform v2.6 — Production Database Upgrade Script
+-- Virtual Audience Platform v2.7 — Production Database Upgrade Script
 -- Safe to run on any existing version; every statement is idempotent.
--- Covers ALL schema changes from v1 through v2.6 in a single pass.
+-- Covers ALL schema changes from v1 through v2.7 in a single pass.
 --
 -- Changelog applied by this script:
 --   v2.0  — session_tokens, viewer_links, short_viewer_links, chat, rooms, consent
@@ -10,6 +10,7 @@
 --   v2.4  — productions table, production_id/guest_name/guest_email on links
 --   v2.5  — invite_status/invited_at on generated_links
 --   v2.6  — return_feeds table, whep_servers table, assigned_whep_server on all link tables
+--   v2.7  — rooms.production_id, return_feeds.fallback_server_address, return_feeds.fallback_server_address2
 
 -- ============================================================
 -- ENUMS (safe — skips if already exists)
@@ -223,6 +224,7 @@ CREATE TABLE IF NOT EXISTS "return_feeds" (
         "stream_name" text NOT NULL,
         "server_address" text,
         "fallback_server_address" text,
+        "fallback_server_address2" text,
         "sort_order" integer NOT NULL DEFAULT 0,
         "created_at" timestamp NOT NULL DEFAULT now()
 );
@@ -347,6 +349,11 @@ DO $$ BEGIN
         ALTER TABLE "return_feeds" ADD COLUMN "fallback_server_address" text;
     END IF;
 
+    -- return_feeds: 3rd fallback server address for round-robin rotation (v2.7)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='return_feeds' AND column_name='fallback_server_address2') THEN
+        ALTER TABLE "return_feeds" ADD COLUMN "fallback_server_address2" text;
+    END IF;
+
 END $$;
 
 -- ============================================================
@@ -430,5 +437,5 @@ WHERE table_schema = 'public'
   )
 ORDER BY table_name;
 
-\echo 'Virtual Audience Platform v2.6 production database upgrade completed successfully'
-\echo 'All schema changes from v1 through v2.6 have been applied.'
+\echo 'Virtual Audience Platform v2.7 production database upgrade completed successfully'
+\echo 'All schema changes from v1 through v2.7 have been applied.'

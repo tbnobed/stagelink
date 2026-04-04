@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        CACHE_BUST: "2026-03-31-v2.6-return-feeds-whep-pool"
-    container_name: virtual-audience-app-v2-6
+        CACHE_BUST: "2026-04-04-v2.7-fallback-server-address2"
+    container_name: virtual-audience-app-v2-7
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -65,7 +65,7 @@ services:
 
   db:
     image: postgres:15-alpine
-    container_name: virtual-audience-db-v2-6
+    container_name: virtual-audience-db-v2-7
     restart: unless-stopped
     environment:
       - POSTGRES_DB=virtual_audience
