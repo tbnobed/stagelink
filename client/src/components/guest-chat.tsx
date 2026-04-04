@@ -171,13 +171,12 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '', onNew
   };
 
   const shouldShowMessage = (message: ChatMessage) => {
-    // Guest users can see broadcast messages and public messages
+    // Private chat only shows individual (1-on-1) messages, not broadcasts
     if (message.messageType === 'broadcast' || message.messageType === 'system') {
-      return true;
+      return false;
     }
     
-    // For individual messages, show if user is sender or intended recipient
-    // Also show messages that don't have a specific recipient (public to session)
+    // Show individual messages where this user is the sender or recipient
     return message.senderId === guestUser.id || 
            message.recipientId === guestUser.id || 
            (!message.recipientId && message.messageType === 'individual');
