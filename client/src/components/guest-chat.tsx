@@ -77,7 +77,7 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '', onNew
               case 'new_message':
                 if (data.message) {
                   setMessages(prev => [...prev, data.message]);
-                  if (data.message.senderId !== guestUser.id && onNewPrivateMessage) {
+                  if (data.message.senderId !== guestUser.id && data.message.messageType === 'individual' && onNewPrivateMessage) {
                     onNewPrivateMessage(data.message);
                   }
                 }
