@@ -13,8 +13,13 @@ import { getSRSApiUrl, getSRSConfig, getSRSWhipUrl, getSRSWhepUrl, getNextWhipSe
 import { sendStreamingInvite, sendViewerInvite } from "./email-service";
 
 const uploadsDir = path.resolve('uploads/room-backgrounds');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (err) {
+  console.warn('Warning: Could not create uploads directory:', (err as Error).message);
+  console.warn('Room background image uploads will not work until the directory is created with proper permissions.');
 }
 
 const ALLOWED_IMAGE_EXTS: Record<string, string> = {

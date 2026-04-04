@@ -41,11 +41,17 @@ RUN mkdir -p /app/uploads/room-backgrounds && chown -R nodejs:nodejs /app/upload
 # upgrades from any prior version are handled automatically.
 COPY --chown=nodejs:nodejs fix-production-database.sql /app/fix-production-database.sql
 
-# Startup script — runs the upgrade SQL then launches the app
+# Startup script — runs as root to fix volume permissions,
+# then runs the DB migration and drops to nodejs for the app.
 RUN cat > /app/start.sh << 'EOF'
 #!/bin/sh
 set -e
 echo "=== Virtual Audience Platform v2.8 ==="
+
+# Fix permissions on volume-mounted uploads directory
+mkdir -p /app/uploads/room-backgrounds
+chown -R nodejs:nodejs /app/uploads
+
 echo "Waiting for database to be ready..."
 sleep 5
 
@@ -54,12 +60,12 @@ psql "$DATABASE_URL" -f /app/fix-production-database.sql
 echo "Database schema is up to date."
 
 echo "Starting application server..."
-exec node dist/production.js
+exec su-exec nodejs node dist/production.js
 EOF
 
-RUN chmod +x /app/start.sh && chown nodejs:nodejs /app/start.sh
+RUN apk add --no-cache su-exec
+RUN chmod +x /app/start.sh
 
-USER nodejs
 EXPOSE 5000
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
