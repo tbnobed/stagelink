@@ -793,6 +793,34 @@ class ChatWebSocketServer {
     };
   }
 
+  // Broadcast production_ended to all connected guests and clear in-memory state.
+  // Called when an admin sets a production status to 'ended'.
+  public broadcastProductionEnded(productionId: string) {
+    const state = this.productionStates.get(productionId);
+    if (!state) return;
+
+    const msg = JSON.stringify({ type: 'production_ended' });
+
+    // Notify live participants
+    for (const clientKey of state.liveParticipants.keys()) {
+      const ws = this.clientKeyToActiveWs.get(clientKey);
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(msg);
+      this.clientProductionMap.delete(clientKey);
+      this.clientKeyToActiveWs.delete(clientKey);
+    }
+
+    // Notify waiting guests
+    for (const waiter of state.waitingQueue) {
+      if (waiter.ws.readyState === WebSocket.OPEN) waiter.ws.send(msg);
+      this.clientProductionMap.delete(waiter.clientKey);
+      this.clientKeyToActiveWs.delete(waiter.clientKey);
+    }
+
+    // Clear production state — room assignments will be swept by the periodic job
+    this.productionStates.delete(productionId);
+    console.log(`Production ${productionId}: ended. All guests notified and in-memory state cleared.`);
+  }
+
   // Update max live participants for a production (e.g., after admin edits it)
   public updateProductionCapacity(productionId: string, maxLive: number) {
     const state = this.productionStates.get(productionId);

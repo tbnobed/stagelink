@@ -254,6 +254,12 @@ export default function Session() {
             setProductionStatus('idle');
             setWaitingPosition(0);
           }
+        } else if (msg.type === 'production_ended') {
+          // Admin ended the production — stop any active stream and show the ended screen
+          stopPublishing();
+          setIsPublishing(false);
+          setProductionStatus('idle');
+          setProductionEnded(true);
         }
       } catch {}
     };

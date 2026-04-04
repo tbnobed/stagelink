@@ -2088,6 +2088,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const wsServer = (global as any).chatWebSocketServer as InstanceType<typeof ChatWebSocketServer>;
         if (wsServer) wsServer.updateProductionCapacity(req.params.id, data.maxLiveParticipants);
       }
+      // When an admin ends a production, kick all connected guests immediately
+      if (data.status === 'ended') {
+        const wsServer = (global as any).chatWebSocketServer as InstanceType<typeof ChatWebSocketServer>;
+        if (wsServer) wsServer.broadcastProductionEnded(req.params.id);
+      }
       res.json(prod);
     } catch (error: any) {
       if (error.name === 'ZodError') return res.status(400).json({ error: error.errors });
