@@ -1,4 +1,4 @@
-import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, productions, returnFeeds, whepServers, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord, type Production, type InsertProduction, type ReturnFeed, type InsertReturnFeed, type WhepServer, type InsertWhepServer } from "@shared/schema";
+import { users, generatedLinks, shortLinks, viewerLinks, shortViewerLinks, sessionTokens, passwordResetTokens, registrationTokens, chatMessages, chatParticipants, rooms, roomParticipants, roomStreamAssignments, consentRecords, productions, returnFeeds, whepServers, monitoredServers, type User, type InsertUser, type GeneratedLink, type InsertGeneratedLink, type ShortLink, type InsertShortLink, type ViewerLink, type InsertViewerLink, type ShortViewerLink, type InsertShortViewerLink, type SessionToken, type InsertSessionToken, type PasswordResetToken, type InsertPasswordResetToken, type RegistrationToken, type InsertRegistrationToken, type ChatMessage, type InsertChatMessage, type ChatParticipant, type InsertChatParticipant, type Room, type InsertRoom, type RoomParticipant, type InsertRoomParticipant, type RoomStreamAssignment, type InsertRoomStreamAssignment, type ConsentRecord, type InsertConsentRecord, type Production, type InsertProduction, type ReturnFeed, type InsertReturnFeed, type WhepServer, type InsertWhepServer, type MonitoredServer, type InsertMonitoredServer } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { eq, lt, and, isNotNull, isNull, desc, like, inArray } from "drizzle-orm";
@@ -127,6 +127,12 @@ export interface IStorage {
   createWhepServer(server: InsertWhepServer): Promise<WhepServer>;
   updateWhepServer(id: number, updates: Partial<InsertWhepServer>): Promise<WhepServer | undefined>;
   deleteWhepServer(id: number): Promise<boolean>;
+
+  // Monitored Servers
+  getAllMonitoredServers(): Promise<MonitoredServer[]>;
+  createMonitoredServer(server: InsertMonitoredServer, userId?: number): Promise<MonitoredServer>;
+  updateMonitoredServer(id: number, updates: Partial<InsertMonitoredServer>): Promise<MonitoredServer | undefined>;
+  deleteMonitoredServer(id: number): Promise<boolean>;
   updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined>;
   validateAndConsumeSessionToken(token: string): Promise<{ valid: boolean; linkId?: string; linkType?: string; productionId?: string; guestName?: string; guestEmail?: string }>;
   getSessionTokenLinkId(token: string): Promise<string | null>;
@@ -683,6 +689,10 @@ export class MemStorage implements IStorage {
   async createWhepServer(server: InsertWhepServer): Promise<WhepServer> { throw new Error('Not implemented'); }
   async updateWhepServer(id: number, updates: Partial<InsertWhepServer>): Promise<WhepServer | undefined> { return undefined; }
   async deleteWhepServer(id: number): Promise<boolean> { return false; }
+  async getAllMonitoredServers(): Promise<MonitoredServer[]> { return []; }
+  async createMonitoredServer(server: InsertMonitoredServer, userId?: number): Promise<MonitoredServer> { throw new Error('Not implemented'); }
+  async updateMonitoredServer(id: number, updates: Partial<InsertMonitoredServer>): Promise<MonitoredServer | undefined> { return undefined; }
+  async deleteMonitoredServer(id: number): Promise<boolean> { return false; }
   async updateLinkInviteStatus(linkId: string, status: 'pending' | 'sent' | 'failed', invitedAt?: Date): Promise<GeneratedLink | undefined> {
     const link = this.links.get(linkId);
     if (!link) return undefined;
@@ -2101,6 +2111,25 @@ export class DatabaseStorage implements IStorage {
       .where(eq(generatedLinks.id, linkId))
       .returning();
     return updated || undefined;
+  }
+
+  async getAllMonitoredServers(): Promise<MonitoredServer[]> {
+    return await db.select().from(monitoredServers).orderBy(monitoredServers.id);
+  }
+
+  async createMonitoredServer(server: InsertMonitoredServer, userId?: number): Promise<MonitoredServer> {
+    const [created] = await db.insert(monitoredServers).values({ ...server, createdBy: userId }).returning();
+    return created;
+  }
+
+  async updateMonitoredServer(id: number, updates: Partial<InsertMonitoredServer>): Promise<MonitoredServer | undefined> {
+    const [updated] = await db.update(monitoredServers).set(updates).where(eq(monitoredServers.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteMonitoredServer(id: number): Promise<boolean> {
+    const result = await db.delete(monitoredServers).where(eq(monitoredServers.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

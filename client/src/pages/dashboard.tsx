@@ -21,12 +21,12 @@ import { Pencil, Trash2, Plus, Server, RefreshCw, Lock } from "lucide-react";
 
 // ---------- types ----------
 interface MonitoredServer {
-  id: string;
+  id: number;
   name: string;
   address: string;
   apiPort: number;
   useHttps: boolean;
-  apiSecret?: string;
+  apiSecret?: string | null;
 }
 
 interface SRSSummaryData {
@@ -45,21 +45,6 @@ interface ServerStatsResponse {
   status: "online" | "error";
   error?: string;
   data?: SRSSummaryData;
-}
-
-// ---------- localStorage helpers ----------
-const STORAGE_KEY = "va_monitored_servers";
-
-function loadServers(): MonitoredServer[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveServers(servers: MonitoredServer[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(servers));
 }
 
 // ---------- form schema ----------
@@ -231,11 +216,13 @@ function ServerDialog({
   initial,
   onSave,
   onClose,
+  isPending,
 }: {
   open: boolean;
   initial?: MonitoredServer;
   onSave: (values: ServerFormValues) => void;
   onClose: () => void;
+  isPending?: boolean;
 }) {
   const form = useForm<ServerFormValues>({
     resolver: zodResolver(serverSchema),
@@ -249,14 +236,16 @@ function ServerDialog({
   });
 
   useEffect(() => {
-    form.reset({
-      name: initial?.name ?? "",
-      address: initial?.address ?? "",
-      apiPort: initial?.apiPort ?? 1985,
-      useHttps: initial?.useHttps ?? false,
-      apiSecret: initial?.apiSecret ?? "",
-    });
-  }, [initial, open]);
+    if (open) {
+      form.reset({
+        name: initial?.name ?? "",
+        address: initial?.address ?? "",
+        apiPort: initial?.apiPort ?? 1985,
+        useHttps: initial?.useHttps ?? false,
+        apiSecret: initial?.apiSecret ?? "",
+      });
+    }
+  }, [open, initial]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -342,7 +331,9 @@ function ServerDialog({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">{initial ? "Save Changes" : "Add Server"}</Button>
+              <Button type="submit" disabled={isPending}>
+                {isPending ? "Saving…" : initial ? "Save Changes" : "Add Server"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
@@ -389,7 +380,6 @@ function StatCard({
 // ---------- Dashboard ----------
 export default function Dashboard() {
   const { toast } = useToast();
-  const [servers, setServers] = useState<MonitoredServer[]>(loadServers);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingServer, setEditingServer] = useState<MonitoredServer | undefined>();
 
@@ -405,14 +395,48 @@ export default function Dashboard() {
     queryKey: ["/api/rooms"],
   });
 
+  const { data: servers = [], isLoading: loadingServers } = useQuery<MonitoredServer[]>({
+    queryKey: ["/api/monitor/servers"],
+  });
+
   const activeProductions = (productions ?? []).filter((p: any) => p.status === "active").length;
   const totalLinks = (links ?? []).length;
   const totalRooms = (rooms ?? []).length;
 
-  function persistServers(updated: MonitoredServer[]) {
-    setServers(updated);
-    saveServers(updated);
-  }
+  const createMutation = useMutation({
+    mutationFn: (body: ServerFormValues) =>
+      apiRequest("POST", "/api/monitor/servers", body).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/monitor/servers"] });
+      toast({ title: "Server added" });
+      setDialogOpen(false);
+      setEditingServer(undefined);
+    },
+    onError: () => toast({ title: "Failed to add server", variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, body }: { id: number; body: ServerFormValues }) =>
+      apiRequest("PUT", `/api/monitor/servers/${id}`, body).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/monitor/servers"] });
+      toast({ title: "Server updated" });
+      setDialogOpen(false);
+      setEditingServer(undefined);
+    },
+    onError: () => toast({ title: "Failed to update server", variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) =>
+      apiRequest("DELETE", `/api/monitor/servers/${id}`).then((r) => r.json()),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/monitor/servers"] });
+      queryClient.removeQueries({ queryKey: ["/api/monitor/server-stats", id] });
+      toast({ title: "Server removed" });
+    },
+    onError: () => toast({ title: "Failed to remove server", variant: "destructive" }),
+  });
 
   function handleSave(values: ServerFormValues) {
     const normalized = {
@@ -420,40 +444,13 @@ export default function Dashboard() {
       apiSecret: values.apiSecret?.trim() || undefined,
     };
     if (editingServer) {
-      persistServers(
-        servers.map((s) =>
-          s.id === editingServer.id ? { ...editingServer, ...normalized } : s
-        )
-      );
-      toast({ title: "Server updated" });
+      updateMutation.mutate({ id: editingServer.id, body: normalized });
     } else {
-      const newServer: MonitoredServer = {
-        id: Math.random().toString(36).slice(2),
-        ...normalized,
-      };
-      persistServers([...servers, newServer]);
-      toast({ title: "Server added" });
+      createMutation.mutate(normalized);
     }
-    setDialogOpen(false);
-    setEditingServer(undefined);
   }
 
-  function handleDelete(id: string) {
-    persistServers(servers.filter((s) => s.id !== id));
-    // Evict cached query
-    queryClient.removeQueries({ queryKey: ["/api/monitor/server-stats", id] });
-    toast({ title: "Server removed" });
-  }
-
-  function openAdd() {
-    setEditingServer(undefined);
-    setDialogOpen(true);
-  }
-
-  function openEdit(server: MonitoredServer) {
-    setEditingServer(server);
-    setDialogOpen(true);
-  }
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="min-h-screen py-8 px-4">
@@ -497,13 +494,18 @@ export default function Dashboard() {
               Add SRS servers to track CPU, memory, connections and uptime.
             </p>
           </div>
-          <Button onClick={openAdd} className="flex items-center gap-2">
+          <Button onClick={() => { setEditingServer(undefined); setDialogOpen(true); }} className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Add Server
           </Button>
         </div>
 
-        {servers.length === 0 ? (
+        {loadingServers ? (
+          <div className="va-bg-dark-surface rounded-2xl border va-border-dark p-12 text-center">
+            <Server className="w-10 h-10 va-text-secondary mx-auto mb-3 opacity-40 animate-pulse" />
+            <p className="va-text-secondary text-sm">Loading servers…</p>
+          </div>
+        ) : servers.length === 0 ? (
           <div className="va-bg-dark-surface rounded-2xl border va-border-dark border-dashed p-12 text-center">
             <Server className="w-10 h-10 va-text-secondary mx-auto mb-3 opacity-40" />
             <p className="va-text-secondary">No servers added yet.</p>
@@ -517,8 +519,8 @@ export default function Dashboard() {
               <ServerCard
                 key={server.id}
                 server={server}
-                onEdit={() => openEdit(server)}
-                onDelete={() => handleDelete(server.id)}
+                onEdit={() => { setEditingServer(server); setDialogOpen(true); }}
+                onDelete={() => deleteMutation.mutate(server.id)}
               />
             ))}
           </div>
@@ -533,6 +535,7 @@ export default function Dashboard() {
             setDialogOpen(false);
             setEditingServer(undefined);
           }}
+          isPending={isSaving}
         />
       </div>
     </div>

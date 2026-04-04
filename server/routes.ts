@@ -1587,6 +1587,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard: CRUD for monitored servers (stored in DB)
+  app.get('/api/monitor/servers', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const servers = await storage.getAllMonitoredServers();
+      res.json(servers);
+    } catch (error) {
+      console.error('Failed to fetch monitored servers:', error);
+      res.status(500).json({ error: 'Failed to fetch monitored servers' });
+    }
+  });
+
+  app.post('/api/monitor/servers', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const { name, address, apiPort, useHttps, apiSecret } = req.body;
+      if (!name || !address) return res.status(400).json({ error: 'name and address required' });
+      const user = req.user as any;
+      const server = await storage.createMonitoredServer(
+        { name, address, apiPort: apiPort ?? 1985, useHttps: useHttps ?? false, apiSecret: apiSecret || null },
+        user?.id
+      );
+      res.status(201).json(server);
+    } catch (error) {
+      console.error('Failed to create monitored server:', error);
+      res.status(500).json({ error: 'Failed to create monitored server' });
+    }
+  });
+
+  app.put('/api/monitor/servers/:id', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+      const { name, address, apiPort, useHttps, apiSecret } = req.body;
+      const updated = await storage.updateMonitoredServer(id, {
+        ...(name !== undefined && { name }),
+        ...(address !== undefined && { address }),
+        ...(apiPort !== undefined && { apiPort }),
+        ...(useHttps !== undefined && { useHttps }),
+        apiSecret: apiSecret || null,
+      });
+      if (!updated) return res.status(404).json({ error: 'Server not found' });
+      res.json(updated);
+    } catch (error) {
+      console.error('Failed to update monitored server:', error);
+      res.status(500).json({ error: 'Failed to update monitored server' });
+    }
+  });
+
+  app.delete('/api/monitor/servers/:id', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+      const deleted = await storage.deleteMonitoredServer(id);
+      if (!deleted) return res.status(404).json({ error: 'Server not found' });
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to delete monitored server:', error);
+      res.status(500).json({ error: 'Failed to delete monitored server' });
+    }
+  });
+
   // Dashboard: proxy server stats for custom monitored servers (avoids CORS)
   app.post('/api/monitor/server-stats', requireAdminOrEngineer, async (req, res) => {
     const { address, port, useHttps, apiSecret } = req.body;

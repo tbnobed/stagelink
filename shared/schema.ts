@@ -370,3 +370,23 @@ export const insertReturnFeedSchema = createInsertSchema(returnFeeds).omit({
 });
 export type InsertReturnFeed = z.infer<typeof insertReturnFeedSchema>;
 export type ReturnFeed = typeof returnFeeds.$inferSelect;
+
+// Monitored servers — dashboard server health monitors
+export const monitoredServers = pgTable("monitored_servers", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  apiPort: integer("api_port").notNull().default(1985),
+  useHttps: boolean("use_https").notNull().default(false),
+  apiSecret: text("api_secret"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+export const insertMonitoredServerSchema = createInsertSchema(monitoredServers).omit({
+  id: true,
+  createdAt: true,
+  createdBy: true,
+});
+export type InsertMonitoredServer = z.infer<typeof insertMonitoredServerSchema>;
+export type MonitoredServer = typeof monitoredServers.$inferSelect;
