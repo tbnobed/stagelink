@@ -39,6 +39,8 @@ export default function Session() {
   const [waitingPosition, setWaitingPosition] = useState<number>(0);
   // Gate: production hasn't been started by admin yet
   const [awaitingProductionStart, setAwaitingProductionStart] = useState(false);
+  // Gate: production has already ended
+  const [productionEnded, setProductionEnded] = useState(false);
   const [productionName, setProductionName] = useState<string | null>(null);
   const productionPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const productionWsRef = useRef<WebSocket | null>(null);
@@ -131,9 +133,11 @@ export default function Session() {
             setProductionId(result.productionId);
             // Store production name for waiting screen
             if (result.productionName) setProductionName(result.productionName);
-            // If the production hasn't been started by the admin yet, gate the guest
+            // Gate guests based on production status
             if (result.productionStatus === 'draft') {
               setAwaitingProductionStart(true);
+            } else if (result.productionStatus === 'ended') {
+              setProductionEnded(true);
             }
           }
           const displayName = result.guestName || `Guest_${stream || 'User'}`;
@@ -277,6 +281,10 @@ export default function Session() {
         const data = await res.json();
         if (data.status === 'active') {
           setAwaitingProductionStart(false);
+          if (data.name) setProductionName(data.name);
+        } else if (data.status === 'ended') {
+          setAwaitingProductionStart(false);
+          setProductionEnded(true);
           if (data.name) setProductionName(data.name);
         }
       } catch {}
@@ -535,6 +543,30 @@ export default function Session() {
           <div className="text-red-500 text-6xl mb-4">🚫</div>
           <h2 className="text-xl font-semibold va-text-primary mb-2">Access Denied</h2>
           <p className="va-text-secondary">This session link is no longer valid.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Gate: production has already ended
+  if (productionEnded) {
+    return (
+      <div className="min-h-screen va-bg-dark flex items-center justify-center p-6">
+        <div className="text-center max-w-md w-full">
+          <div className="relative mx-auto w-24 h-24 mb-6">
+            <div className="relative rounded-full bg-slate-500/10 border-2 border-slate-500/40 w-full h-full flex items-center justify-center">
+              <svg className="w-10 h-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" />
+              </svg>
+            </div>
+          </div>
+          {productionName && (
+            <p className="text-slate-400 text-sm font-medium uppercase tracking-widest mb-2">{productionName}</p>
+          )}
+          <h2 className="text-2xl font-bold va-text-primary mb-3">Production Ended</h2>
+          <p className="va-text-secondary">
+            This production has concluded. Thank you for participating.
+          </p>
         </div>
       </div>
     );
