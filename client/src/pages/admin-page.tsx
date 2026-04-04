@@ -67,16 +67,16 @@ export default function AdminPage() {
   });
 
   const [editingFeedId, setEditingFeedId] = useState<number | null>(null);
-  const [editFeedValues, setEditFeedValues] = useState({ label: '', streamName: '', serverAddress: '', fallbackServerAddress: '' });
+  const [editFeedValues, setEditFeedValues] = useState({ label: '', streamName: '', serverAddress: '', fallbackServerAddress: '', fallbackServerAddress2: '' });
   const [showAddFeed, setShowAddFeed] = useState(false);
-  const [newFeed, setNewFeed] = useState({ label: '', streamName: '', serverAddress: '', fallbackServerAddress: '' });
+  const [newFeed, setNewFeed] = useState({ label: '', streamName: '', serverAddress: '', fallbackServerAddress: '', fallbackServerAddress2: '' });
 
   const createFeedMutation = useMutation({
-    mutationFn: async (data: { label: string; streamName: string; serverAddress: string | null; fallbackServerAddress: string | null; sortOrder: number }) => {
+    mutationFn: async (data: { label: string; streamName: string; serverAddress: string | null; fallbackServerAddress: string | null; fallbackServerAddress2: string | null; sortOrder: number }) => {
       const res = await apiRequest('POST', '/api/return-feeds', data);
       return res.json();
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/return-feeds'] }); setShowAddFeed(false); setNewFeed({ label: '', streamName: '', serverAddress: '', fallbackServerAddress: '' }); toast({ title: 'Feed added' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/return-feeds'] }); setShowAddFeed(false); setNewFeed({ label: '', streamName: '', serverAddress: '', fallbackServerAddress: '', fallbackServerAddress2: '' }); toast({ title: 'Feed added' }); },
     onError: () => toast({ title: 'Failed to add feed', variant: 'destructive' }),
   });
 
@@ -100,7 +100,7 @@ export default function AdminPage() {
 
   const startEditFeed = (feed: ReturnFeed) => {
     setEditingFeedId(feed.id);
-    setEditFeedValues({ label: feed.label, streamName: feed.streamName, serverAddress: feed.serverAddress || '', fallbackServerAddress: feed.fallbackServerAddress || '' });
+    setEditFeedValues({ label: feed.label, streamName: feed.streamName, serverAddress: feed.serverAddress || '', fallbackServerAddress: feed.fallbackServerAddress || '', fallbackServerAddress2: feed.fallbackServerAddress2 || '' });
   };
 
   const { data: whepServers = [], isLoading: whepServersLoading } = useQuery<WhepServer[]>({
@@ -647,12 +647,13 @@ export default function AdminPage() {
                 <TableHead>Stream Name</TableHead>
                 <TableHead>Primary Server</TableHead>
                 <TableHead>Fallback Server</TableHead>
+                <TableHead>Fallback Server 2</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {returnFeedsLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading…</TableCell></TableRow>
               ) : returnFeeds.map(feed => (
                 <TableRow key={feed.id}>
                   {editingFeedId === feed.id ? (
@@ -661,9 +662,10 @@ export default function AdminPage() {
                       <TableCell><Input value={editFeedValues.streamName} onChange={e => setEditFeedValues(v => ({ ...v, streamName: e.target.value }))} className="h-8 text-sm font-mono" /></TableCell>
                       <TableCell><Input value={editFeedValues.serverAddress} onChange={e => setEditFeedValues(v => ({ ...v, serverAddress: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port (optional)" /></TableCell>
                       <TableCell><Input value={editFeedValues.fallbackServerAddress} onChange={e => setEditFeedValues(v => ({ ...v, fallbackServerAddress: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port (optional)" /></TableCell>
+                      <TableCell><Input value={editFeedValues.fallbackServerAddress2} onChange={e => setEditFeedValues(v => ({ ...v, fallbackServerAddress2: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port (optional)" /></TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">
-                          <Button size="sm" className="h-7 px-2" onClick={() => updateFeedMutation.mutate({ id: feed.id, updates: { label: editFeedValues.label, streamName: editFeedValues.streamName, serverAddress: editFeedValues.serverAddress || null, fallbackServerAddress: editFeedValues.fallbackServerAddress || null } })}><Check className="h-3 w-3" /></Button>
+                          <Button size="sm" className="h-7 px-2" onClick={() => updateFeedMutation.mutate({ id: feed.id, updates: { label: editFeedValues.label, streamName: editFeedValues.streamName, serverAddress: editFeedValues.serverAddress || null, fallbackServerAddress: editFeedValues.fallbackServerAddress || null, fallbackServerAddress2: editFeedValues.fallbackServerAddress2 || null } })}><Check className="h-3 w-3" /></Button>
                           <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingFeedId(null)}><X className="h-3 w-3" /></Button>
                         </div>
                       </TableCell>
@@ -674,6 +676,7 @@ export default function AdminPage() {
                       <TableCell className="font-mono text-sm text-muted-foreground">{feed.streamName}</TableCell>
                       <TableCell className="font-mono text-sm text-muted-foreground">{feed.serverAddress || <span className="italic text-muted-foreground/50">default</span>}</TableCell>
                       <TableCell className="font-mono text-sm text-muted-foreground">{feed.fallbackServerAddress || <span className="italic text-muted-foreground/50">none</span>}</TableCell>
+                      <TableCell className="font-mono text-sm text-muted-foreground">{feed.fallbackServerAddress2 || <span className="italic text-muted-foreground/50">none</span>}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">
                           <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => startEditFeed(feed)}><Pencil className="h-3 w-3" /></Button>
@@ -690,10 +693,11 @@ export default function AdminPage() {
                   <TableCell><Input value={newFeed.streamName} onChange={e => setNewFeed(v => ({ ...v, streamName: e.target.value }))} className="h-8 text-sm font-mono" placeholder="e.g. Socal7" /></TableCell>
                   <TableCell><Input value={newFeed.serverAddress} onChange={e => setNewFeed(v => ({ ...v, serverAddress: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port (optional)" /></TableCell>
                   <TableCell><Input value={newFeed.fallbackServerAddress} onChange={e => setNewFeed(v => ({ ...v, fallbackServerAddress: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port (optional)" /></TableCell>
+                  <TableCell><Input value={newFeed.fallbackServerAddress2} onChange={e => setNewFeed(v => ({ ...v, fallbackServerAddress2: e.target.value }))} className="h-8 text-sm font-mono" placeholder="host:port (optional)" /></TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
-                      <Button size="sm" className="h-7 px-2" onClick={() => { if (newFeed.label && newFeed.streamName) createFeedMutation.mutate({ label: newFeed.label, streamName: newFeed.streamName, serverAddress: newFeed.serverAddress || null, fallbackServerAddress: newFeed.fallbackServerAddress || null, sortOrder: 999 }); }}><Check className="h-3 w-3" /></Button>
-                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => { setShowAddFeed(false); setNewFeed({ label: '', streamName: '', serverAddress: '', fallbackServerAddress: '' }); }}><X className="h-3 w-3" /></Button>
+                      <Button size="sm" className="h-7 px-2" onClick={() => { if (newFeed.label && newFeed.streamName) createFeedMutation.mutate({ label: newFeed.label, streamName: newFeed.streamName, serverAddress: newFeed.serverAddress || null, fallbackServerAddress: newFeed.fallbackServerAddress || null, fallbackServerAddress2: newFeed.fallbackServerAddress2 || null, sortOrder: 999 }); }}><Check className="h-3 w-3" /></Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => { setShowAddFeed(false); setNewFeed({ label: '', streamName: '', serverAddress: '', fallbackServerAddress: '', fallbackServerAddress2: '' }); }}><X className="h-3 w-3" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>

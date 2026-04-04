@@ -27,16 +27,21 @@ async function getNextWhepServerAddress(): Promise<string | null> {
   return (await getNextWhepServers()).primary;
 }
 
-async function getNextFeedServers(feed: ReturnFeed): Promise<{ primary: string | null; fallback: string | null }> {
-  const addrs = [feed.serverAddress, feed.fallbackServerAddress].filter(Boolean) as string[];
-  if (addrs.length === 0) return { primary: null, fallback: null };
-  if (addrs.length === 1) return { primary: addrs[0], fallback: null };
+async function getNextFeedServers(feed: ReturnFeed): Promise<{ primary: string | null; fallback: string | null; fallback2: string | null }> {
+  const addrs = [feed.serverAddress, feed.fallbackServerAddress, feed.fallbackServerAddress2].filter(Boolean) as string[];
+  if (addrs.length === 0) return { primary: null, fallback: null, fallback2: null };
+  if (addrs.length === 1) return { primary: addrs[0], fallback: null, fallback2: null };
   // Use the last assigned server in DB to determine which server is next — restart-safe
   const lastServer = await storage.getLastWhepServerForFeed(feed.streamName);
-  const idx = lastServer === addrs[0] ? 1 : 0;
+  const lastIdx = addrs.indexOf(lastServer || '');
+  const baseIdx = lastIdx === -1 ? addrs.length - 1 : lastIdx;
+  const primaryIdx = (baseIdx + 1) % addrs.length;
+  const fallbackIdx = (baseIdx + 2) % addrs.length;
+  const fallback2Idx = (baseIdx + 3) % addrs.length;
   return {
-    primary: addrs[idx],
-    fallback: addrs[(idx + 1) % addrs.length],
+    primary: addrs[primaryIdx],
+    fallback: addrs.length > 1 ? addrs[fallbackIdx] : null,
+    fallback2: addrs.length > 2 ? addrs[fallback2Idx] : null,
   };
 }
 
@@ -425,6 +430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const returnFeedName = req.body.returnFeed;
       let assignedWhepServerAddr: string | null = null;
       let assignedWhepFallbackAddr: string | null = null;
+      let assignedWhepFallback2Addr: string | null = null;
       if (returnFeedName) {
         const allFeeds = await storage.getAllReturnFeeds();
         const matchedFeed = allFeeds.find(f => f.streamName === returnFeedName);
@@ -432,6 +438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const feedServers = await getNextFeedServers(matchedFeed);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
+          assignedWhepFallback2Addr = feedServers.fallback2;
         } else {
           const poolServers = await getNextWhepServers();
           assignedWhepServerAddr = poolServers.primary;
@@ -449,6 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       parsedUrl.searchParams.set('server', assignedServerAddr);
       if (assignedWhepServerAddr) parsedUrl.searchParams.set('returnServer', assignedWhepServerAddr);
       if (assignedWhepFallbackAddr) parsedUrl.searchParams.set('returnFallbackServer', assignedWhepFallbackAddr);
+      if (assignedWhepFallback2Addr) parsedUrl.searchParams.set('returnFallbackServer2', assignedWhepFallback2Addr);
       const finalUrl = isAbsoluteUrl ? parsedUrl.toString() : `${parsedUrl.pathname}${parsedUrl.search}`;
 
       const linkData = {
@@ -558,6 +566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine WHEP server for return feed delivery
       let assignedWhepServerAddr: string | null = null;
       let assignedWhepFallbackAddr: string | null = null;
+      let assignedWhepFallback2Addr: string | null = null;
       if (returnFeed) {
         const allFeeds = await storage.getAllReturnFeeds();
         const matchedFeed = allFeeds.find(f => f.streamName === returnFeed);
@@ -565,6 +574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const feedServers = await getNextFeedServers(matchedFeed);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
+          assignedWhepFallback2Addr = feedServers.fallback2;
         } else {
           const poolServers = await getNextWhepServers();
           assignedWhepServerAddr = poolServers.primary;
@@ -580,6 +590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let finalUrl = `${url}&token=${sessionToken.id}`;
       if (assignedWhepServerAddr) finalUrl += `&server=${encodeURIComponent(assignedWhepServerAddr)}`;
       if (assignedWhepFallbackAddr) finalUrl += `&returnFallbackServer=${encodeURIComponent(assignedWhepFallbackAddr)}`;
+      if (assignedWhepFallback2Addr) finalUrl += `&returnFallbackServer2=${encodeURIComponent(assignedWhepFallback2Addr)}`;
 
       const viewerLinkData = {
         id,
@@ -639,6 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine WHEP server for return feed delivery
       let assignedWhepServerAddr: string | null = null;
       let assignedWhepFallbackAddr: string | null = null;
+      let assignedWhepFallback2Addr: string | null = null;
       if (returnFeed) {
         const allFeeds = await storage.getAllReturnFeeds();
         const matchedFeed = allFeeds.find(f => f.streamName === returnFeed);
@@ -646,6 +658,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const feedServers = await getNextFeedServers(matchedFeed);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
+          assignedWhepFallback2Addr = feedServers.fallback2;
         } else {
           const poolServers = await getNextWhepServers();
           assignedWhepServerAddr = poolServers.primary;
@@ -809,6 +822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine WHEP server for return feed delivery
       let assignedWhepServerAddr: string | null = null;
       let assignedWhepFallbackAddr: string | null = null;
+      let assignedWhepFallback2Addr: string | null = null;
       if (returnFeed) {
         const allFeeds = await storage.getAllReturnFeeds();
         const matchedFeed = allFeeds.find(f => f.streamName === returnFeed);
@@ -816,6 +830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const feedServers = await getNextFeedServers(matchedFeed);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
+          assignedWhepFallback2Addr = feedServers.fallback2;
         } else {
           const poolServers = await getNextWhepServers();
           assignedWhepServerAddr = poolServers.primary;
@@ -951,12 +966,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tokenParam = originalLink.sessionToken ? `&token=${originalLink.sessionToken}` : '';
       const serverParam = (shortLink.assignedServer || originalLink.assignedServer) ? `&server=${encodeURIComponent(shortLink.assignedServer || originalLink.assignedServer || '')}` : '';
       const returnServerParam = (shortLink.assignedWhepServer || originalLink.assignedWhepServer) ? `&returnServer=${encodeURIComponent(shortLink.assignedWhepServer || originalLink.assignedWhepServer || '')}` : '';
-      // Look up fallback server from the return feed at redirect time
+      // Look up fallback servers from the return feed at redirect time
       const allFeedsForFallback = await storage.getAllReturnFeeds();
       const feedForFallback = allFeedsForFallback.find(f => f.streamName === shortLink.returnFeed);
       const fallbackAddr = feedForFallback?.fallbackServerAddress;
+      const fallback2Addr = feedForFallback?.fallbackServerAddress2;
       const returnFallbackParam = fallbackAddr ? `&returnFallbackServer=${encodeURIComponent(fallbackAddr)}` : '';
-      const redirectUrl = `/session?stream=${encodeURIComponent(shortLink.streamName)}&return=${encodeURIComponent(shortLink.returnFeed)}${chatParam}${tokenParam}${serverParam}${returnServerParam}${returnFallbackParam}`;
+      const returnFallback2Param = fallback2Addr ? `&returnFallbackServer2=${encodeURIComponent(fallback2Addr)}` : '';
+      const redirectUrl = `/session?stream=${encodeURIComponent(shortLink.streamName)}&return=${encodeURIComponent(shortLink.returnFeed)}${chatParam}${tokenParam}${serverParam}${returnServerParam}${returnFallbackParam}${returnFallback2Param}`;
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Failed to resolve short link:', error);
@@ -1918,9 +1935,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/return-feeds', requireAdmin, async (req, res) => {
     try {
-      const { label, streamName, serverAddress, fallbackServerAddress, sortOrder } = req.body;
+      const { label, streamName, serverAddress, fallbackServerAddress, fallbackServerAddress2, sortOrder } = req.body;
       if (!label || !streamName) return res.status(400).json({ error: 'label and streamName are required' });
-      const feed = await storage.createReturnFeed({ label, streamName, serverAddress: serverAddress || null, fallbackServerAddress: fallbackServerAddress || null, sortOrder: sortOrder ?? 0 });
+      const feed = await storage.createReturnFeed({ label, streamName, serverAddress: serverAddress || null, fallbackServerAddress: fallbackServerAddress || null, fallbackServerAddress2: fallbackServerAddress2 || null, sortOrder: sortOrder ?? 0 });
       res.status(201).json(feed);
     } catch (error) {
       res.status(500).json({ error: 'Failed to create return feed' });
@@ -1930,8 +1947,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/return-feeds/:id', requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { label, streamName, serverAddress, fallbackServerAddress, sortOrder } = req.body;
-      const feed = await storage.updateReturnFeed(id, { label, streamName, serverAddress: serverAddress || null, fallbackServerAddress: fallbackServerAddress || null, sortOrder });
+      const { label, streamName, serverAddress, fallbackServerAddress, fallbackServerAddress2, sortOrder } = req.body;
+      const feed = await storage.updateReturnFeed(id, { label, streamName, serverAddress: serverAddress || null, fallbackServerAddress: fallbackServerAddress || null, fallbackServerAddress2: fallbackServerAddress2 || null, sortOrder });
       if (!feed) return res.status(404).json({ error: 'Return feed not found' });
       res.json(feed);
     } catch (error) {
@@ -2248,10 +2265,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Determine WHEP server for return feed delivery (round-robin with fallback)
         let assignedWhepServerAddr: string | null = null;
         let assignedWhepFallbackAddr: string | null = null;
+        let assignedWhepFallback2Addr: string | null = null;
         if (matchedFeedForProd?.serverAddress) {
           const feedServers = await getNextFeedServers(matchedFeedForProd);
           assignedWhepServerAddr = feedServers.primary;
           assignedWhepFallbackAddr = feedServers.fallback;
+          assignedWhepFallback2Addr = feedServers.fallback2;
         } else {
           const poolServers = await getNextWhepServers();
           assignedWhepServerAddr = poolServers.primary;
@@ -2261,6 +2280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let finalUrl = `${baseUrl}&token=${sessionToken.id}&server=${assignedServerAddr}`;
         if (assignedWhepServerAddr) finalUrl += `&returnServer=${encodeURIComponent(assignedWhepServerAddr)}`;
         if (assignedWhepFallbackAddr) finalUrl += `&returnFallbackServer=${encodeURIComponent(assignedWhepFallbackAddr)}`;
+        if (assignedWhepFallback2Addr) finalUrl += `&returnFallbackServer2=${encodeURIComponent(assignedWhepFallback2Addr)}`;
 
         const linkData = {
           id: linkId,
