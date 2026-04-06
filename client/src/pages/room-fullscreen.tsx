@@ -150,14 +150,14 @@ function VideoPlayer({ streamUrl, streamName, assignedUser, assignedGuest, onFai
   };
 
   return (
-    <div className="relative h-full w-full">
-      <div className="relative h-full w-full bg-black rounded-lg overflow-hidden">
+    <div className="relative h-full w-full overflow-hidden">
+      <div className="relative h-full w-full bg-black overflow-hidden">
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
             data-testid={`video-player-${streamName}`}
           />
           {error && (
@@ -267,16 +267,21 @@ export default function RoomFullscreen() {
     setLocallyFailedStreams(prev => new Set([...prev, streamName]));
   };
 
-  const getGridClass = () => {
-    const streamCount = Math.max(visibleStreams.length, 1);
-    // Full-screen optimized grid layouts with proper rows
-    if (streamCount === 1) return "grid-cols-1 grid-rows-1";
-    if (streamCount === 2) return "grid-cols-2 grid-rows-1";
-    if (streamCount === 3) return "grid-cols-3 grid-rows-1";
-    if (streamCount === 4) return "grid-cols-2 grid-rows-2";
-    if (streamCount <= 6) return "grid-cols-3 grid-rows-2";
-    if (streamCount <= 9) return "grid-cols-3 grid-rows-3";
-    return "grid-cols-4 grid-rows-3";
+  const getGridLayout = () => {
+    const n = Math.max(visibleStreams.length, 1);
+    if (n === 1) return { cols: 1, rows: 1 };
+    if (n === 2) return { cols: 2, rows: 1 };
+    if (n === 3) return { cols: 3, rows: 1 };
+    if (n === 4) return { cols: 2, rows: 2 };
+    if (n <= 6) return { cols: 3, rows: 2 };
+    if (n <= 9) return { cols: 3, rows: 3 };
+    if (n <= 12) return { cols: 4, rows: 3 };
+    if (n <= 16) return { cols: 4, rows: 4 };
+    if (n <= 20) return { cols: 5, rows: 4 };
+    if (n <= 25) return { cols: 5, rows: 5 };
+    const cols = Math.ceil(Math.sqrt(n));
+    const rows = Math.ceil(n / cols);
+    return { cols, rows };
   };
 
   return (
@@ -301,7 +306,15 @@ export default function RoomFullscreen() {
               </div>
             </div>
           ) : (
-            <div className={`grid gap-1 h-full w-full ${getGridClass()}`} data-testid="video-grid-fullscreen">
+            <div
+              className="h-full w-full"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `repeat(${getGridLayout().cols}, 1fr)`,
+                gridTemplateRows: `repeat(${getGridLayout().rows}, 1fr)`,
+              }}
+              data-testid="video-grid-fullscreen"
+            >
               {visibleStreams
                 .sort((a, b) => a.position - b.position)
                 .map((stream) => (
