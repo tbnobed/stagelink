@@ -807,6 +807,54 @@ class ChatWebSocketServer {
     return true;
   }
 
+  public kickParticipantByLinkId(productionId: string, linkId: string): boolean {
+    const state = this.productionStates.get(productionId);
+    if (!state) return false;
+
+    const clientKey = `prod-${linkId}`;
+
+    if (state.liveParticipants.has(clientKey)) {
+      const ws = this.clientKeyToActiveWs.get(clientKey);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'production_status', status: 'kicked' }));
+        ws.close(1000, 'Kicked by admin');
+      }
+      this.clientKeyToActiveWs.delete(clientKey);
+      this.wsToProductionClientKey.forEach((ck, w) => {
+        if (ck === clientKey) this.wsToProductionClientKey.delete(w);
+      });
+      const existing = state.disconnectTimers.get(clientKey);
+      if (existing) clearTimeout(existing);
+      this.evictLiveParticipant(productionId, clientKey, state);
+      console.log(`Production ${productionId}: admin kicked live participant ${linkId}`);
+      return true;
+    }
+
+    const waitingIdx = state.waitingQueue.findIndex(w => w.linkId === linkId);
+    if (waitingIdx !== -1) {
+      const removed = state.waitingQueue.splice(waitingIdx, 1)[0];
+      this.clientProductionMap.delete(clientKey);
+      const ws = this.clientKeyToActiveWs.get(clientKey);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'production_status', status: 'kicked' }));
+        ws.close(1000, 'Kicked by admin');
+      }
+      this.clientKeyToActiveWs.delete(clientKey);
+      this.wsToProductionClientKey.forEach((ck, w) => {
+        if (ck === clientKey) this.wsToProductionClientKey.delete(w);
+      });
+      state.waitingQueue.forEach((w, i) => {
+        if (w.ws.readyState === WebSocket.OPEN) {
+          w.ws.send(JSON.stringify({ type: 'production_status', status: 'waiting', position: i + 1 }));
+        }
+      });
+      console.log(`Production ${productionId}: admin kicked waiting participant ${linkId}`);
+      return true;
+    }
+
+    return false;
+  }
+
   // Get current production state for REST API
   public getProductionLiveStatus(productionId: string): { liveIds: string[]; waitingIds: Array<{ linkId: string; guestName: string; position: number }> } | null {
     const state = this.productionStates.get(productionId);

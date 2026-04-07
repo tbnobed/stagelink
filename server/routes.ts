@@ -2420,6 +2420,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST promote a waiting participant to live
+  app.post('/api/productions/:id/participants/:linkId/kick', requireAdminOrEngineer, async (req, res) => {
+    try {
+      const wsServer = (global as any).chatWebSocketServer as InstanceType<typeof ChatWebSocketServer>;
+      if (!wsServer) return res.status(503).json({ error: 'WebSocket server not available' });
+      const kicked = wsServer.kickParticipantByLinkId(req.params.id, req.params.linkId);
+      if (!kicked) {
+        return res.status(404).json({ error: 'Participant not found in live or waiting state' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to kick participant' });
+    }
+  });
+
   app.post('/api/productions/:id/participants/:linkId/promote', requireAdminOrEngineer, async (req, res) => {
     try {
       const wsServer = (global as any).chatWebSocketServer as InstanceType<typeof ChatWebSocketServer>;

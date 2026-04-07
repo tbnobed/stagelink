@@ -192,6 +192,21 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
     onError: () => toast({ title: 'Failed to remove participant', variant: 'destructive' }),
   });
 
+  const kickMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      const res = await apiRequest('POST', `/api/productions/${productionId}/participants/${linkId}/kick`, {});
+      if (!res.ok) throw new Error('Failed to kick');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Participant kicked', description: 'Their stream has been disconnected and room slot freed.' });
+      refetch();
+    },
+    onError: () => {
+      toast({ title: 'Could not kick participant', description: 'They may no longer be connected.', variant: 'destructive' });
+    },
+  });
+
   if (isLoading) return <div className="text-gray-400 py-8 text-center">Loading participants...</div>;
   if (!data) return null;
 
@@ -291,7 +306,7 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
     );
   };
 
-  const ParticipantRow = ({ p, showPromote }: { p: ParticipantRecord; showPromote?: boolean }) => (
+  const ParticipantRow = ({ p, showPromote, showKick }: { p: ParticipantRecord; showPromote?: boolean; showKick?: boolean }) => (
     <div className="bg-gray-800/50 rounded-lg px-3 py-2">
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
@@ -311,9 +326,21 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
               disabled={promoteMutation.isPending}
             >Promote</Button>
           )}
+          {showKick && (
+            <Button size="sm" variant="outline"
+              className="h-7 text-xs border-red-600/50 text-red-400 hover:bg-red-500/10"
+              title="Kick — disconnect stream and free room slot"
+              onClick={() => {
+                if (confirm(`Kick ${p.guestName || p.streamName || 'this participant'}? Their stream will be disconnected immediately.`)) {
+                  kickMutation.mutate(p.id);
+                }
+              }}
+              disabled={kickMutation.isPending}
+            >Kick</Button>
+          )}
           <Button size="sm" variant="ghost"
             className="h-7 w-7 p-0 text-gray-500 hover:text-red-400 hover:bg-red-500/10"
-            title="Remove participant"
+            title="Remove participant link"
             onClick={() => {
               if (confirm(`Remove ${p.guestName || p.streamName || 'this participant'}?`)) {
                 deleteParticipantMutation.mutate(p.id);
@@ -331,7 +358,7 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
     </div>
   );
 
-  const Group = ({ title, groupKey, items, showPromote }: { title: string; groupKey: string; items: ParticipantRecord[]; showPromote?: boolean }) => {
+  const Group = ({ title, groupKey, items, showPromote, showKick }: { title: string; groupKey: string; items: ParticipantRecord[]; showPromote?: boolean; showKick?: boolean }) => {
     const filtered = items.filter(matchesSearch);
     const isExpanded = !!expanded[groupKey];
     const visible = isExpanded ? filtered : filtered.slice(0, PAGE);
@@ -346,7 +373,7 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
         ) : (
           <>
             <div className="space-y-2">
-              {visible.map(p => <ParticipantRow key={p.id} p={p} showPromote={showPromote} />)}
+              {visible.map(p => <ParticipantRow key={p.id} p={p} showPromote={showPromote} showKick={showKick && (p.status === 'live' || p.status === 'waiting')} />)}
             </div>
             {hidden > 0 && (
               <button
@@ -382,8 +409,8 @@ function ParticipantsPanel({ productionId }: { productionId: string }) {
           className="w-full bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
         />
       </div>
-      <Group key="live" title="Live" groupKey="live" items={live} />
-      <Group key="waiting" title="Waiting" groupKey="waiting" items={waiting} showPromote />
+      <Group key="live" title="Live" groupKey="live" items={live} showKick />
+      <Group key="waiting" title="Waiting" groupKey="waiting" items={waiting} showPromote showKick />
       <Group key="offline" title="Offline" groupKey="offline" items={offline} />
     </div>
   );

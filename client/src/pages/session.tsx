@@ -250,6 +250,16 @@ export default function Session() {
                 });
               });
             }
+          } else if (msg.status === 'kicked') {
+            stopPublishing();
+            setIsPublishing(false);
+            setProductionStatus('idle');
+            setWaitingPosition(0);
+            toast({
+              title: "Disconnected by Admin",
+              description: "You have been removed from this production by an administrator.",
+              variant: "destructive",
+            });
           } else if (msg.status === 'signed_off') {
             // Server confirmed sign-off; guest is no longer tracked as live or waiting.
             // Set to 'idle' so they can re-enter the queue by clicking Start Stream again.
