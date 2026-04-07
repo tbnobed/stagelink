@@ -86,8 +86,9 @@ export function ProductionPublicChat({ productionId, guestUser, className = '' }
         } catch {}
       };
 
-      ws.onclose = () => {
+      ws.onclose = (ev) => {
         if (!mountedRef.current) return;
+        if (ev.code === 4000) return;
         setIsConnected(false);
         const attempt = reconnectAttemptRef.current++;
         const baseDelay = Math.min(1000 * Math.pow(2, attempt), 30000);

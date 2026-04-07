@@ -190,11 +190,11 @@ class ChatWebSocketServer {
     // Use username for guest users (null userId), userId for authenticated users
     const clientKey = message.userId ? `${message.userId}-${message.sessionId}` : `guest-${message.username}-${message.sessionId}`;
     
-    // Remove existing client if reconnecting
+    // Remove existing client if reconnecting — use code 4000 so the old client doesn't auto-reconnect
     if (this.clients.has(clientKey)) {
       const existingClient = this.clients.get(clientKey)!;
       this.wsToRegularClientKey.delete(existingClient.ws);
-      existingClient.ws.close();
+      existingClient.ws.close(4000, 'replaced');
       this.clients.delete(clientKey);
     }
 
@@ -667,7 +667,7 @@ class ChatWebSocketServer {
     if (this.notificationListeners.has(listenerKey)) {
       const existingListener = this.notificationListeners.get(listenerKey)!;
       this.wsToNotificationListenerKey.delete(existingListener.ws);
-      existingListener.ws.close();
+      existingListener.ws.close(4000, 'replaced');
       this.notificationListeners.delete(listenerKey);
     }
 

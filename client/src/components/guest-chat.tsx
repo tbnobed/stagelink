@@ -27,6 +27,7 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '', onNew
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptRef = useRef(0);
+  const mountedRef = useRef(true);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -37,8 +38,10 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '', onNew
   // Connect to WebSocket when enabled
   useEffect(() => {
     if (!enabled || !guestUser || !sessionId) return;
+    mountedRef.current = true;
 
     const connect = () => {
+      if (!mountedRef.current) return;
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/chat`;
@@ -107,6 +110,10 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '', onNew
 
         wsRef.current.onclose = (event) => {
           console.log(`Guest Chat WebSocket disconnected: ${event.code} ${event.reason}`);
+          
+          if (event.code === 4000) return;
+          if (!mountedRef.current) return;
+          
           setIsConnected(false);
           
           if (enabled && guestUser) {
@@ -134,13 +141,13 @@ export function GuestChat({ sessionId, enabled, guestUser, className = '', onNew
     connect();
 
     return () => {
-      // Clear reconnection timeout
+      mountedRef.current = false;
+      
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
       
-      // Close WebSocket connection
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;

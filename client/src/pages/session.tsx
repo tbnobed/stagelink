@@ -739,56 +739,20 @@ export default function Session() {
               )}
             </div>
 
-            {/* Chat panel in waiting room */}
+            {/* Chat in waiting room — rendered directly (no portal) */}
             {(productionId || chatEnabled) && guestUser && (
               <div className="lg:w-80 xl:w-96 flex flex-col min-h-0 h-64 lg:h-auto va-bg-dark-surface rounded-xl border va-border-dark overflow-hidden">
-                <div className="flex items-center gap-1 px-2 py-1.5 border-b va-border-dark shrink-0">
-                  {productionId && (
-                    <button
-                      onClick={() => setChatTab('group')}
-                      className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
-                        chatTab === 'group'
-                          ? 'bg-blue-600 text-white'
-                          : 'va-text-secondary hover:va-text-primary'
-                      }`}
-                    >
-                      <i className="fas fa-users mr-1"></i>Group Chat
-                    </button>
-                  )}
-                  {chatEnabled && (
-                    <button
-                      onClick={() => { setChatTab('private'); setPrivateUnread(0); }}
-                      className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors relative ${
-                        chatTab === 'private'
-                          ? 'bg-gray-600 text-white'
-                          : 'va-text-secondary hover:va-text-primary'
-                      }`}
-                    >
-                      <i className="fas fa-lock mr-1"></i>Private
-                      {privateUnread > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-pulse">
-                          {privateUnread > 99 ? '99+' : privateUnread}
-                        </span>
-                      )}
-                    </button>
-                  )}
-                </div>
-                {chatTab === 'group' && productionId && (
-                  <ProductionPublicChat
-                    productionId={productionId}
-                    guestUser={guestUser}
-                    className="flex-1 min-h-0"
-                  />
-                )}
-                {chatEnabled && linkId && (
-                  <GuestChat
-                    sessionId={linkId}
-                    enabled={true}
-                    guestUser={guestUser}
-                    className={`flex-1 min-h-0 ${chatTab !== 'private' ? 'hidden' : ''}`}
-                    onNewPrivateMessage={handlePrivateMessage}
-                  />
-                )}
+                <ChatTabsContent
+                  productionId={productionId}
+                  chatEnabled={chatEnabled}
+                  chatTab={chatTab}
+                  setChatTab={setChatTab}
+                  privateUnread={privateUnread}
+                  setPrivateUnread={setPrivateUnread}
+                  guestUser={guestUser}
+                  linkId={linkId}
+                  handlePrivateMessage={handlePrivateMessage}
+                />
               </div>
             )}
           </div>
@@ -925,61 +889,20 @@ export default function Session() {
                 </div>
               </div>
 
-              {/* Chat section — fills remaining left-column height */}
-              {(productionId || chatEnabled) && guestUser && (
+              {/* Chat in normal session (not waiting room) — rendered directly */}
+              {!isInWaitingRoom && (productionId || chatEnabled) && guestUser && (
                 <div className="va-bg-dark-surface rounded-xl border va-border-dark flex-1 flex flex-col min-h-0 overflow-hidden">
-                  {/* Tab header */}
-                  <div className="flex items-center gap-1 px-2 py-1.5 border-b va-border-dark shrink-0">
-                    {productionId && (
-                      <button
-                        onClick={() => setChatTab('group')}
-                        className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
-                          chatTab === 'group'
-                            ? 'bg-blue-600 text-white'
-                            : 'va-text-secondary hover:va-text-primary'
-                        }`}
-                      >
-                        <i className="fas fa-users mr-1"></i>Group Chat
-                      </button>
-                    )}
-                    {chatEnabled && (
-                      <button
-                        onClick={() => { setChatTab('private'); setPrivateUnread(0); }}
-                        className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors relative ${
-                          chatTab === 'private'
-                            ? 'bg-gray-600 text-white'
-                            : 'va-text-secondary hover:va-text-primary'
-                        }`}
-                      >
-                        <i className="fas fa-lock mr-1"></i>Private
-                        {privateUnread > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-pulse">
-                            {privateUnread > 99 ? '99+' : privateUnread}
-                          </span>
-                        )}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Group chat panel */}
-                  {chatTab === 'group' && productionId && (
-                    <ProductionPublicChat
-                      productionId={productionId}
-                      guestUser={guestUser}
-                      className="flex-1 min-h-0"
-                    />
-                  )}
-
-                  {/* Private chat panel — always mounted to keep WS alive for notifications */}
-                  {chatEnabled && linkId && (
-                    <GuestChat
-                      sessionId={linkId}
-                      enabled={true}
-                      guestUser={guestUser}
-                      className={`flex-1 min-h-0 ${chatTab !== 'private' ? 'hidden' : ''}`}
-                      onNewPrivateMessage={handlePrivateMessage}
-                    />
-                  )}
+                  <ChatTabsContent
+                    productionId={productionId}
+                    chatEnabled={chatEnabled}
+                    chatTab={chatTab}
+                    setChatTab={setChatTab}
+                    privateUnread={privateUnread}
+                    setPrivateUnread={setPrivateUnread}
+                    guestUser={guestUser}
+                    linkId={linkId}
+                    handlePrivateMessage={handlePrivateMessage}
+                  />
                 </div>
               )}
             </div>
@@ -1048,6 +971,81 @@ export default function Session() {
           </div>
         )}
       </div>
+      {/* Chat is rendered directly in the waiting room or session layout above */}
     </div>
+  );
+}
+
+function ChatTabsContent({
+  productionId,
+  chatEnabled,
+  chatTab,
+  setChatTab,
+  privateUnread,
+  setPrivateUnread,
+  guestUser,
+  linkId,
+  handlePrivateMessage,
+}: {
+  productionId: string | null;
+  chatEnabled: boolean;
+  chatTab: 'group' | 'private';
+  setChatTab: (tab: 'group' | 'private') => void;
+  privateUnread: number;
+  setPrivateUnread: (fn: (n: number) => number) => void;
+  guestUser: any;
+  linkId: string | null;
+  handlePrivateMessage: (message: any) => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b va-border-dark shrink-0">
+        {productionId && (
+          <button
+            onClick={() => setChatTab('group')}
+            className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+              chatTab === 'group'
+                ? 'bg-blue-600 text-white'
+                : 'va-text-secondary hover:va-text-primary'
+            }`}
+          >
+            <i className="fas fa-users mr-1"></i>Group Chat
+          </button>
+        )}
+        {chatEnabled && (
+          <button
+            onClick={() => { setChatTab('private'); setPrivateUnread(() => 0); }}
+            className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors relative ${
+              chatTab === 'private'
+                ? 'bg-gray-600 text-white'
+                : 'va-text-secondary hover:va-text-primary'
+            }`}
+          >
+            <i className="fas fa-lock mr-1"></i>Private
+            {privateUnread > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-pulse">
+                {privateUnread > 99 ? '99+' : privateUnread}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+      {chatTab === 'group' && productionId && (
+        <ProductionPublicChat
+          productionId={productionId}
+          guestUser={guestUser}
+          className="flex-1 min-h-0"
+        />
+      )}
+      {chatEnabled && linkId && (
+        <GuestChat
+          sessionId={linkId}
+          enabled={true}
+          guestUser={guestUser}
+          className={`flex-1 min-h-0 ${chatTab !== 'private' ? 'hidden' : ''}`}
+          onNewPrivateMessage={handlePrivateMessage}
+        />
+      )}
+    </>
   );
 }
