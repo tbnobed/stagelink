@@ -197,92 +197,115 @@ export default function Session() {
   // Production capacity management via WebSocket
   useEffect(() => {
     if (!productionId || !linkId || !consentGranted) return;
+    const mountedRef = { current: true };
+    const reconnectAttemptRef = { current: 0 };
+    const reconnectTimeoutRef = { current: null as NodeJS.Timeout | null };
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/chat`;
-    const ws = new WebSocket(wsUrl);
-    productionWsRef.current = ws;
+    const connect = () => {
+      if (!mountedRef.current) return;
 
-    ws.onopen = () => {
-      const sessionToken = new URLSearchParams(window.location.search).get('token');
-      ws.send(JSON.stringify({
-        type: 'production_join',
-        productionId,
-        linkId,
-        guestName: guestName || 'Guest',
-        sessionId: `prod-${productionId}`,
-        ...(sessionToken ? { token: sessionToken } : {}),
-      }));
-    };
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/chat`;
+      const ws = new WebSocket(wsUrl);
+      productionWsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'production_status') {
-          if (msg.status === 'live') {
-            // Granted a live slot — update state and let the user manually start the stream.
-            // The normal manual-start flow (togglePublishing) applies here. Auto-start only
-            // happens when the server sends 'promoted' (waiting → live by admin action).
-            setProductionStatus('live');
-            setWaitingPosition(0);
-          } else if (msg.status === 'waiting') {
-            setProductionStatus('waiting');
-            setWaitingPosition(msg.position || 0);
-            // Flag that return feed should auto-start; effect below watches productionStatus
-            // and fires startReturnFeed when status transitions to 'waiting'
-          } else if (msg.status === 'promoted') {
-            setProductionStatus('live');
-            setWaitingPosition(0);
-            toast({ title: "You're Live!", description: "A spot opened up — your stream is starting!" });
-            // Auto-start WHIP publishing when promoted from waiting
-            if (publisherVideoRef.current) {
-              startPublishing(publisherVideoRef.current).then(result => {
-                setIsPublishing(true);
-                setSessionId(result.sessionId || 'Connected');
-                setAudioCodec('opus/48000/2');
-                setVideoCodec('h264/720p@30fps');
-              }).catch(err => {
-                console.error('Auto-publish on promotion failed:', err);
-                toast({
-                  title: "Stream Error",
-                  description: "You were promoted but stream failed to start. Please click 'Start Stream' manually.",
-                  variant: "destructive"
+      ws.onopen = () => {
+        if (!mountedRef.current) { ws.close(); return; }
+        reconnectAttemptRef.current = 0;
+        const sessionToken = new URLSearchParams(window.location.search).get('token');
+        ws.send(JSON.stringify({
+          type: 'production_join',
+          productionId,
+          linkId,
+          guestName: guestName || 'Guest',
+          sessionId: `prod-${productionId}`,
+          ...(sessionToken ? { token: sessionToken } : {}),
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        if (!mountedRef.current) return;
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'production_status') {
+            if (msg.status === 'live') {
+              setProductionStatus('live');
+              setWaitingPosition(0);
+            } else if (msg.status === 'waiting') {
+              setProductionStatus('waiting');
+              setWaitingPosition(msg.position || 0);
+            } else if (msg.status === 'promoted') {
+              setProductionStatus('live');
+              setWaitingPosition(0);
+              toast({ title: "You're Live!", description: "A spot opened up — your stream is starting!" });
+              if (publisherVideoRef.current) {
+                startPublishing(publisherVideoRef.current).then(result => {
+                  setIsPublishing(true);
+                  setSessionId(result.sessionId || 'Connected');
+                  setAudioCodec('opus/48000/2');
+                  setVideoCodec('h264/720p@30fps');
+                }).catch(err => {
+                  console.error('Auto-publish on promotion failed:', err);
+                  toast({
+                    title: "Stream Error",
+                    description: "You were promoted but stream failed to start. Please click 'Start Stream' manually.",
+                    variant: "destructive"
+                  });
                 });
+              }
+            } else if (msg.status === 'kicked') {
+              stopPublishing();
+              setIsPublishing(false);
+              setProductionStatus('idle');
+              setWaitingPosition(0);
+              toast({
+                title: "Disconnected by Admin",
+                description: "You have been removed from this production by an administrator.",
+                variant: "destructive",
               });
+            } else if (msg.status === 'signed_off') {
+              setProductionStatus('idle');
+              setWaitingPosition(0);
             }
-          } else if (msg.status === 'kicked') {
+          } else if (msg.type === 'production_ended') {
             stopPublishing();
             setIsPublishing(false);
             setProductionStatus('idle');
-            setWaitingPosition(0);
-            toast({
-              title: "Disconnected by Admin",
-              description: "You have been removed from this production by an administrator.",
-              variant: "destructive",
-            });
-          } else if (msg.status === 'signed_off') {
-            // Server confirmed sign-off; guest is no longer tracked as live or waiting.
-            // Set to 'idle' so they can re-enter the queue by clicking Start Stream again.
-            setProductionStatus('idle');
-            setWaitingPosition(0);
+            setProductionEnded(true);
           }
-        } else if (msg.type === 'production_ended') {
-          // Admin ended the production — stop any active stream and show the ended screen
-          stopPublishing();
-          setIsPublishing(false);
-          setProductionStatus('idle');
-          setProductionEnded(true);
-        }
-      } catch {}
+        } catch {}
+      };
+
+      ws.onclose = (event) => {
+        console.log(`Production WS closed: ${event.code} ${event.reason}`);
+        if (event.code === 4000) return;
+        if (!mountedRef.current) return;
+
+        const attempt = reconnectAttemptRef.current++;
+        const baseDelay = Math.min(1000 * Math.pow(2, attempt), 30000);
+        const jitter = Math.random() * 1000;
+        const delay = baseDelay + jitter;
+        console.log(`Production WS reconnecting in ${Math.round(delay)}ms (attempt ${attempt + 1})`);
+        reconnectTimeoutRef.current = setTimeout(connect, delay);
+      };
+
+      ws.onerror = (error) => {
+        console.error('Production WS error:', error);
+      };
     };
 
-    ws.onclose = () => {
-      console.log('Production WS closed');
-    };
+    connect();
 
     return () => {
-      ws.close();
-      productionWsRef.current = null;
+      mountedRef.current = false;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      if (productionWsRef.current) {
+        productionWsRef.current.close();
+        productionWsRef.current = null;
+      }
     };
   }, [productionId, linkId, consentGranted, guestName, toast]);
 

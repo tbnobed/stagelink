@@ -99,4 +99,19 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  const shutdown = (signal: string) => {
+    log(`${signal} received — shutting down gracefully`);
+    server.close(() => {
+      log('HTTP server closed');
+      process.exit(0);
+    });
+    setTimeout(() => {
+      log('Graceful shutdown timed out — forcing exit');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 })();
