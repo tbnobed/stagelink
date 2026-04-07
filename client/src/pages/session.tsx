@@ -503,7 +503,8 @@ export default function Session() {
   }, []);
 
   const handlePrivateMessage = useCallback((message: ChatMessage) => {
-    const isPrivateTabActive = chatTab === 'private' && showChat;
+    const inWaiting = productionId !== null && productionStatus === 'waiting';
+    const isPrivateTabActive = chatTab === 'private' && (showChat || inWaiting);
     if (!isPrivateTabActive) {
       setPrivateUnread(prev => prev + 1);
     }
@@ -514,7 +515,7 @@ export default function Session() {
         ? message.content.slice(0, 80) + '…'
         : message.content,
     });
-  }, [chatTab, showChat, playNotificationSound, toast]);
+  }, [chatTab, showChat, productionId, productionStatus, playNotificationSound, toast]);
 
   const toggleMute = () => {
     const next = !isMuted;
@@ -675,41 +676,42 @@ export default function Session() {
 
       {/* Waiting Room Overlay — rendered on top when capacity is full; session layout stays mounted */}
       {isInWaitingRoom && (
-        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
-          <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center gap-6">
-
-            {/* Left panel: status info */}
-            <div className="text-center lg:text-left lg:w-72 flex-shrink-0">
-              <div className="relative mx-auto lg:mx-0 w-20 h-20 mb-4">
+        <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col">
+          {/* Top bar with status */}
+          <div className="shrink-0 px-4 py-3 border-b border-yellow-500/30 bg-yellow-500/5 flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="relative w-10 h-10">
                 <div className="absolute inset-0 rounded-full bg-yellow-500/20 animate-ping" />
                 <div className="relative rounded-full bg-yellow-500/10 border-2 border-yellow-500/50 w-full h-full flex items-center justify-center">
-                  <svg className="w-9 h-9 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
-              <h2 className="text-2xl font-bold va-text-primary mb-2">You're in the waiting room</h2>
-              <p className="va-text-secondary mb-4 text-sm">
-                {guestName ? `Hi ${guestName}!` : 'Hi there!'} The live session is currently full.
-              </p>
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
-                <p className="text-yellow-300 text-sm font-medium">Your position in queue</p>
-                <p className="text-5xl font-bold text-yellow-400 mt-1">#{waitingPosition}</p>
+              <div>
+                <h2 className="text-lg font-bold va-text-primary">Waiting Room</h2>
+                <p className="va-text-secondary text-xs">
+                  {guestName ? `Hi ${guestName}!` : 'Hi there!'} You'll go live when a spot opens.
+                </p>
               </div>
-              <p className="va-text-secondary text-xs">
-                You'll automatically go live when a spot opens up. Keep this page open.
-              </p>
             </div>
+            <div className="ml-auto bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-2 text-center">
+              <p className="text-yellow-300 text-[10px] font-medium uppercase tracking-wider">Queue</p>
+              <p className="text-2xl font-bold text-yellow-400">#{waitingPosition}</p>
+            </div>
+          </div>
 
-            {/* Right panel: return feed video — 2× larger */}
-            <div className="flex-1 w-full min-w-0">
-              <div className="rounded-xl overflow-hidden border va-border-dark relative" style={{ aspectRatio: '16/9' }}>
+          {/* Main content: video + chat side by side (desktop) or stacked (mobile) */}
+          <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-3">
+            {/* Return feed video */}
+            <div className="lg:flex-1 flex flex-col min-h-0">
+              <div className="flex-1 min-h-0 rounded-xl overflow-hidden border va-border-dark relative bg-black">
                 <video
                   ref={waitingReturnFeedRef}
                   autoPlay
                   playsInline
                   muted={isWaitingFeedMuted}
-                  className="w-full h-full object-cover bg-black"
+                  className="w-full h-full object-contain bg-black"
                 />
                 {isReturnFeedStarted && (
                   <button
@@ -724,19 +726,71 @@ export default function Session() {
                     <i className={`fas ${isWaitingFeedMuted ? 'fa-volume-mute' : 'fa-volume-up'} text-sm`} />
                   </button>
                 )}
-              </div>
-              <div className="mt-2 text-center">
                 {!isReturnFeedStarted && (
-                  <Button variant="outline" size="sm" onClick={startReturnFeed}>
-                    Watch Return Feed While You Wait
-                  </Button>
-                )}
-                {isReturnFeedStarted && (
-                  <p className="text-sm text-green-400">Return feed is playing {isWaitingFeedMuted ? '(muted — click 🔇 to unmute)' : ''}</p>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Button variant="outline" size="sm" onClick={startReturnFeed}>
+                      Watch Return Feed While You Wait
+                    </Button>
+                  </div>
                 )}
               </div>
+              {isReturnFeedStarted && (
+                <p className="text-xs text-green-400 text-center mt-1">Return feed is playing {isWaitingFeedMuted ? '(muted)' : ''}</p>
+              )}
             </div>
 
+            {/* Chat panel in waiting room */}
+            {(productionId || chatEnabled) && guestUser && (
+              <div className="lg:w-80 xl:w-96 flex flex-col min-h-0 h-64 lg:h-auto va-bg-dark-surface rounded-xl border va-border-dark overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 border-b va-border-dark shrink-0">
+                  {productionId && (
+                    <button
+                      onClick={() => setChatTab('group')}
+                      className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors ${
+                        chatTab === 'group'
+                          ? 'bg-blue-600 text-white'
+                          : 'va-text-secondary hover:va-text-primary'
+                      }`}
+                    >
+                      <i className="fas fa-users mr-1"></i>Group Chat
+                    </button>
+                  )}
+                  {chatEnabled && (
+                    <button
+                      onClick={() => { setChatTab('private'); setPrivateUnread(0); }}
+                      className={`flex-1 py-1 text-xs font-medium rounded-md transition-colors relative ${
+                        chatTab === 'private'
+                          ? 'bg-gray-600 text-white'
+                          : 'va-text-secondary hover:va-text-primary'
+                      }`}
+                    >
+                      <i className="fas fa-lock mr-1"></i>Private
+                      {privateUnread > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-pulse">
+                          {privateUnread > 99 ? '99+' : privateUnread}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+                {chatTab === 'group' && productionId && (
+                  <ProductionPublicChat
+                    productionId={productionId}
+                    guestUser={guestUser}
+                    className="flex-1 min-h-0"
+                  />
+                )}
+                {chatEnabled && linkId && (
+                  <GuestChat
+                    sessionId={linkId}
+                    enabled={true}
+                    guestUser={guestUser}
+                    className={`flex-1 min-h-0 ${chatTab !== 'private' ? 'hidden' : ''}`}
+                    onNewPrivateMessage={handlePrivateMessage}
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
